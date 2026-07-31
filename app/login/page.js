@@ -17,7 +17,7 @@ export default function Login() {
       options: {
         emailRedirectTo:
           typeof window !== "undefined"
-            ? `${window.location.origin}/dashboard`
+         ? `${window.location.origin}/auth/callback`
             : undefined,
       },
     });
