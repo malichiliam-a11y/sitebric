@@ -1,0 +1,30 @@
+-- Run this once in Supabase: Dashboard -> SQL Editor -> New query -> paste -> Run
+
+create table if not exists projects (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) not null,
+  client_name text not null,
+  prompt text not null,
+  code text,
+  status text default 'generating',
+  created_at timestamptz default now()
+);
+
+-- Row-level security: every reseller can only see and edit their own client sites
+alter table projects enable row level security;
+
+create policy "Users can view their own projects"
+  on projects for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert their own projects"
+  on projects for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update their own projects"
+  on projects for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete their own projects"
+  on projects for delete
+  using (auth.uid() = user_id);
