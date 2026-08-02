@@ -13,7 +13,7 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(true);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("siteforge_email");
+    const saved = window.localStorage.getItem("fuseableai_email");
     if (saved) setEmail(saved);
 
     // If already signed in (e.g. from a previous visit), skip the
@@ -40,9 +40,9 @@ export default function Login() {
     setError("");
     setLoading(true);
     if (rememberMe) {
-      window.localStorage.setItem("siteforge_email", email);
+      window.localStorage.setItem("fuseableai_email", email);
     } else {
-      window.localStorage.removeItem("siteforge_email");
+      window.localStorage.removeItem("fuseableai_email");
     }
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
@@ -122,7 +122,7 @@ export default function Login() {
             letterSpacing: "-0.02em",
           }}
         >
-          site
+          fuseable
           <span
             style={{
               background: "linear-gradient(90deg, #8B5CF6, #22D3EE)",
@@ -130,7 +130,7 @@ export default function Login() {
               WebkitTextFillColor: "transparent",
             }}
           >
-            forge
+            ai
           </span>
         </div>
         <div
