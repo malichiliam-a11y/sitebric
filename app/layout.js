@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "siteforge",
+  title: "fuseableai",
   description: "Generate client websites with AI",
 };
 
