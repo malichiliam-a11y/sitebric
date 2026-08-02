@@ -1,5 +1,6 @@
+
 export const metadata = {
-  title: "fuseableai",
+  title: "sitebric",
   description: "Generate client websites with AI",
 };
 
