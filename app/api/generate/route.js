@@ -84,10 +84,15 @@ Rules:
 
     if (!code) throw new Error("empty response from model");
 
-    await supabase
+    const { error: updateError } = await supabase
       .from("projects")
       .update({ code, status: "done" })
       .eq("id", project.id);
+
+    if (updateError) {
+      console.error("Failed to save generated site:", updateError.message);
+      throw new Error(`Failed to save site: ${updateError.message}`);
+    }
 
     return NextResponse.json({ id: project.id, status: "done" });
   } catch (err) {
