@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 
-// Give this function up to 60 seconds — larger site generations can
-// take a while, and the default timeout is shorter than that.
+// Give this function up to 5 minutes — large site generations can
+// genuinely take a few minutes, and cutting it short leaves things
+// stuck on "generating" with no error ever being recorded.
 export const maxDuration = 300;
 
 export async function POST(req) {
@@ -57,10 +58,12 @@ Brief: "${prompt}"
 
 Rules:
 - Output ONLY raw HTML, no markdown fences, no explanation.
-- All CSS in <style>, all JS in <script>, inline, one file, no external dependencies (Google Fonts <link> is fine).
+- All CSS in <style>, all JS in <script>, inline, one file (Google Fonts <link> is fine).
 - Real, polished design with real copy for this specific business — not lorem ipsum.
-- Include a clear hero, a services/about section, and a contact section at minimum.
-- Keep CSS efficient and avoid unnecessary repetition, so the full page always finishes within the response.`,
+- Include a clear hero, a services/about section, a "why choose us" section, a "how it works" or process section (if relevant to the business), and a contact section at minimum.
+- Keep CSS efficient and avoid unnecessary repetition, so the full page always finishes within the response.
+- Use REAL photos, not just gradients/CSS shapes: pull relevant images from https://loremflickr.com/900/600/<relevant-keywords> (comma-separated, e.g. /900/600/luxury,car,detailing) for the hero, gallery, and service sections. Pick keywords specific to this business, and vary the size per placement (e.g. /500/400/ for smaller cards).
+- If the business has a natural before/after angle (detailing, renovation, fitness, cleaning, landscaping, etc.), build a REAL functional before/after image comparison slider: two stacked images, a draggable handle (range input or mouse/touch drag) controlling a clip-path to reveal one image over the other. Make it actually work, not decorative.`,
           },
         ],
       }),
