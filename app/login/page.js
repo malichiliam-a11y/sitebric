@@ -10,6 +10,7 @@ export default function Login() {
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
   useEffect(() => {
