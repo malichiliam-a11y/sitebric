@@ -92,9 +92,9 @@ export default function DashboardClient({ initialProjects }) {
           }}
         >
           <span style={{ fontFamily: display, fontWeight: 700, fontSize: 17 }}>
-            fuseable
+            site
             <span style={{ background: accent, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              ai
+              bric
             </span>
           </span>
           <button onClick={signOut} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 12, cursor: "pointer" }}>
