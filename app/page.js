@@ -18,7 +18,7 @@ export default function Home() {
   const body = "'Inter', sans-serif";
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("fuseableai_email");
+    const saved = window.localStorage.getItem("sitebric_email");
     if (saved) setEmail(saved);
 
     (async () => {
@@ -43,9 +43,9 @@ export default function Home() {
     setError("");
     setLoading(true);
     if (rememberMe) {
-      window.localStorage.setItem("fuseableai_email", email);
+      window.localStorage.setItem("sitebric_email", email);
     } else {
-      window.localStorage.removeItem("fuseableai_email");
+      window.localStorage.removeItem("sitebric_email");
     }
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
@@ -139,7 +139,7 @@ export default function Home() {
                 marginBottom: 24,
               }}
             >
-              fuseable
+              site
               <span
                 style={{
                   background: accent,
@@ -147,7 +147,7 @@ export default function Home() {
                   WebkitTextFillColor: "transparent",
                 }}
               >
-                ai
+                bric
               </span>
             </div>
             <h1
@@ -387,9 +387,9 @@ export default function Home() {
               textAlign: "center",
             }}
           >
-            Why resellers choose fuseable
+            Why resellers choose site
             <span style={{ background: accent, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              ai
+              bric
             </span>
           </div>
           <div
