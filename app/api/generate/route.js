@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 
 // Give this function up to 60 seconds — larger site generations can
 // take a while, and the default timeout is shorter than that.
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function POST(req) {
   const supabase = createClient();
