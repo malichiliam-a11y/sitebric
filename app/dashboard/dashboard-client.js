@@ -8,7 +8,6 @@ export default function DashboardClient({ initialProjects }) {
   const [projects, setProjects] = useState(initialProjects);
   const [activeId, setActiveId] = useState(null);
   const [view, setView] = useState("preview");
-  const [showNew, setShowNew] = useState(false);
   const [clientName, setClientName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
@@ -16,6 +15,8 @@ export default function DashboardClient({ initialProjects }) {
 
   const active = projects.find((p) => p.id === activeId);
   const accent = "linear-gradient(90deg, #8B5CF6, #22D3EE)";
+  const display = "'Space Grotesk', sans-serif";
+  const body = "'Inter', sans-serif";
 
   useEffect(() => {
     const hasGenerating = projects.some((p) => p.status === "generating");
@@ -49,7 +50,6 @@ export default function DashboardClient({ initialProjects }) {
         .order("created_at", { ascending: false });
       if (data) setProjects(data);
       setActiveId(result.id);
-      setShowNew(false);
       setClientName("");
       setPrompt("");
     } catch (err) {
@@ -70,19 +70,8 @@ export default function DashboardClient({ initialProjects }) {
     window.location.href = "/login";
   }
 
-  const display = "'Space Grotesk', sans-serif";
-  const body = "'Inter', sans-serif";
-
   return (
-    <div
-      style={{
-        height: "100vh",
-        display: "flex",
-        color: "#F2F0FA",
-        background: "#0A0A10",
-        fontFamily: body,
-      }}
-    >
+    <div style={{ height: "100vh", display: "flex", color: "#F2F0FA", background: "#0A0A10", fontFamily: body }}>
       <div
         style={{
           width: 300,
@@ -90,6 +79,7 @@ export default function DashboardClient({ initialProjects }) {
           display: "flex",
           flexDirection: "column",
           background: "rgba(255,255,255,0.015)",
+          zIndex: 2,
         }}
       >
         <div
@@ -103,33 +93,18 @@ export default function DashboardClient({ initialProjects }) {
         >
           <span style={{ fontFamily: display, fontWeight: 700, fontSize: 17 }}>
             site
-            <span
-              style={{
-                background: accent,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
+            <span style={{ background: accent, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               forge
             </span>
           </span>
-          <button
-            onClick={signOut}
-            style={{
-              background: "none",
-              border: "none",
-              color: "rgba(255,255,255,0.4)",
-              fontSize: 12,
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={signOut} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 12, cursor: "pointer" }}>
             Sign out
           </button>
         </div>
 
         <div style={{ padding: 16 }}>
           <button
-            onClick={() => setShowNew(true)}
+            onClick={() => setActiveId(null)}
             style={{
               width: "100%",
               background: accent,
@@ -150,9 +125,7 @@ export default function DashboardClient({ initialProjects }) {
 
         <div style={{ flex: 1, overflowY: "auto", padding: "0 12px" }}>
           {projects.length === 0 && (
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", padding: 12 }}>
-              No client sites yet.
-            </div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", padding: 12 }}>No client sites yet.</div>
           )}
           {projects.map((p) => (
             <div
@@ -164,12 +137,8 @@ export default function DashboardClient({ initialProjects }) {
                 borderRadius: 12,
                 marginBottom: 8,
                 fontSize: 13,
-                border:
-                  p.id === activeId
-                    ? "1px solid rgba(139,92,246,0.5)"
-                    : "1px solid rgba(255,255,255,0.06)",
-                background:
-                  p.id === activeId ? "rgba(139,92,246,0.08)" : "transparent",
+                border: p.id === activeId ? "1px solid rgba(139,92,246,0.5)" : "1px solid rgba(255,255,255,0.06)",
+                background: p.id === activeId ? "rgba(139,92,246,0.08)" : "transparent",
                 transition: "all 0.15s",
               }}
             >
@@ -186,158 +155,155 @@ export default function DashboardClient({ initialProjects }) {
                 </span>
               </div>
               <div style={{ fontSize: 11, marginTop: 4 }}>
-                {p.status === "generating" && (
-                  <span style={{ color: "#22D3EE" }}>● generating</span>
-                )}
-                {p.status === "done" && (
-                  <span style={{ color: "#4ADE80" }}>● live</span>
-                )}
-                {p.status === "error" && (
-                  <span style={{ color: "#F87171" }}>● failed</span>
-                )}
+                {p.status === "generating" && <span style={{ color: "#22D3EE" }}>● generating</span>}
+                {p.status === "done" && <span style={{ color: "#4ADE80" }}>● live</span>}
+                {p.status === "error" && <span style={{ color: "#F87171" }}>● failed</span>}
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>
-        {showNew && (
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 24,
-            }}
-          >
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+        {!active && (
+          <>
+            {/* glowing gradient background, like a hero */}
             <div
               style={{
-                width: "100%",
-                maxWidth: 460,
-                borderRadius: 20,
-                padding: 28,
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                backdropFilter: "blur(20px)",
+                position: "absolute",
+                top: "-30%",
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: 1100,
+                height: 1100,
+                borderRadius: "50%",
+                background:
+                  "radial-gradient(circle, rgba(139,92,246,0.28) 0%, rgba(34,211,238,0.12) 45%, transparent 70%)",
+                filter: "blur(50px)",
+                pointerEvents: "none",
+              }}
+            />
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 24,
+                position: "relative",
+                zIndex: 1,
               }}
             >
-              <button
-                onClick={() => setShowNew(false)}
+              <div
                 style={{
-                  background: "none",
-                  border: "none",
-                  color: "rgba(255,255,255,0.4)",
-                  fontSize: 12,
-                  cursor: "pointer",
-                  marginBottom: 18,
-                }}
-              >
-                ← Back
-              </button>
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 8, fontWeight: 500 }}>
-                Client / business name
-              </div>
-              <input
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                placeholder="e.g. Rosa's Bakery"
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: 12,
-                  padding: "12px 14px",
-                  color: "#fff",
-                  fontFamily: body,
-                  fontSize: 14,
-                  marginBottom: 16,
-                  outline: "none",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
-              />
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 8, fontWeight: 500 }}>
-                Describe the business & what the site needs
-              </div>
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={4}
-                placeholder="a family-owned bakery in Austin, warm and rustic feel, needs a menu section and hours..."
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: 12,
-                  padding: "12px 14px",
-                  color: "#fff",
-                  fontFamily: body,
-                  fontSize: 14,
-                  resize: "none",
-                  outline: "none",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
-              />
-              <button
-                onClick={generate}
-                disabled={busy || !clientName.trim() || !prompt.trim()}
-                style={{
-                  width: "100%",
-                  marginTop: 18,
-                  background: busy ? "rgba(255,255,255,0.08)" : accent,
-                  color: busy ? "rgba(255,255,255,0.4)" : "#0A0A10",
-                  border: "none",
-                  borderRadius: 12,
-                  padding: "13px 10px",
                   fontFamily: display,
                   fontWeight: 700,
-                  fontSize: 13,
-                  cursor: busy ? "default" : "pointer",
-                  boxShadow: busy ? "none" : "0 6px 20px rgba(139,92,246,0.3)",
+                  fontSize: 32,
+                  marginBottom: 10,
+                  textAlign: "center",
                 }}
               >
-                {busy ? "Generating…" : "Generate site"}
-              </button>
-              {error && (
-                <div
+                What client are we building for?
+              </div>
+              <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 36, textAlign: "center" }}>
+                Describe the business, generate a full site in seconds.
+              </div>
+
+              <div
+                style={{
+                  width: "100%",
+                  maxWidth: 620,
+                  borderRadius: 20,
+                  padding: 22,
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  backdropFilter: "blur(20px)",
+                  boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+                }}
+              >
+                <input
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="Client / business name — e.g. Rosa's Bakery"
                   style={{
-                    fontSize: 12,
-                    color: "#FCA5A5",
-                    background: "rgba(220,38,38,0.1)",
-                    border: "1px solid rgba(220,38,38,0.25)",
-                    borderRadius: 10,
-                    padding: "10px 14px",
-                    marginTop: 12,
+                    width: "100%",
+                    boxSizing: "border-box",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 12,
+                    padding: "13px 16px",
+                    color: "#fff",
+                    fontFamily: body,
+                    fontSize: 14,
+                    marginBottom: 12,
+                    outline: "none",
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
+                  onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
+                />
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  rows={4}
+                  placeholder="Describe the business & what the site needs — vibe, sections, key info..."
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 12,
+                    padding: "13px 16px",
+                    color: "#fff",
+                    fontFamily: body,
+                    fontSize: 14,
+                    resize: "none",
+                    outline: "none",
+                    marginBottom: 14,
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
+                  onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
+                />
+                <button
+                  onClick={generate}
+                  disabled={busy || !clientName.trim() || !prompt.trim()}
+                  style={{
+                    width: "100%",
+                    background: busy ? "rgba(255,255,255,0.08)" : accent,
+                    color: busy ? "rgba(255,255,255,0.4)" : "#0A0A10",
+                    border: "none",
+                    borderRadius: 12,
+                    padding: "14px 10px",
+                    fontFamily: display,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: busy ? "default" : "pointer",
+                    boxShadow: busy ? "none" : "0 6px 20px rgba(139,92,246,0.3)",
                   }}
                 >
-                  {error}
-                </div>
-              )}
+                  {busy ? "Generating…" : "Generate site →"}
+                </button>
+                {error && (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#FCA5A5",
+                      background: "rgba(220,38,38,0.1)",
+                      border: "1px solid rgba(220,38,38,0.25)",
+                      borderRadius: 10,
+                      padding: "10px 14px",
+                      marginTop: 12,
+                    }}
+                  >
+                    {error}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </>
         )}
 
-        {!showNew && !active && (
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "rgba(255,255,255,0.25)",
-              fontSize: 13,
-            }}
-          >
-            Select a client site, or create a new one
-          </div>
-        )}
-
-        {!showNew && active && (
+        {active && (
           <>
             <div
               style={{
@@ -348,9 +314,7 @@ export default function DashboardClient({ initialProjects }) {
                 borderBottom: "1px solid rgba(255,255,255,0.08)",
               }}
             >
-              <span style={{ fontSize: 14, fontFamily: display, fontWeight: 600 }}>
-                {active.client_name}
-              </span>
+              <span style={{ fontSize: 14, fontFamily: display, fontWeight: 600 }}>{active.client_name}</span>
               <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 3 }}>
                 <button
                   onClick={() => setView("preview")}
@@ -386,16 +350,7 @@ export default function DashboardClient({ initialProjects }) {
             </div>
             <div style={{ flex: 1, background: "#0A0A10", minHeight: 0 }}>
               {active.status === "generating" && (
-                <div
-                  style={{
-                    height: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 13,
-                    color: "rgba(255,255,255,0.4)",
-                  }}
-                >
+                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
                   Generating…
                 </div>
               )}
@@ -408,17 +363,7 @@ export default function DashboardClient({ initialProjects }) {
                 />
               )}
               {active.status === "done" && view === "code" && (
-                <pre
-                  style={{
-                    height: "100%",
-                    overflow: "auto",
-                    padding: 20,
-                    fontSize: 12,
-                    color: "rgba(255,255,255,0.7)",
-                    whiteSpace: "pre-wrap",
-                    fontFamily: "monospace",
-                  }}
-                >
+                <pre style={{ height: "100%", overflow: "auto", padding: 20, fontSize: 12, color: "rgba(255,255,255,0.7)", whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
                   {active.code}
                 </pre>
               )}
