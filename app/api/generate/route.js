@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 
+// Give this function up to 60 seconds — larger site generations can
+// take a while, and the default timeout is shorter than that.
+export const maxDuration = 60;
+
 export async function POST(req) {
   const supabase = createClient();
   const {
@@ -16,6 +20,7 @@ export async function POST(req) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });
   }
 
+  // Create the row first so the dashboard can show a "generating" state
   const { data: project, error: insertError } = await supabase
     .from("projects")
     .insert({
@@ -54,7 +59,8 @@ Rules:
 - Output ONLY raw HTML, no markdown fences, no explanation.
 - All CSS in <style>, all JS in <script>, inline, one file, no external dependencies (Google Fonts <link> is fine).
 - Real, polished design with real copy for this specific business — not lorem ipsum.
-- Include a clear hero, a services/about section, and a contact section at minimum.`,
+- Include a clear hero, a services/about section, and a contact section at minimum.
+- Keep CSS efficient and avoid unnecessary repetition, so the full page always finishes within the response.`,
           },
         ],
       }),
@@ -90,6 +96,7 @@ Rules:
       .from("projects")
       .update({ status: "error" })
       .eq("id", project.id);
+    // Temporarily returning the real error message so we can debug.
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
