@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 
@@ -12,10 +12,16 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const saved = window.localStorage.getItem("siteforge_email");
+    if (saved) setEmail(saved);
+  }, []);
+
   async function sendCode(e) {
     e.preventDefault();
     setError("");
     setLoading(true);
+    window.localStorage.setItem("siteforge_email", email);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -48,59 +54,71 @@ export default function Login() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#000",
+        background: "#0A0A10",
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {/* faint grid background */}
+      {/* glowing gradient orb */}
       <div
         style={{
           position: "absolute",
-          inset: 0,
-          backgroundImage:
-            "linear-gradient(#111 1px, transparent 1px), linear-gradient(90deg, #111 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-          maskImage:
-            "radial-gradient(ellipse at center, black 0%, transparent 75%)",
-          WebkitMaskImage:
-            "radial-gradient(ellipse at center, black 0%, transparent 75%)",
+          top: "-20%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 900,
+          height: 900,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle, rgba(139,92,246,0.35) 0%, rgba(34,211,238,0.12) 45%, transparent 70%)",
+          filter: "blur(40px)",
+          pointerEvents: "none",
         }}
       />
 
       <form
         onSubmit={sent ? verifyCode : sendCode}
         style={{
-          width: 360,
-          border: "1px solid #fff",
-          padding: "36px 32px",
-          background: "#000",
+          width: 380,
+          borderRadius: 20,
+          padding: "40px 36px",
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          backdropFilter: "blur(20px)",
           position: "relative",
           zIndex: 1,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
         }}
       >
         <div
           style={{
             fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: 22,
+            fontSize: 26,
             fontWeight: 700,
             color: "#fff",
-            marginBottom: 4,
+            marginBottom: 6,
             letterSpacing: "-0.02em",
           }}
         >
-          site<span style={{ opacity: 0.4 }}>forge</span>
+          site
+          <span
+            style={{
+              background: "linear-gradient(90deg, #8B5CF6, #22D3EE)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            forge
+          </span>
         </div>
         <div
           style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 11,
-            color: "#666",
-            marginBottom: 28,
-            letterSpacing: "0.05em",
+            fontSize: 13,
+            color: "rgba(255,255,255,0.45)",
+            marginBottom: 30,
           }}
         >
-          {sent ? "// verify identity" : "// authenticate to continue"}
+          {sent ? "Enter the code we sent you" : "Sign in to your dashboard"}
         </div>
 
         {sent ? (
@@ -108,60 +126,58 @@ export default function Login() {
             <label
               style={{
                 display: "block",
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 10,
-                color: "#999",
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
+                fontSize: 12,
+                color: "rgba(255,255,255,0.5)",
                 marginBottom: 8,
+                fontWeight: 500,
               }}
             >
-              6-digit code sent to {email}
+              Code sent to {email}
             </label>
             <input
               type="text"
               inputMode="numeric"
               required
               autoFocus
-              placeholder="000000"
+              placeholder="Enter code"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               style={{
                 width: "100%",
                 boxSizing: "border-box",
-                background: "#000",
-                border: "1px solid #333",
-                borderRadius: 0,
-                padding: "12px 14px",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 12,
+                padding: "13px 16px",
                 color: "#fff",
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 20,
-                letterSpacing: "0.3em",
-                marginBottom: 16,
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 16,
+                letterSpacing: "0.15em",
+                marginBottom: 18,
                 outline: "none",
+                transition: "border-color 0.2s",
               }}
-              onFocus={(e) => (e.target.style.borderColor = "#fff")}
-              onBlur={(e) => (e.target.style.borderColor = "#333")}
+              onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
+              onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
             />
             <button
               type="submit"
               disabled={loading}
               style={{
                 width: "100%",
-                background: "#fff",
-                color: "#000",
+                background: "linear-gradient(90deg, #8B5CF6, #22D3EE)",
+                color: "#0A0A10",
                 border: "none",
-                borderRadius: 0,
-                padding: "13px 10px",
+                borderRadius: 12,
+                padding: "14px 10px",
                 fontFamily: "'Space Grotesk', sans-serif",
                 fontWeight: 700,
-                fontSize: 13,
-                letterSpacing: "0.03em",
-                textTransform: "uppercase",
+                fontSize: 14,
                 cursor: "pointer",
+                boxShadow: "0 8px 24px rgba(139,92,246,0.35)",
               }}
             >
-              {loading ? "verifying..." : "verify →"}
+              {loading ? "Verifying..." : "Verify & sign in"}
             </button>
           </>
         ) : (
@@ -169,15 +185,13 @@ export default function Login() {
             <label
               style={{
                 display: "block",
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 10,
-                color: "#999",
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
+                fontSize: 12,
+                color: "rgba(255,255,255,0.5)",
                 marginBottom: 8,
+                fontWeight: 500,
               }}
             >
-              email
+              Email
             </label>
             <input
               type="email"
@@ -189,54 +203,54 @@ export default function Login() {
               style={{
                 width: "100%",
                 boxSizing: "border-box",
-                background: "#000",
-                border: "1px solid #333",
-                borderRadius: 0,
-                padding: "12px 14px",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 12,
+                padding: "13px 16px",
                 color: "#fff",
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 13,
-                marginBottom: 16,
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 14,
+                marginBottom: 18,
                 outline: "none",
+                transition: "border-color 0.2s",
               }}
-              onFocus={(e) => (e.target.style.borderColor = "#fff")}
-              onBlur={(e) => (e.target.style.borderColor = "#333")}
+              onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
+              onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
             />
             <button
               type="submit"
               disabled={loading}
               style={{
                 width: "100%",
-                background: "#fff",
-                color: "#000",
+                background: "linear-gradient(90deg, #8B5CF6, #22D3EE)",
+                color: "#0A0A10",
                 border: "none",
-                borderRadius: 0,
-                padding: "13px 10px",
+                borderRadius: 12,
+                padding: "14px 10px",
                 fontFamily: "'Space Grotesk', sans-serif",
                 fontWeight: 700,
-                fontSize: 13,
-                letterSpacing: "0.03em",
-                textTransform: "uppercase",
+                fontSize: 14,
                 cursor: "pointer",
+                boxShadow: "0 8px 24px rgba(139,92,246,0.35)",
               }}
             >
-              {loading ? "sending..." : "send code →"}
+              {loading ? "Sending..." : "Send login code"}
             </button>
           </>
         )}
         {error && (
           <div
             style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 11,
-              color: "#fff",
-              background: "#1a1a1a",
-              border: "1px solid #333",
-              padding: "8px 10px",
+              fontSize: 12,
+              color: "#FCA5A5",
+              background: "rgba(220,38,38,0.1)",
+              border: "1px solid rgba(220,38,38,0.25)",
+              borderRadius: 10,
+              padding: "10px 14px",
               marginTop: 14,
             }}
           >
-            ! {error}
+            {error}
           </div>
         )}
       </form>
