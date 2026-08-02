@@ -15,6 +15,7 @@ export default function DashboardClient({ initialProjects }) {
   const [error, setError] = useState("");
 
   const active = projects.find((p) => p.id === activeId);
+  const accent = "linear-gradient(90deg, #8B5CF6, #22D3EE)";
 
   useEffect(() => {
     const hasGenerating = projects.some((p) => p.status === "generating");
@@ -69,81 +70,88 @@ export default function DashboardClient({ initialProjects }) {
     window.location.href = "/login";
   }
 
-  const mono = "'JetBrains Mono', monospace";
   const display = "'Space Grotesk', sans-serif";
+  const body = "'Inter', sans-serif";
 
   return (
     <div
       style={{
         height: "100vh",
         display: "flex",
-        color: "#fff",
-        background: "#000",
-        fontFamily: mono,
+        color: "#F2F0FA",
+        background: "#0A0A10",
+        fontFamily: body,
       }}
     >
       <div
         style={{
-          width: 290,
-          borderRight: "1px solid #fff",
+          width: 300,
+          borderRight: "1px solid rgba(255,255,255,0.08)",
           display: "flex",
           flexDirection: "column",
+          background: "rgba(255,255,255,0.015)",
         }}
       >
         <div
           style={{
-            padding: "16px 18px",
-            borderBottom: "1px solid #333",
+            padding: "18px 20px",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
           }}
         >
-          <span style={{ fontFamily: display, fontWeight: 700, fontSize: 16, letterSpacing: "-0.02em" }}>
-            site<span style={{ opacity: 0.4 }}>forge</span>
+          <span style={{ fontFamily: display, fontWeight: 700, fontSize: 17 }}>
+            site
+            <span
+              style={{
+                background: accent,
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              forge
+            </span>
           </span>
           <button
             onClick={signOut}
             style={{
               background: "none",
               border: "none",
-              color: "#666",
-              fontSize: 10,
-              letterSpacing: "0.05em",
-              textTransform: "uppercase",
+              color: "rgba(255,255,255,0.4)",
+              fontSize: 12,
               cursor: "pointer",
             }}
           >
-            sign out
+            Sign out
           </button>
         </div>
 
-        <div style={{ padding: 14 }}>
+        <div style={{ padding: 16 }}>
           <button
             onClick={() => setShowNew(true)}
             style={{
               width: "100%",
-              background: "#fff",
-              color: "#000",
+              background: accent,
+              color: "#0A0A10",
               border: "none",
-              borderRadius: 0,
-              padding: "11px 10px",
+              borderRadius: 12,
+              padding: "12px 10px",
               fontFamily: display,
               fontWeight: 700,
-              fontSize: 12,
-              letterSpacing: "0.03em",
-              textTransform: "uppercase",
+              fontSize: 13,
               cursor: "pointer",
+              boxShadow: "0 6px 20px rgba(139,92,246,0.3)",
             }}
           >
-            + new client site
+            + New client site
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 10px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 12px" }}>
           {projects.length === 0 && (
-            <div style={{ fontSize: 11, color: "#555", padding: 10, letterSpacing: "0.02em" }}>
-              no client sites yet.
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", padding: 12 }}>
+              No client sites yet.
             </div>
           )}
           {projects.map((p) => (
@@ -152,37 +160,48 @@ export default function DashboardClient({ initialProjects }) {
               onClick={() => setActiveId(p.id)}
               style={{
                 cursor: "pointer",
-                padding: "10px 12px",
-                borderRadius: 0,
-                marginBottom: 6,
-                fontSize: 12,
-                border: p.id === activeId ? "1px solid #fff" : "1px solid #262626",
-                background: p.id === activeId ? "#111" : "transparent",
+                padding: "12px 14px",
+                borderRadius: 12,
+                marginBottom: 8,
+                fontSize: 13,
+                border:
+                  p.id === activeId
+                    ? "1px solid rgba(139,92,246,0.5)"
+                    : "1px solid rgba(255,255,255,0.06)",
+                background:
+                  p.id === activeId ? "rgba(139,92,246,0.08)" : "transparent",
+                transition: "all 0.15s",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#fff" }}>{p.client_name}</span>
+                <span style={{ fontWeight: 500 }}>{p.client_name}</span>
                 <span
                   onClick={(e) => {
                     e.stopPropagation();
                     removeProject(p.id);
                   }}
-                  style={{ color: "#555", fontSize: 10 }}
+                  style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}
                 >
                   ✕
                 </span>
               </div>
-              <div style={{ fontSize: 10, marginTop: 4, letterSpacing: "0.05em" }}>
-                {p.status === "generating" && <span style={{ color: "#999" }}>◐ generating</span>}
-                {p.status === "done" && <span style={{ color: "#fff" }}>● live</span>}
-                {p.status === "error" && <span style={{ color: "#666" }}>● failed</span>}
+              <div style={{ fontSize: 11, marginTop: 4 }}>
+                {p.status === "generating" && (
+                  <span style={{ color: "#22D3EE" }}>● generating</span>
+                )}
+                {p.status === "done" && (
+                  <span style={{ color: "#4ADE80" }}>● live</span>
+                )}
+                {p.status === "error" && (
+                  <span style={{ color: "#F87171" }}>● failed</span>
+                )}
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>
         {showNew && (
           <div
             style={{
@@ -196,11 +215,12 @@ export default function DashboardClient({ initialProjects }) {
             <div
               style={{
                 width: "100%",
-                maxWidth: 440,
-                border: "1px solid #fff",
-                borderRadius: 0,
-                padding: 24,
-                background: "#000",
+                maxWidth: 460,
+                borderRadius: 20,
+                padding: 28,
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                backdropFilter: "blur(20px)",
               }}
             >
               <button
@@ -208,17 +228,16 @@ export default function DashboardClient({ initialProjects }) {
                 style={{
                   background: "none",
                   border: "none",
-                  color: "#999",
-                  fontSize: 11,
+                  color: "rgba(255,255,255,0.4)",
+                  fontSize: 12,
                   cursor: "pointer",
                   marginBottom: 18,
-                  letterSpacing: "0.03em",
                 }}
               >
-                ← back
+                ← Back
               </button>
-              <div style={{ fontSize: 10, color: "#999", marginBottom: 8, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                client / business name
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 8, fontWeight: 500 }}>
+                Client / business name
               </div>
               <input
                 value={clientName}
@@ -227,21 +246,21 @@ export default function DashboardClient({ initialProjects }) {
                 style={{
                   width: "100%",
                   boxSizing: "border-box",
-                  background: "#000",
-                  border: "1px solid #333",
-                  borderRadius: 0,
-                  padding: "10px 12px",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 12,
+                  padding: "12px 14px",
                   color: "#fff",
-                  fontFamily: mono,
-                  fontSize: 12,
+                  fontFamily: body,
+                  fontSize: 14,
                   marginBottom: 16,
                   outline: "none",
                 }}
-                onFocus={(e) => (e.target.style.borderColor = "#fff")}
-                onBlur={(e) => (e.target.style.borderColor = "#333")}
+                onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
+                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
               />
-              <div style={{ fontSize: 10, color: "#999", marginBottom: 8, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                describe the business & what the site needs
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 8, fontWeight: 500 }}>
+                Describe the business & what the site needs
               </div>
               <textarea
                 value={prompt}
@@ -251,52 +270,52 @@ export default function DashboardClient({ initialProjects }) {
                 style={{
                   width: "100%",
                   boxSizing: "border-box",
-                  background: "#000",
-                  border: "1px solid #333",
-                  borderRadius: 0,
-                  padding: "10px 12px",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 12,
+                  padding: "12px 14px",
                   color: "#fff",
-                  fontFamily: mono,
-                  fontSize: 12,
+                  fontFamily: body,
+                  fontSize: 14,
                   resize: "none",
                   outline: "none",
                 }}
-                onFocus={(e) => (e.target.style.borderColor = "#fff")}
-                onBlur={(e) => (e.target.style.borderColor = "#333")}
+                onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
+                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
               />
               <button
                 onClick={generate}
                 disabled={busy || !clientName.trim() || !prompt.trim()}
                 style={{
                   width: "100%",
-                  marginTop: 16,
-                  background: busy ? "#1a1a1a" : "#fff",
-                  color: busy ? "#666" : "#000",
-                  border: busy ? "1px solid #333" : "none",
-                  borderRadius: 0,
-                  padding: "12px 10px",
+                  marginTop: 18,
+                  background: busy ? "rgba(255,255,255,0.08)" : accent,
+                  color: busy ? "rgba(255,255,255,0.4)" : "#0A0A10",
+                  border: "none",
+                  borderRadius: 12,
+                  padding: "13px 10px",
                   fontFamily: display,
                   fontWeight: 700,
-                  fontSize: 12,
-                  letterSpacing: "0.03em",
-                  textTransform: "uppercase",
+                  fontSize: 13,
                   cursor: busy ? "default" : "pointer",
+                  boxShadow: busy ? "none" : "0 6px 20px rgba(139,92,246,0.3)",
                 }}
               >
-                {busy ? "generating…" : "generate site →"}
+                {busy ? "Generating…" : "Generate site"}
               </button>
               {error && (
                 <div
                   style={{
-                    fontSize: 11,
-                    color: "#fff",
-                    background: "#1a1a1a",
-                    border: "1px solid #333",
-                    padding: "8px 10px",
-                    marginTop: 10,
+                    fontSize: 12,
+                    color: "#FCA5A5",
+                    background: "rgba(220,38,38,0.1)",
+                    border: "1px solid rgba(220,38,38,0.25)",
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    marginTop: 12,
                   }}
                 >
-                  ! {error}
+                  {error}
                 </div>
               )}
             </div>
@@ -310,12 +329,11 @@ export default function DashboardClient({ initialProjects }) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#444",
-              fontSize: 12,
-              letterSpacing: "0.02em",
+              color: "rgba(255,255,255,0.25)",
+              fontSize: 13,
             }}
           >
-            select a client site, or create a new one
+            Select a client site, or create a new one
           </div>
         )}
 
@@ -326,50 +344,47 @@ export default function DashboardClient({ initialProjects }) {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                padding: "14px 18px",
-                borderBottom: "1px solid #333",
+                padding: "16px 20px",
+                borderBottom: "1px solid rgba(255,255,255,0.08)",
               }}
             >
-              <span style={{ fontSize: 12, fontFamily: display, fontWeight: 600 }}>
+              <span style={{ fontSize: 14, fontFamily: display, fontWeight: 600 }}>
                 {active.client_name}
               </span>
-              <div style={{ display: "flex", gap: 2 }}>
+              <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 3 }}>
                 <button
                   onClick={() => setView("preview")}
                   style={{
-                    background: view === "preview" ? "#fff" : "none",
-                    color: view === "preview" ? "#000" : "#999",
-                    border: "1px solid #333",
-                    fontSize: 11,
-                    padding: "5px 12px",
-                    borderRadius: 0,
+                    background: view === "preview" ? "rgba(255,255,255,0.1)" : "none",
+                    border: "none",
+                    color: "#F2F0FA",
+                    fontSize: 12,
+                    padding: "6px 14px",
+                    borderRadius: 8,
                     cursor: "pointer",
-                    letterSpacing: "0.03em",
-                    textTransform: "uppercase",
+                    fontWeight: 500,
                   }}
                 >
-                  preview
+                  Preview
                 </button>
                 <button
                   onClick={() => setView("code")}
                   style={{
-                    background: view === "code" ? "#fff" : "none",
-                    color: view === "code" ? "#000" : "#999",
-                    border: "1px solid #333",
-                    borderLeft: "none",
-                    fontSize: 11,
-                    padding: "5px 12px",
-                    borderRadius: 0,
+                    background: view === "code" ? "rgba(255,255,255,0.1)" : "none",
+                    border: "none",
+                    color: "#F2F0FA",
+                    fontSize: 12,
+                    padding: "6px 14px",
+                    borderRadius: 8,
                     cursor: "pointer",
-                    letterSpacing: "0.03em",
-                    textTransform: "uppercase",
+                    fontWeight: 500,
                   }}
                 >
-                  code
+                  Code
                 </button>
               </div>
             </div>
-            <div style={{ flex: 1, background: "#0a0a0a", minHeight: 0 }}>
+            <div style={{ flex: 1, background: "#0A0A10", minHeight: 0 }}>
               {active.status === "generating" && (
                 <div
                   style={{
@@ -377,12 +392,11 @@ export default function DashboardClient({ initialProjects }) {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: 12,
-                    color: "#999",
-                    letterSpacing: "0.05em",
+                    fontSize: 13,
+                    color: "rgba(255,255,255,0.4)",
                   }}
                 >
-                  generating…
+                  Generating…
                 </div>
               )}
               {active.status === "done" && view === "preview" && (
@@ -398,11 +412,11 @@ export default function DashboardClient({ initialProjects }) {
                   style={{
                     height: "100%",
                     overflow: "auto",
-                    padding: 18,
-                    fontSize: 11,
-                    color: "#ccc",
+                    padding: 20,
+                    fontSize: 12,
+                    color: "rgba(255,255,255,0.7)",
                     whiteSpace: "pre-wrap",
-                    fontFamily: mono,
+                    fontFamily: "monospace",
                   }}
                 >
                   {active.code}
