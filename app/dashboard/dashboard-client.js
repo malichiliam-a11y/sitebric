@@ -59,6 +59,48 @@ export default function DashboardClient({ initialProjects }) {
     }
   }
 
+  const [domainInput, setDomainInput] = useState("");
+  const [domainBusy, setDomainBusy] = useState(false);
+  const [domainError, setDomainError] = useState("");
+
+  async function connectDomain(project) {
+    if (!domainInput.trim()) return;
+    setDomainBusy(true);
+    setDomainError("");
+    try {
+      const res = await fetch("/api/connect-domain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id, domain: domainInput.trim() }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "failed");
+
+      const { data } = await supabase
+        .from("projects")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (data) setProjects(data);
+      setDomainInput("");
+    } catch (err) {
+      setDomainError(err.message);
+    } finally {
+      setDomainBusy(false);
+    }
+  }
+
+  async function togglePublish(project) {
+    const { data } = await supabase
+      .from("projects")
+      .update({ published: !project.published })
+      .eq("id", project.id)
+      .select()
+      .single();
+    if (data) {
+      setProjects((prev) => prev.map((p) => (p.id === data.id ? data : p)));
+    }
+  }
+
   async function removeProject(id) {
     await supabase.from("projects").delete().eq("id", id);
     setProjects((p) => p.filter((x) => x.id !== id));
@@ -315,6 +357,36 @@ export default function DashboardClient({ initialProjects }) {
               }}
             >
               <span style={{ fontSize: 14, fontFamily: display, fontWeight: 600 }}>{active.client_name}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {active.published && (
+                  <a
+                    href={`/s/${active.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: 12, color: "#22D3EE", textDecoration: "none" }}
+                  >
+                    View live link →
+                  </a>
+                )}
+                <button
+                  onClick={() => togglePublish(active)}
+                  disabled={active.status !== "done"}
+                  style={{
+                    background: active.published ? "rgba(255,255,255,0.08)" : accent,
+                    color: active.published ? "#F2F0FA" : "#0A0A10",
+                    border: active.published ? "1px solid rgba(255,255,255,0.15)" : "none",
+                    borderRadius: 8,
+                    padding: "6px 14px",
+                    fontFamily: display,
+                    fontWeight: 700,
+                    fontSize: 12,
+                    cursor: active.status !== "done" ? "default" : "pointer",
+                    opacity: active.status !== "done" ? 0.4 : 1,
+                  }}
+                >
+                  {active.published ? "Unpublish" : "Publish"}
+                </button>
+              </div>
               <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 3 }}>
                 <button
                   onClick={() => setView("preview")}
@@ -348,6 +420,62 @@ export default function DashboardClient({ initialProjects }) {
                 </button>
               </div>
             </div>
+            {active.published && (
+              <div
+                style={{
+                  padding: "10px 20px",
+                  borderBottom: "1px solid rgba(255,255,255,0.08)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                {active.custom_domain ? (
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+                    Connected domain: <span style={{ color: "#22D3EE" }}>{active.custom_domain}</span>
+                  </span>
+                ) : (
+                  <>
+                    <input
+                      value={domainInput}
+                      onChange={(e) => setDomainInput(e.target.value)}
+                      placeholder="clientswebsite.com"
+                      style={{
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        borderRadius: 8,
+                        padding: "6px 10px",
+                        color: "#fff",
+                        fontFamily: body,
+                        fontSize: 12,
+                        outline: "none",
+                        width: 220,
+                      }}
+                    />
+                    <button
+                      onClick={() => connectDomain(active)}
+                      disabled={domainBusy || !domainInput.trim()}
+                      style={{
+                        background: "rgba(255,255,255,0.08)",
+                        color: "#F2F0FA",
+                        border: "1px solid rgba(255,255,255,0.15)",
+                        borderRadius: 8,
+                        padding: "6px 14px",
+                        fontFamily: display,
+                        fontWeight: 700,
+                        fontSize: 12,
+                        cursor: domainBusy ? "default" : "pointer",
+                      }}
+                    >
+                      {domainBusy ? "Connecting…" : "Connect domain"}
+                    </button>
+                    {domainError && (
+                      <span style={{ fontSize: 11, color: "#FCA5A5" }}>{domainError}</span>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
             <div style={{ flex: 1, background: "#0A0A10", minHeight: 0 }}>
               {active.status === "generating" && (
                 <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
