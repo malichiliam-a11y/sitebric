@@ -4,9 +4,31 @@ import { useState } from "react";
 
 export default function Pricing() {
   const [hovered, setHovered] = useState(null);
+  const [loadingPlan, setLoadingPlan] = useState(null);
   const accent = "linear-gradient(90deg, #8B5CF6, #22D3EE)";
   const display = "'Space Grotesk', sans-serif";
   const body = "'Inter', sans-serif";
+
+  async function subscribe(planId) {
+    setLoadingPlan(planId);
+    try {
+      const res = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planId }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Something went wrong. Try again.");
+        setLoadingPlan(null);
+      }
+    } catch (err) {
+      alert("Something went wrong. Try again.");
+      setLoadingPlan(null);
+    }
+  }
 
   const tiers = [
     {
@@ -359,6 +381,8 @@ export default function Pricing() {
                   </ul>
 
                   <button
+                    onClick={() => subscribe(tier.id)}
+                    disabled={loadingPlan !== null}
                     style={{
                       width: "100%",
                       background: tier.featured ? accent : "rgba(255,255,255,0.06)",
@@ -369,7 +393,8 @@ export default function Pricing() {
                       fontFamily: display,
                       fontWeight: 700,
                       fontSize: 14,
-                      cursor: "pointer",
+                      cursor: loadingPlan !== null ? "default" : "pointer",
+                      opacity: loadingPlan !== null && loadingPlan !== tier.id ? 0.5 : 1,
                       transform: isHovered ? "scale(1.02)" : "scale(1)",
                       boxShadow: tier.featured
                         ? isHovered
@@ -379,7 +404,7 @@ export default function Pricing() {
                       transition: "transform 0.2s ease, box-shadow 0.2s ease",
                     }}
                   >
-                    {tier.cta}
+                    {loadingPlan === tier.id ? "Redirecting…" : tier.cta}
                   </button>
                 </div>
               </div>
