@@ -42,6 +42,7 @@ export async function POST(req) {
             stripe_customer_id: session.customer,
             stripe_subscription_id: session.subscription,
             generations_used: 0,
+            searches_used: 0,
           });
         }
         break;
@@ -54,7 +55,7 @@ export async function POST(req) {
 
         await supabaseAdmin
           .from("profiles")
-          .update({ generations_used: 0 })
+          .update({ generations_used: 0, searches_used: 0 })
           .eq("stripe_customer_id", customerId);
         break;
       }
