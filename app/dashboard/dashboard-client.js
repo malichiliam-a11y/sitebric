@@ -119,9 +119,35 @@ export default function DashboardClient({ initialProjects }) {
   }
 
   async function togglePublish(project) {
+    const updates = { published: !project.published };
+
+    // Generate a sitebric.com subdomain the first time a site is published.
+    if (!project.published && !project.slug) {
+      const base = project.client_name
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s]/g, "")
+        .replace(/\s+/g, "-")
+        .slice(0, 40) || "site";
+
+      let slug = base;
+      let attempt = 0;
+      while (attempt < 5) {
+        const { data: existing } = await supabase
+          .from("projects")
+          .select("id")
+          .eq("slug", slug)
+          .maybeSingle();
+        if (!existing) break;
+        attempt++;
+        slug = `${base}${Math.floor(100 + Math.random() * 900)}`;
+      }
+      updates.slug = slug;
+    }
+
     const { data } = await supabase
       .from("projects")
-      .update({ published: !project.published })
+      .update(updates)
       .eq("id", project.id)
       .select()
       .single();
@@ -520,8 +546,13 @@ export default function DashboardClient({ initialProjects }) {
               <span style={{ fontSize: 14, fontFamily: display, fontWeight: 600 }}>{active.client_name}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 {active.published && (
-                  <a href={`/s/${active.id}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#22D3EE", textDecoration: "none" }}>
-                    View live link →
+                  <a
+                    href={active.slug ? `https://${active.slug}.sitebric.com` : `/s/${active.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: 12, color: "#22D3EE", textDecoration: "none" }}
+                  >
+                    {active.slug ? `${active.slug}.sitebric.com` : "View live link"} →
                   </a>
                 )}
                 <button
