@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 
-// Serves a client's published site when their own domain points here.
+// Serves a client's published site — either from their own connected
+// custom domain, or from an auto-generated <slug>.sitebric.com subdomain.
 export async function GET(req) {
   const host = req.nextUrl.searchParams.get("host");
   const supabase = createClient();
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select("code, published, status")
-    .eq("custom_domain", host)
-    .single();
+  let query = supabase.from("projects").select("code, published, status");
+
+  if (host.endsWith(".sitebric.com")) {
+    const slug = host.replace(".sitebric.com", "");
+    query = query.eq("slug", slug);
+  } else {
+    query = query.eq("custom_domain", host);
+  }
+
+  const { data: project } = await query.single();
 
   if (!project || !project.published || project.status !== "done" || !project.code) {
     return new NextResponse(
