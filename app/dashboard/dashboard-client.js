@@ -31,7 +31,7 @@ export default function DashboardClient({ initialProjects }) {
     return () => clearInterval(interval);
   }, [projects, supabase]);
 
-  async function generate() {
+ async function generate() {
     if (!clientName.trim() || !prompt.trim()) return;
     setBusy(true);
     setError("");
@@ -42,8 +42,13 @@ export default function DashboardClient({ initialProjects }) {
         body: JSON.stringify({ clientName, prompt }),
       });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "failed");
 
+      if (res.status === 402) {
+        window.location.href = "/pricing";
+        return;
+      }
+
+      if (!res.ok) throw new Error(result.message || result.error || "failed");
       const { data } = await supabase
         .from("projects")
         .select("*")
