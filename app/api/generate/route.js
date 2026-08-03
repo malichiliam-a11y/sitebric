@@ -1,5 +1,15 @@
+
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+
+// Used only for the generations_used increment at the end — that write
+// needs to bypass RLS since users don't have update permission on their
+// own profile row (intentionally, so they can't tamper with their plan).
+const supabaseAdmin = createAdminClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 // Give this function up to 5 minutes — large site generations can
 // genuinely take a few minutes, and cutting it short leaves things
@@ -146,8 +156,9 @@ Rules:
     }
 
     // Only count it against their monthly limit once generation
-    // actually succeeds.
-    await supabase
+    // actually succeeds. Uses the admin client since users don't have
+    // update permission on their own profile row.
+    await supabaseAdmin
       .from("profiles")
       .update({ generations_used: profile.generations_used + 1 })
       .eq("id", user.id);
