@@ -37,18 +37,20 @@ export default function DashboardClient({ initialProjects }) {
   }
 
   useEffect(() => {
-    (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-      if (user) {
-        const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-        setProfile(data);
-      }
-    })();
+    loadProfile();
     loadBillingStatus();
   }, [supabase]);
+
+  async function loadProfile() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    setUser(user);
+    if (user) {
+      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+      setProfile(data);
+    }
+  }
 
   useEffect(() => {
     const hasGenerating = projects.some((p) => p.status === "generating");
@@ -90,6 +92,7 @@ export default function DashboardClient({ initialProjects }) {
       setActiveId(result.id);
       setClientName("");
       setPrompt("");
+      loadProfile();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -129,6 +132,7 @@ export default function DashboardClient({ initialProjects }) {
         .order("created_at", { ascending: false });
       if (data) setProjects(data);
       setEditInstruction("");
+      loadProfile();
     } catch (err) {
       setEditError(err.message);
     } finally {
