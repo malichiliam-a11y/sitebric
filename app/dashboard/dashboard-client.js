@@ -576,52 +576,39 @@ export default function DashboardClient({ initialProjects }) {
                 </button>
               </div>
             </div>
-            {active.published && (
-              <div style={{ padding: "10px 20px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", gap: 10 }}>
+         {active.published && (
+              <div
+                style={{
+                  padding: "14px 20px",
+                  borderBottom: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
                 {active.custom_domain ? (
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
-                    Connected domain: <span style={{ color: "#22D3EE" }}>{active.custom_domain}</span>
-                  </span>
-                ) : (
-                  <>
-                    <input
-                      value={domainInput}
-                      onChange={(e) => setDomainInput(e.target.value)}
-                      placeholder="clientswebsite.com"
+                  <div>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+                      Connected domain: <span style={{ color: "#22D3EE" }}>{active.custom_domain}</span>
+                    </span>
+                    <div
                       style={{
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        borderRadius: 8,
-                        padding: "6px 10px",
-                        color: "#fff",
-                        fontFamily: body,
+                        marginTop: 10,
                         fontSize: 12,
-                        outline: "none",
-                        width: 220,
-                      }}
-                    />
-                    <button
-                      onClick={() => connectDomain(active)}
-                      disabled={domainBusy || !domainInput.trim()}
-                      style={{
-                        background: "rgba(255,255,255,0.08)",
-                        color: "#F2F0FA",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        borderRadius: 8,
-                        padding: "6px 14px",
-                        fontFamily: display,
-                        fontWeight: 700,
-                        fontSize: 12,
-                        cursor: domainBusy ? "default" : "pointer",
+                        lineHeight: 1.6,
+                        color: "#C4B5FD",
+                        background: "rgba(139,92,246,0.08)",
+                        border: "1px solid rgba(139,92,246,0.15)",
+                        borderRadius: 10,
+                        padding: "12px 14px",
+                        maxWidth: 520,
                       }}
                     >
-                      {domainBusy ? "Connecting…" : "Connect domain"}
-                    </button>
-                    {domainError && <span style={{ fontSize: 11, color: "#FCA5A5" }}>{domainError}</span>}
-                  </>
-                )}
-              </div>
-            )}
+                      <strong style={{ display: "block", marginBottom: 6, color: "#F2F0FA" }}>
+                        One more step — point the domain here
+                      </strong>
+                      Log into wherever <code>{active.custom_domain}</code> was purchased (Namecheap,
+                      GoDaddy, etc.), find its DNS or nameserver settings, and set the nameservers to:
+                      <div
+                        style={{
+                          marginTop: 8,
             <div style={{ flex: 1, background: "#0A0A10", minHeight: 0 }}>
               {active.status === "generating" && (
                 <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
