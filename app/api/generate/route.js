@@ -6,6 +6,12 @@ import { createClient } from "@/lib/supabase-server";
 // stuck on "generating" with no error ever being recorded.
 export const maxDuration = 300;
 
+const LIMITS = {
+  starter: { sites: 5, generations: 10 },
+  growth: { sites: 20, generations: 40 },
+  pro: { sites: 100, generations: 150 },
+};
+
 export async function POST(req) {
   const supabase = createClient();
   const {
@@ -14,6 +20,47 @@ export async function POST(req) {
 
   if (!user) {
     return NextResponse.json({ error: "not authenticated" }, { status: 401 });
+  }
+
+  // ---- Plan + usage check ----
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan, generations_used")
+    .eq("id", user.id)
+    .single();
+
+  const plan = profile?.plan;
+  if (!plan || plan === "none") {
+    return NextResponse.json(
+      { error: "no_plan", message: "Subscribe to a plan to generate sites." },
+      { status: 402 }
+    );
+  }
+
+  const limit = LIMITS[plan];
+  if (profile.generations_used >= limit.generations) {
+    return NextResponse.json(
+      {
+        error: "generation_limit",
+        message: `You've used all ${limit.generations} generations for this month. Upgrade for more.`,
+      },
+      { status: 402 }
+    );
+  }
+
+  const { count: siteCount } = await supabase
+    .from("projects")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  if (siteCount >= limit.sites) {
+    return NextResponse.json(
+      {
+        error: "site_limit",
+        message: `You've reached your ${limit.sites}-site limit for this plan. Upgrade for more.`,
+      },
+      { status: 402 }
+    );
   }
 
   const { clientName, prompt } = await req.json();
@@ -96,6 +143,13 @@ Rules:
       console.error("Failed to save generated site:", updateError.message);
       throw new Error(`Failed to save site: ${updateError.message}`);
     }
+
+    // Only count it against their monthly limit once generation
+    // actually succeeds.
+    await supabase
+      .from("profiles")
+      .update({ generations_used: profile.generations_used + 1 })
+      .eq("id", user.id);
 
     return NextResponse.json({ id: project.id, status: "done" });
   } catch (err) {
