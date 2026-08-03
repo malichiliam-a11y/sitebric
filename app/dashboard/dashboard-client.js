@@ -91,6 +91,42 @@ export default function DashboardClient({ initialProjects }) {
   const [domainInput, setDomainInput] = useState("");
   const [domainBusy, setDomainBusy] = useState(false);
   const [domainError, setDomainError] = useState("");
+  const [editInstruction, setEditInstruction] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
+  const [editError, setEditError] = useState("");
+
+  async function editSite() {
+    if (!editInstruction.trim() || !active) return;
+    setEditBusy(true);
+    setEditError("");
+    try {
+      const res = await fetch("/api/edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: active.id, instruction: editInstruction }),
+      });
+      const result = await res.json();
+
+      if (res.status === 402) {
+        window.location.href = "/pricing";
+        return;
+      }
+
+      if (!res.ok) throw new Error(result.message || result.error || "failed");
+
+      const { data } = await supabase
+        .from("projects")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (data) setProjects(data);
+      setEditInstruction("");
+    } catch (err) {
+      setEditError(err.message);
+    } finally {
+      setEditBusy(false);
+    }
+  }
+
 
   async function connectDomain(project) {
     if (!domainInput.trim()) return;
@@ -739,6 +775,60 @@ export default function DashboardClient({ initialProjects }) {
                 </pre>
               )}
             </div>
+            {active.status === "done" && (
+              <div
+                style={{
+                  padding: "14px 20px",
+                  borderTop: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(255,255,255,0.015)",
+                }}
+              >
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <input
+                    value={editInstruction}
+                    onChange={(e) => setEditInstruction(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !editBusy) editSite();
+                    }}
+                    placeholder="Describe a change — e.g. 'make the hero image a plumber instead' or 'add a testimonials section'"
+                    style={{
+                      flex: 1,
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: 10,
+                      padding: "11px 14px",
+                      color: "#fff",
+                      fontFamily: body,
+                      fontSize: 13,
+                      outline: "none",
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
+                    onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
+                  />
+                  <button
+                    onClick={editSite}
+                    disabled={editBusy || !editInstruction.trim()}
+                    style={{
+                      background: editBusy ? "rgba(255,255,255,0.08)" : accent,
+                      color: editBusy ? "rgba(255,255,255,0.4)" : "#0A0A10",
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "11px 20px",
+                      fontFamily: display,
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: editBusy ? "default" : "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {editBusy ? "Applying…" : "Apply edit"}
+                  </button>
+                </div>
+                {editError && (
+                  <div style={{ fontSize: 12, color: "#FCA5A5", marginTop: 8 }}>{editError}</div>
+                )}
+              </div>
+            )}
           </>
         )}
 
