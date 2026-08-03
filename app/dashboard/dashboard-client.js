@@ -27,6 +27,14 @@ export default function DashboardClient({ initialProjects }) {
   const accent = "linear-gradient(90deg, #8B5CF6, #22D3EE)";
   const display = "'Space Grotesk', sans-serif";
   const body = "'Inter', sans-serif";
+  const [billingStatus, setBillingStatus] = useState(null);
+  const [cancelBusy, setCancelBusy] = useState(false);
+
+  async function loadBillingStatus() {
+    const res = await fetch("/api/billing-status");
+    const data = await res.json();
+    setBillingStatus(data);
+  }
 
   useEffect(() => {
     (async () => {
@@ -39,6 +47,7 @@ export default function DashboardClient({ initialProjects }) {
         setProfile(data);
       }
     })();
+    loadBillingStatus();
   }, [supabase]);
 
   useEffect(() => {
@@ -904,9 +913,124 @@ export default function DashboardClient({ initialProjects }) {
               </div>
             </div>
 
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
-              Generation usage resets at the start of each billing cycle. Manage or cancel your subscription anytime from your Stripe receipt email.
+            {billingStatus?.cancelAtPeriodEnd && (
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "#FCD34D",
+                  background: "rgba(217,119,6,0.1)",
+                  border: "1px solid rgba(217,119,6,0.25)",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  marginBottom: 16,
+                }}
+              >
+                Your subscription is set to cancel on{" "}
+                {billingStatus.currentPeriodEnd
+                  ? new Date(billingStatus.currentPeriodEnd * 1000).toLocaleDateString()
+                  : "the end of this billing period"}
+                . You'll keep full access until then.
+              </div>
+            )}
+
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+              <button
+                onClick={async () => {
+                  const res = await fetch("/api/billing-portal", { method: "POST" });
+                  const result = await res.json();
+                  if (result.url) {
+                    window.location.href = result.url;
+                  } else {
+                    alert(result.error || "Couldn't open billing portal.");
+                  }
+                }}
+                disabled={currentPlan === "none"}
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  color: "#F2F0FA",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: 10,
+                  padding: "10px 18px",
+                  fontFamily: display,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: currentPlan === "none" ? "default" : "pointer",
+                  opacity: currentPlan === "none" ? 0.4 : 1,
+                }}
+              >
+                Manage billing
+              </button>
+
+              {currentPlan !== "none" && billingStatus?.hasSubscription && (
+                billingStatus.cancelAtPeriodEnd ? (
+                  <button
+                    onClick={async () => {
+                      setCancelBusy(true);
+                      const res = await fetch("/api/resume-subscription", { method: "POST" });
+                      if (res.ok) {
+                        await loadBillingStatus();
+                      } else {
+                        const result = await res.json();
+                        alert(result.error || "Couldn't resume subscription.");
+                      }
+                      setCancelBusy(false);
+                    }}
+                    disabled={cancelBusy}
+                    style={{
+                      background: accent,
+                      color: "#0A0A10",
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "10px 18px",
+                      fontFamily: display,
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: cancelBusy ? "default" : "pointer",
+                    }}
+                  >
+                    {cancelBusy ? "Resuming…" : "Resume subscription"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      const confirmed = window.confirm(
+                        "Cancel your subscription? You'll keep access until the end of your current billing period, then your plan will end."
+                      );
+                      if (!confirmed) return;
+                      setCancelBusy(true);
+                      const res = await fetch("/api/cancel-subscription", { method: "POST" });
+                      if (res.ok) {
+                        await loadBillingStatus();
+                      } else {
+                        const result = await res.json();
+                        alert(result.error || "Couldn't cancel subscription.");
+                      }
+                      setCancelBusy(false);
+                    }}
+                    disabled={cancelBusy}
+                    style={{
+                      background: "rgba(239,68,68,0.1)",
+                      color: "#F87171",
+                      border: "1px solid rgba(239,68,68,0.3)",
+                      borderRadius: 10,
+                      padding: "10px 18px",
+                      fontFamily: display,
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: cancelBusy ? "default" : "pointer",
+                    }}
+                  >
+                    {cancelBusy ? "Cancelling…" : "Cancel subscription"}
+                  </button>
+                )
+              )}
             </div>
+
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
+              Generation usage resets at the start of each billing cycle. Use "Manage billing" to update your card or
+              view invoices, or use "Cancel subscription" to cancel directly — no need to leave the dashboard.
+            </div>
+
           </div>
         )}
 
