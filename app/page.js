@@ -69,8 +69,8 @@ export default function Home() {
       type: "email",
     });
     setLoading(false);
-    if (error) setError(error.message);
-    else router.push("/dashboard");
+   if (error) setError(error.message);
+    else window.location.href = "/dashboard";
   }
 
   const inputStyle = {
