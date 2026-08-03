@@ -827,7 +827,21 @@ export default function DashboardClient({ initialProjects }) {
                 Deleting your account removes all client sites permanently. This can't be undone.
               </div>
               <button
-                onClick={() => alert("Account deletion isn't wired up yet — for now, email support to request this.")}
+                onClick={async () => {
+                  const confirmed = window.confirm(
+                    "Delete your account? This permanently removes every client site and can't be undone."
+                  );
+                  if (!confirmed) return;
+
+                  const res = await fetch("/api/delete-account", { method: "POST" });
+                  if (res.ok) {
+                    await supabase.auth.signOut();
+                    window.location.href = "/";
+                  } else {
+                    const result = await res.json();
+                    alert(result.error || "Something went wrong deleting your account.");
+                  }
+                }}
                 style={{
                   background: "rgba(239,68,68,0.1)",
                   color: "#F87171",
