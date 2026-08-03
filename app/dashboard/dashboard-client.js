@@ -576,7 +576,7 @@ export default function DashboardClient({ initialProjects }) {
                 </button>
               </div>
             </div>
-         {active.published && (
+            {active.published && (
               <div
                 style={{
                   padding: "14px 20px",
@@ -609,6 +609,81 @@ export default function DashboardClient({ initialProjects }) {
                       <div
                         style={{
                           marginTop: 8,
+                          fontFamily: "monospace",
+                          fontSize: 12,
+                          background: "rgba(0,0,0,0.25)",
+                          borderRadius: 6,
+                          padding: "8px 10px",
+                        }}
+                      >
+                        ns1.vercel-dns.com
+                        <br />
+                        ns2.vercel-dns.com
+                      </div>
+                      <div style={{ marginTop: 8, color: "rgba(255,255,255,0.5)" }}>
+                        This can take anywhere from a few minutes to a few hours to take effect. Once it
+                        does, the domain will start showing this site automatically.
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <input
+                        value={domainInput}
+                        onChange={(e) => setDomainInput(e.target.value)}
+                        placeholder="clientswebsite.com"
+                        style={{
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: 8,
+                          padding: "6px 10px",
+                          color: "#fff",
+                          fontFamily: body,
+                          fontSize: 12,
+                          outline: "none",
+                          width: 220,
+                        }}
+                      />
+                      <button
+                        onClick={() => connectDomain(active)}
+                        disabled={domainBusy || !domainInput.trim()}
+                        style={{
+                          background: "rgba(255,255,255,0.08)",
+                          color: "#F2F0FA",
+                          border: "1px solid rgba(255,255,255,0.15)",
+                          borderRadius: 8,
+                          padding: "6px 14px",
+                          fontFamily: display,
+                          fontWeight: 700,
+                          fontSize: 12,
+                          cursor: domainBusy ? "default" : "pointer",
+                        }}
+                      >
+                        {domainBusy ? "Connecting…" : "Connect domain"}
+                      </button>
+                      {domainError && (
+                        <span style={{ fontSize: 11, color: "#FCA5A5" }}>{domainError}</span>
+                      )}
+                    </div>
+                    <a
+                      href="https://www.namecheap.com/domains/registration/results/"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: "inline-block",
+                        marginTop: 8,
+                        fontSize: 11,
+                        color: "rgba(255,255,255,0.4)",
+                        textDecoration: "none",
+                      }}
+                    >
+                      Don't have a domain yet? Search for one on Namecheap →
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
             <div style={{ flex: 1, background: "#0A0A10", minHeight: 0 }}>
               {active.status === "generating" && (
                 <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
@@ -814,21 +889,7 @@ export default function DashboardClient({ initialProjects }) {
                 Deleting your account removes all client sites permanently. This can't be undone.
               </div>
               <button
-                onClick={async () => {
-                  const confirmed = window.confirm(
-                    "Delete your account? This permanently removes every client site and can't be undone."
-                  );
-                  if (!confirmed) return;
-
-                  const res = await fetch("/api/delete-account", { method: "POST" });
-                  if (res.ok) {
-                    await supabase.auth.signOut();
-                    window.location.href = "/";
-                  } else {
-                    const result = await res.json();
-                    alert(result.error || "Something went wrong deleting your account.");
-                  }
-                }}
+                onClick={() => alert("Account deletion isn't wired up yet — for now, email support to request this.")}
                 style={{
                   background: "rgba(239,68,68,0.1)",
                   color: "#F87171",
