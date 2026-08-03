@@ -110,6 +110,51 @@ export default function DashboardClient({ initialProjects }) {
   const [editInstruction, setEditInstruction] = useState("");
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState("");
+  const [leadLocation, setLeadLocation] = useState("");
+  const [leadCategory, setLeadCategory] = useState("");
+  const [leadResults, setLeadResults] = useState(null);
+  const [leadBusy, setLeadBusy] = useState(false);
+  const [leadError, setLeadError] = useState("");
+
+  async function findLeads() {
+    if (!leadLocation.trim() || !leadCategory.trim()) return;
+    setLeadBusy(true);
+    setLeadError("");
+    setLeadResults(null);
+    try {
+      const res = await fetch("/api/find-leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ location: leadLocation, category: leadCategory }),
+      });
+      const result = await res.json();
+
+      if (res.status === 402) {
+        setLeadError(result.message);
+        return;
+      }
+
+      if (!res.ok) throw new Error(result.message || result.error || "failed");
+
+      setLeadResults(result.leads);
+      loadProfile();
+    } catch (err) {
+      setLeadError(err.message);
+    } finally {
+      setLeadBusy(false);
+    }
+  }
+
+  function generateForLead(lead) {
+    setTab("sites");
+    setActiveId(null);
+    setClientName(lead.name);
+    setPrompt(
+      `${lead.name} is a local business${lead.address ? ` located at ${lead.address}` : ""}${
+        lead.phone ? `, phone ${lead.phone}` : ""
+      }. Build them a professional website that fits their industry.`
+    );
+  }
 
   async function editSite() {
     if (!editInstruction.trim() || !active) return;
@@ -233,6 +278,7 @@ export default function DashboardClient({ initialProjects }) {
 
   const navItems = [
     { id: "sites", label: "Sites" },
+    { id: "leads", label: "Find Leads" },
     { id: "billing", label: "Billing" },
     { id: "profile", label: "Profile" },
     { id: "settings", label: "Settings" },
@@ -847,6 +893,135 @@ export default function DashboardClient({ initialProjects }) {
               </div>
             )}
           </>
+        )}
+
+        {/* ===== BILLING TAB ===== */}
+        {/* ===== FIND LEADS TAB ===== */}
+        {tab === "leads" && (
+          <div style={{ padding: "48px 40px", maxWidth: 760, overflowY: "auto" }}>
+            <div style={{ fontFamily: display, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>Find Leads</div>
+            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 32 }}>
+              Search for local businesses with no website — instant client leads.
+            </div>
+
+            <div
+              style={{
+                borderRadius: 16,
+                padding: 22,
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                marginBottom: 24,
+              }}
+            >
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <input
+                  value={leadCategory}
+                  onChange={(e) => setLeadCategory(e.target.value)}
+                  placeholder="Business type — e.g. locksmith"
+                  style={{
+                    flex: "1 1 200px",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                    color: "#fff",
+                    fontFamily: body,
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
+                <input
+                  value={leadLocation}
+                  onChange={(e) => setLeadLocation(e.target.value)}
+                  placeholder="City — e.g. Austin, TX"
+                  style={{
+                    flex: "1 1 200px",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                    color: "#fff",
+                    fontFamily: body,
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
+                <button
+                  onClick={findLeads}
+                  disabled={leadBusy || !leadCategory.trim() || !leadLocation.trim()}
+                  style={{
+                    background: leadBusy ? "rgba(255,255,255,0.08)" : accent,
+                    color: leadBusy ? "rgba(255,255,255,0.4)" : "#0A0A10",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "12px 22px",
+                    fontFamily: display,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: leadBusy ? "default" : "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {leadBusy ? "Searching…" : "Search"}
+                </button>
+              </div>
+              {leadError && (
+                <div style={{ fontSize: 12, color: "#FCA5A5", marginTop: 12 }}>{leadError}</div>
+              )}
+            </div>
+
+            {leadResults && leadResults.length === 0 && (
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
+                No websiteless businesses found for that search — try a different city or category.
+              </div>
+            )}
+
+            {leadResults && leadResults.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {leadResults.map((lead) => (
+                  <div
+                    key={lead.id}
+                    style={{
+                      borderRadius: 14,
+                      padding: "16px 18px",
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 16,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{lead.name}</div>
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>
+                        {lead.address}
+                        {lead.phone && ` · ${lead.phone}`}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => generateForLead(lead)}
+                      style={{
+                        background: accent,
+                        color: "#0A0A10",
+                        border: "none",
+                        borderRadius: 8,
+                        padding: "8px 16px",
+                        fontFamily: display,
+                        fontWeight: 700,
+                        fontSize: 12,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Generate site →
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* ===== BILLING TAB ===== */}
