@@ -78,6 +78,10 @@ export default function DashboardClient({ initialProjects }) {
       const result = await res.json();
 
       if (res.status === 402) {
+        if (result.error === "site_limit") {
+          setError(result.message + " Delete an existing site to free up a slot, or upgrade your plan.");
+          return;
+        }
         window.location.href = "/pricing";
         return;
       }
