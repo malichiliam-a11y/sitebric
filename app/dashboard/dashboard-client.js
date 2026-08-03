@@ -3,8 +3,16 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase-browser";
 
+const PLAN_LIMITS = {
+  none: { sites: 0, generations: 0, label: "No plan" },
+  starter: { sites: 5, generations: 10, label: "Starter" },
+  growth: { sites: 20, generations: 40, label: "Growth" },
+  pro: { sites: 100, generations: 150, label: "Pro" },
+};
+
 export default function DashboardClient({ initialProjects }) {
   const supabase = createClient();
+  const [tab, setTab] = useState("sites");
   const [projects, setProjects] = useState(initialProjects);
   const [activeId, setActiveId] = useState(null);
   const [view, setView] = useState("preview");
@@ -12,11 +20,26 @@ export default function DashboardClient({ initialProjects }) {
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
 
   const active = projects.find((p) => p.id === activeId);
   const accent = "linear-gradient(90deg, #8B5CF6, #22D3EE)";
   const display = "'Space Grotesk', sans-serif";
   const body = "'Inter', sans-serif";
+
+  useEffect(() => {
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+      if (user) {
+        const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+        setProfile(data);
+      }
+    })();
+  }, [supabase]);
 
   useEffect(() => {
     const hasGenerating = projects.some((p) => p.status === "generating");
@@ -31,7 +54,7 @@ export default function DashboardClient({ initialProjects }) {
     return () => clearInterval(interval);
   }, [projects, supabase]);
 
- async function generate() {
+  async function generate() {
     if (!clientName.trim() || !prompt.trim()) return;
     setBusy(true);
     setError("");
@@ -49,6 +72,7 @@ export default function DashboardClient({ initialProjects }) {
       }
 
       if (!res.ok) throw new Error(result.message || result.error || "failed");
+
       const { data } = await supabase
         .from("projects")
         .select("*")
@@ -117,8 +141,69 @@ export default function DashboardClient({ initialProjects }) {
     window.location.href = "/login";
   }
 
+  const statusMeta = {
+    generating: { color: "#22D3EE", label: "generating" },
+    done: { color: "#4ADE80", label: "live" },
+    error: { color: "#F87171", label: "failed" },
+  };
+
+  const currentPlan = profile?.plan || "none";
+  const limits = PLAN_LIMITS[currentPlan] || PLAN_LIMITS.none;
+  const sitesUsed = projects.length;
+  const gensUsed = profile?.generations_used || 0;
+
+  const navItems = [
+    { id: "sites", label: "Sites" },
+    { id: "billing", label: "Billing" },
+    { id: "profile", label: "Profile" },
+    { id: "settings", label: "Settings" },
+  ];
+
   return (
-    <div style={{ height: "100vh", display: "flex", color: "#F2F0FA", background: "#0A0A10", fontFamily: body }}>
+    <div style={{ height: "100vh", display: "flex", color: "#F2F0FA", background: "#0A0A10", fontFamily: body, position: "relative" }}>
+      <style>{`
+        @keyframes sbDashDrift1 {
+          0%   { transform: translate(-50%, 0) scale(1); }
+          50%  { transform: translate(-42%, 8%) scale(1.15); }
+          100% { transform: translate(-50%, 0) scale(1); }
+        }
+        @keyframes sbDashDrift2 {
+          0%   { transform: translate(0, 0) scale(1); opacity: 0.4; }
+          50%  { transform: translate(10%, -8%) scale(1.2); opacity: 0.65; }
+          100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+        }
+        .sb-dash-ambient { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+        .sb-dash-orb { position: absolute; border-radius: 50%; filter: blur(60px); }
+        .sb-dash-orb-a {
+          top: -30%; left: 50%; width: 1100px; height: 1100px;
+          background: radial-gradient(circle, rgba(139,92,246,0.26) 0%, rgba(34,211,238,0.12) 45%, transparent 70%);
+          animation: sbDashDrift1 12s ease-in-out infinite;
+        }
+        .sb-dash-orb-b {
+          bottom: -20%; right: -10%; width: 700px; height: 700px;
+          background: radial-gradient(circle, rgba(34,211,238,0.18) 0%, transparent 70%);
+          animation: sbDashDrift2 15s ease-in-out infinite;
+        }
+        .sb-project-card {
+          transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+          cursor: pointer;
+        }
+        .sb-project-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 16px 36px rgba(139,92,246,0.18);
+          border-color: rgba(139,92,246,0.35);
+        }
+        .sb-sidebar-item {
+          transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .sb-nav-tab {
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .sb-dash-orb-a, .sb-dash-orb-b { animation: none; }
+        }
+      `}</style>
+
       <div
         style={{
           width: 300,
@@ -149,108 +234,125 @@ export default function DashboardClient({ initialProjects }) {
           </button>
         </div>
 
-        <div style={{ padding: 16 }}>
-          <button
-            onClick={() => setActiveId(null)}
-            style={{
-              width: "100%",
-              background: accent,
-              color: "#0A0A10",
-              border: "none",
-              borderRadius: 12,
-              padding: "12px 10px",
-              fontFamily: display,
-              fontWeight: 700,
-              fontSize: 13,
-              cursor: "pointer",
-              boxShadow: "0 6px 20px rgba(139,92,246,0.3)",
-            }}
-          >
-            + New client site
-          </button>
-        </div>
-
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 12px" }}>
-          {projects.length === 0 && (
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", padding: 12 }}>No client sites yet.</div>
-          )}
-          {projects.map((p) => (
-            <div
-              key={p.id}
-              onClick={() => setActiveId(p.id)}
+        {/* ===== TAB NAV ===== */}
+        <div style={{ display: "flex", flexDirection: "column", padding: "12px 12px 0" }}>
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                setTab(item.id);
+                setActiveId(null);
+              }}
+              className="sb-nav-tab"
               style={{
-                cursor: "pointer",
-                padding: "12px 14px",
-                borderRadius: 12,
-                marginBottom: 8,
+                textAlign: "left",
+                background: tab === item.id ? "rgba(139,92,246,0.1)" : "transparent",
+                color: tab === item.id ? "#F2F0FA" : "rgba(255,255,255,0.5)",
+                border: "none",
+                borderRadius: 10,
+                padding: "10px 12px",
                 fontSize: 13,
-                border: p.id === activeId ? "1px solid rgba(139,92,246,0.5)" : "1px solid rgba(255,255,255,0.06)",
-                background: p.id === activeId ? "rgba(139,92,246,0.08)" : "transparent",
-                transition: "all 0.15s",
+                fontWeight: 600,
+                fontFamily: display,
+                cursor: "pointer",
+                marginBottom: 4,
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontWeight: 500 }}>{p.client_name}</span>
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeProject(p.id);
-                  }}
-                  style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}
-                >
-                  ✕
-                </span>
-              </div>
-              <div style={{ fontSize: 11, marginTop: 4 }}>
-                {p.status === "generating" && <span style={{ color: "#22D3EE" }}>● generating</span>}
-                {p.status === "done" && <span style={{ color: "#4ADE80" }}>● live</span>}
-                {p.status === "error" && <span style={{ color: "#F87171" }}>● failed</span>}
-              </div>
-            </div>
+              {item.label}
+            </button>
           ))}
         </div>
+
+        {tab === "sites" && (
+          <>
+            <div style={{ padding: 16 }}>
+              <button
+                onClick={() => setActiveId(null)}
+                style={{
+                  width: "100%",
+                  background: accent,
+                  color: "#0A0A10",
+                  border: "none",
+                  borderRadius: 12,
+                  padding: "12px 10px",
+                  fontFamily: display,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  boxShadow: "0 6px 20px rgba(139,92,246,0.3)",
+                }}
+              >
+                + New client site
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 12px" }}>
+              {projects.length === 0 && (
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", padding: 12 }}>No client sites yet.</div>
+              )}
+              {projects.map((p) => {
+                const meta = statusMeta[p.status] || statusMeta.generating;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => setActiveId(p.id)}
+                    className="sb-sidebar-item"
+                    style={{
+                      cursor: "pointer",
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      marginBottom: 8,
+                      fontSize: 13,
+                      border: p.id === activeId ? "1px solid rgba(139,92,246,0.5)" : "1px solid rgba(255,255,255,0.06)",
+                      background: p.id === activeId ? "rgba(139,92,246,0.08)" : "transparent",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontWeight: 500 }}>{p.client_name}</span>
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeProject(p.id);
+                        }}
+                        style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}
+                      >
+                        ✕
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, marginTop: 4, color: meta.color }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: meta.color, boxShadow: `0 0 5px ${meta.color}` }} />
+                      {meta.label}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
-        {!active && (
+
+        {/* ===== SITES TAB ===== */}
+        {tab === "sites" && !active && (
           <>
-            {/* glowing gradient background, like a hero */}
-            <div
-              style={{
-                position: "absolute",
-                top: "-30%",
-                left: "50%",
-                transform: "translateX(-50%)",
-                width: 1100,
-                height: 1100,
-                borderRadius: "50%",
-                background:
-                  "radial-gradient(circle, rgba(139,92,246,0.28) 0%, rgba(34,211,238,0.12) 45%, transparent 70%)",
-                filter: "blur(50px)",
-                pointerEvents: "none",
-              }}
-            />
+            <div className="sb-dash-ambient">
+              <div className="sb-dash-orb sb-dash-orb-a" />
+              <div className="sb-dash-orb sb-dash-orb-b" />
+            </div>
             <div
               style={{
                 flex: 1,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                justifyContent: "center",
-                padding: 24,
+                padding: "56px 24px",
                 position: "relative",
                 zIndex: 1,
+                overflowY: "auto",
               }}
             >
-              <div
-                style={{
-                  fontFamily: display,
-                  fontWeight: 700,
-                  fontSize: 32,
-                  marginBottom: 10,
-                  textAlign: "center",
-                }}
-              >
+              <div style={{ fontFamily: display, fontWeight: 700, fontSize: 32, marginBottom: 10, textAlign: "center" }}>
                 What client are we building for?
               </div>
               <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 36, textAlign: "center" }}>
@@ -267,6 +369,7 @@ export default function DashboardClient({ initialProjects }) {
                   border: "1px solid rgba(255,255,255,0.1)",
                   backdropFilter: "blur(20px)",
                   boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+                  marginBottom: 60,
                 }}
               >
                 <input
@@ -346,11 +449,64 @@ export default function DashboardClient({ initialProjects }) {
                   </div>
                 )}
               </div>
+
+              {projects.length > 0 && (
+                <div style={{ width: "100%", maxWidth: 1000 }}>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 16, fontWeight: 500 }}>
+                    Your client sites
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 18 }}>
+                    {projects.map((p) => {
+                      const meta = statusMeta[p.status] || statusMeta.generating;
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => setActiveId(p.id)}
+                          className="sb-project-card"
+                          style={{
+                            borderRadius: 16,
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            background: "rgba(255,255,255,0.03)",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: 100,
+                              background:
+                                p.status === "done"
+                                  ? "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(34,211,238,0.15))"
+                                  : "rgba(255,255,255,0.03)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontFamily: display,
+                              fontWeight: 700,
+                              fontSize: 22,
+                              color: "rgba(255,255,255,0.15)",
+                            }}
+                          >
+                            {p.client_name.slice(0, 1).toUpperCase()}
+                          </div>
+                          <div style={{ padding: "12px 14px" }}>
+                            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>{p.client_name}</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: meta.color }}>
+                              <span style={{ width: 6, height: 6, borderRadius: "50%", background: meta.color, boxShadow: `0 0 5px ${meta.color}` }} />
+                              {meta.label}
+                              {p.published && <span style={{ color: "rgba(255,255,255,0.3)" }}>· published</span>}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
 
-        {active && (
+        {tab === "sites" && active && (
           <>
             <div
               style={{
@@ -364,12 +520,7 @@ export default function DashboardClient({ initialProjects }) {
               <span style={{ fontSize: 14, fontFamily: display, fontWeight: 600 }}>{active.client_name}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 {active.published && (
-                  <a
-                    href={`/s/${active.id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ fontSize: 12, color: "#22D3EE", textDecoration: "none" }}
-                  >
+                  <a href={`/s/${active.id}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#22D3EE", textDecoration: "none" }}>
                     View live link →
                   </a>
                 )}
@@ -426,15 +577,7 @@ export default function DashboardClient({ initialProjects }) {
               </div>
             </div>
             {active.published && (
-              <div
-                style={{
-                  padding: "10px 20px",
-                  borderBottom: "1px solid rgba(255,255,255,0.08)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
+              <div style={{ padding: "10px 20px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", gap: 10 }}>
                 {active.custom_domain ? (
                   <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
                     Connected domain: <span style={{ color: "#22D3EE" }}>{active.custom_domain}</span>
@@ -474,9 +617,7 @@ export default function DashboardClient({ initialProjects }) {
                     >
                       {domainBusy ? "Connecting…" : "Connect domain"}
                     </button>
-                    {domainError && (
-                      <span style={{ fontSize: 11, color: "#FCA5A5" }}>{domainError}</span>
-                    )}
+                    {domainError && <span style={{ fontSize: 11, color: "#FCA5A5" }}>{domainError}</span>}
                   </>
                 )}
               </div>
@@ -502,6 +643,207 @@ export default function DashboardClient({ initialProjects }) {
               )}
             </div>
           </>
+        )}
+
+        {/* ===== BILLING TAB ===== */}
+        {tab === "billing" && (
+          <div style={{ padding: "48px 40px", maxWidth: 640, overflowY: "auto" }}>
+            <div style={{ fontFamily: display, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>Billing</div>
+            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 32 }}>
+              Your current plan and usage for this billing cycle.
+            </div>
+
+            <div
+              style={{
+                borderRadius: 16,
+                padding: 24,
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>Current plan</div>
+                  <div style={{ fontFamily: display, fontWeight: 700, fontSize: 20 }}>{limits.label}</div>
+                </div>
+                <a
+                  href="/pricing"
+                  style={{
+                    background: accent,
+                    color: "#0A0A10",
+                    fontFamily: display,
+                    fontWeight: 700,
+                    fontSize: 13,
+                    padding: "10px 18px",
+                    borderRadius: 10,
+                    textDecoration: "none",
+                  }}
+                >
+                  {currentPlan === "none" ? "Choose a plan" : "Change plan"}
+                </a>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
+                  <span style={{ color: "rgba(255,255,255,0.5)" }}>Client sites</span>
+                  <span>{sitesUsed} / {limits.sites}</span>
+                </div>
+                <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${limits.sites ? Math.min(100, (sitesUsed / limits.sites) * 100) : 0}%`,
+                      height: "100%",
+                      background: accent,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
+                  <span style={{ color: "rgba(255,255,255,0.5)" }}>Generations this month</span>
+                  <span>{gensUsed} / {limits.generations}</span>
+                </div>
+                <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${limits.generations ? Math.min(100, (gensUsed / limits.generations) * 100) : 0}%`,
+                      height: "100%",
+                      background: accent,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
+              Generation usage resets at the start of each billing cycle. Manage or cancel your subscription anytime from your Stripe receipt email.
+            </div>
+          </div>
+        )}
+
+        {/* ===== PROFILE TAB ===== */}
+        {tab === "profile" && (
+          <div style={{ padding: "48px 40px", maxWidth: 640, overflowY: "auto" }}>
+            <div style={{ fontFamily: display, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>Profile</div>
+            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 32 }}>
+              Your account details.
+            </div>
+
+            <div
+              style={{
+                borderRadius: 16,
+                padding: 24,
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+                marginBottom: 20,
+              }}
+            >
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: "50%",
+                  background: accent,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: display,
+                  fontWeight: 700,
+                  fontSize: 18,
+                  color: "#0A0A10",
+                  flexShrink: 0,
+                }}
+              >
+                {user?.email ? user.email.slice(0, 1).toUpperCase() : "?"}
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{user?.email || "Loading..."}</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+                  Member since {user?.created_at ? new Date(user.created_at).toLocaleDateString() : "—"}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={signOut}
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                color: "#F2F0FA",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 10,
+                padding: "10px 18px",
+                fontFamily: display,
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+            >
+              Sign out
+            </button>
+          </div>
+        )}
+
+        {/* ===== SETTINGS TAB ===== */}
+        {tab === "settings" && (
+          <div style={{ padding: "48px 40px", maxWidth: 640, overflowY: "auto" }}>
+            <div style={{ fontFamily: display, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>Settings</div>
+            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 32 }}>
+              Account preferences.
+            </div>
+
+            <div
+              style={{
+                borderRadius: 16,
+                padding: 24,
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>Email</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 16 }}>
+                {user?.email || "—"}
+              </div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>
+                To change your login email, sign in with a different address next time — a new account isn't created if you've used it before.
+              </div>
+            </div>
+
+            <div
+              style={{
+                borderRadius: 16,
+                padding: 24,
+                background: "rgba(239,68,68,0.05)",
+                border: "1px solid rgba(239,68,68,0.2)",
+              }}
+            >
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6, color: "#F87171" }}>Danger zone</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 16 }}>
+                Deleting your account removes all client sites permanently. This can't be undone.
+              </div>
+              <button
+                onClick={() => alert("Account deletion isn't wired up yet — for now, email support to request this.")}
+                style={{
+                  background: "rgba(239,68,68,0.1)",
+                  color: "#F87171",
+                  border: "1px solid rgba(239,68,68,0.3)",
+                  borderRadius: 10,
+                  padding: "10px 18px",
+                  fontFamily: display,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                Delete account
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
