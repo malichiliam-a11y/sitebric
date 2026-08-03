@@ -703,9 +703,13 @@ export default function DashboardClient({ initialProjects }) {
                       rel="noreferrer"
                       style={{
                         display: "inline-block",
-                        marginTop: 8,
-                        fontSize: 11,
-                        color: "rgba(255,255,255,0.4)",
+                        marginTop: 10,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        fontFamily: display,
+                        background: accent,
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
                         textDecoration: "none",
                       }}
                     >
