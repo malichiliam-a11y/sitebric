@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+
+// Used only for the generations_used increment — bypasses RLS since
+// users don't have update permission on their own profile row.
+const supabaseAdmin = createAdminClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 export const maxDuration = 300;
 
@@ -111,7 +119,7 @@ Rules:
     if (!code) throw new Error("empty response from model");
 
     await supabase.from("projects").update({ code, status: "done" }).eq("id", projectId);
-    await supabase
+    await supabaseAdmin
       .from("profiles")
       .update({ generations_used: profile.generations_used + 1 })
       .eq("id", user.id);
@@ -119,6 +127,8 @@ Rules:
     return NextResponse.json({ status: "done" });
   } catch (err) {
     console.error("Edit failed:", err.message);
+    // Revert to "done" with the old code still intact rather than
+    // leaving it stuck on "generating" with the edit lost.
     await supabase.from("projects").update({ status: "done" }).eq("id", projectId);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
