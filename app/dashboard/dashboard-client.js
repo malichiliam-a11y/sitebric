@@ -115,6 +115,7 @@ export default function DashboardClient({ initialProjects }) {
   const [leadResults, setLeadResults] = useState(null);
   const [leadBusy, setLeadBusy] = useState(false);
   const [leadError, setLeadError] = useState("");
+  const [siteSearch, setSiteSearch] = useState("");
 
   async function findLeads() {
     if (!leadLocation.trim() || !leadCategory.trim()) return;
@@ -411,11 +412,43 @@ export default function DashboardClient({ initialProjects }) {
               </button>
             </div>
 
+            <div style={{ padding: "0 12px 10px" }}>
+              <input
+                value={siteSearch}
+                onChange={(e) => setSiteSearch(e.target.value)}
+                placeholder="Search your sites…"
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 10,
+                  padding: "8px 12px",
+                  color: "#fff",
+                  fontFamily: body,
+                  fontSize: 12,
+                  outline: "none",
+                }}
+              />
+            </div>
+
             <div style={{ flex: 1, overflowY: "auto", padding: "0 12px" }}>
               {projects.length === 0 && (
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", padding: 12 }}>No client sites yet.</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", padding: 12, lineHeight: 1.6 }}>
+                  No client sites yet — type a business name and description above, then hit "Generate site" to
+                  create your first one.
+                </div>
               )}
-              {projects.map((p) => {
+              {projects.length > 0 &&
+                projects.filter((p) => p.client_name.toLowerCase().includes(siteSearch.toLowerCase())).length ===
+                  0 && (
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", padding: 12 }}>
+                    No sites match "{siteSearch}".
+                  </div>
+                )}
+              {projects
+                .filter((p) => p.client_name.toLowerCase().includes(siteSearch.toLowerCase()))
+                .map((p) => {
                 const meta = statusMeta[p.status] || statusMeta.generating;
                 return (
                   <div
@@ -581,7 +614,9 @@ export default function DashboardClient({ initialProjects }) {
                     Your client sites
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 18 }}>
-                    {projects.map((p) => {
+                    {projects
+                      .filter((p) => p.client_name.toLowerCase().includes(siteSearch.toLowerCase()))
+                      .map((p) => {
                       const meta = statusMeta[p.status] || statusMeta.generating;
                       return (
                         <div
@@ -1331,6 +1366,24 @@ export default function DashboardClient({ initialProjects }) {
               </div>
               <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>
                 To change your login email, sign in with a different address next time — a new account isn't created if you've used it before.
+              </div>
+            </div>
+
+            <div
+              style={{
+                borderRadius: 16,
+                padding: 24,
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>Need help?</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 4 }}>
+                Questions, bugs, or feedback — reach out anytime at{" "}
+                <a href="mailto:supportsitebric@gmail.com" style={{ color: "#22D3EE" }}>
+                  supportsitebric@gmail.com
+                </a>
               </div>
             </div>
 
