@@ -15,6 +15,10 @@ const SEARCH_LIMITS = {
   pro: 150,
 };
 
+// Fetching up to 3 pages with required delays between them can take
+// several seconds — give it more room than the default timeout.
+export const maxDuration = 30;
+
 export async function POST(req) {
   const supabase = createClient();
   const {
@@ -56,31 +60,49 @@ export async function POST(req) {
   }
 
   try {
-    const placesRes = await fetch(
-      "https://places.googleapis.com/v1/places:searchText",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": process.env.GOOGLE_PLACES_API_KEY,
-          "X-Goog-FieldMask":
-            "places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.id,places.googleMapsUri",
-        },
-        body: JSON.stringify({
-          textQuery: `${category} in ${location}`,
-          maxResultCount: 20,
-        }),
+    let allPlaces = [];
+    let pageToken = null;
+    let pagesFetched = 0;
+
+    do {
+      const body = {
+        textQuery: `${category} in ${location}`,
+        maxResultCount: 20,
+      };
+      if (pageToken) body.pageToken = pageToken;
+
+      const placesRes = await fetch(
+        "https://places.googleapis.com/v1/places:searchText",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": process.env.GOOGLE_PLACES_API_KEY,
+            "X-Goog-FieldMask":
+              "places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.id,places.googleMapsUri,nextPageToken",
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      const data = await placesRes.json();
+
+      if (!placesRes.ok) {
+        throw new Error(data?.error?.message || "Google Places API error");
       }
-    );
 
-    const data = await placesRes.json();
+      allPlaces = allPlaces.concat(data.places || []);
+      pageToken = data.nextPageToken || null;
+      pagesFetched++;
 
-    if (!placesRes.ok) {
-      throw new Error(data?.error?.message || "Google Places API error");
-    }
+      // Google requires a short delay before a pageToken becomes valid.
+      if (pageToken && pagesFetched < 3) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    } while (pageToken && pagesFetched < 3);
 
     // Only keep businesses that have no website listed — those are the leads.
-    const leads = (data.places || [])
+    const leads = allPlaces
       .filter((p) => !p.websiteUri)
       .map((p) => ({
         id: p.id,
