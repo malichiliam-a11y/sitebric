@@ -34,7 +34,7 @@ export default function TermsPage() {
         </div>
 
         <div style={section}>
-          <div style={h2}>3. Subscriptions & billing</div>
+          <div style={h2}>3. Subscriptions and billing</div>
           <p style={p}>
             Sitebric is offered on paid monthly subscription plans, billed through Stripe. Plans include limits on
             client sites, AI generations, and lead searches as described on our Pricing page. Subscriptions renew
