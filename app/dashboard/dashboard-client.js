@@ -995,9 +995,30 @@ export default function DashboardClient({ initialProjects }) {
                   >
                     <div>
                       <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{lead.name}</div>
-                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 6 }}>
                         {lead.address}
-                        {lead.phone && ` · ${lead.phone}`}
+                      </div>
+                      <div style={{ display: "flex", gap: 14, fontSize: 12 }}>
+                        {lead.phone ? (
+                          <a
+                            href={`tel:${lead.phone.replace(/[^0-9+]/g, "")}`}
+                            style={{ color: "#22D3EE", textDecoration: "none" }}
+                          >
+                            📞 {lead.phone}
+                          </a>
+                        ) : (
+                          <span style={{ color: "rgba(255,255,255,0.3)" }}>No phone listed</span>
+                        )}
+                        {lead.mapsUrl && (
+                          <a
+                            href={lead.mapsUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: "#C4B5FD", textDecoration: "none" }}
+                          >
+                            View on Maps →
+                          </a>
+                        )}
                       </div>
                     </div>
                     <button
