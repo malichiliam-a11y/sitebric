@@ -898,7 +898,7 @@ export default function DashboardClient({ initialProjects }) {
         {/* ===== BILLING TAB ===== */}
         {/* ===== FIND LEADS TAB ===== */}
         {tab === "leads" && (
-          <div style={{ padding: "48px 40px", maxWidth: 760, overflowY: "auto" }}>
+          <div style={{ padding: "48px 40px", maxWidth: 1200, overflowY: "auto" }}>
             <div style={{ fontFamily: display, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>Find Leads</div>
             <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 32 }}>
               Search for local businesses with no website — instant client leads.
@@ -977,7 +977,13 @@ export default function DashboardClient({ initialProjects }) {
             )}
 
             {leadResults && leadResults.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+                  gap: 14,
+                }}
+              >
                 {leadResults.map((lead) => (
                   <div
                     key={lead.id}
@@ -987,18 +993,16 @@ export default function DashboardClient({ initialProjects }) {
                       background: "rgba(255,255,255,0.03)",
                       border: "1px solid rgba(255,255,255,0.08)",
                       display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 16,
-                      flexWrap: "wrap",
+                      flexDirection: "column",
+                      gap: 12,
                     }}
                   >
                     <div>
                       <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{lead.name}</div>
-                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 6 }}>
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 8 }}>
                         {lead.address}
                       </div>
-                      <div style={{ display: "flex", gap: 14, fontSize: 12 }}>
+                      <div style={{ display: "flex", gap: 14, fontSize: 12, flexWrap: "wrap" }}>
                         {lead.phone ? (
                           <a
                             href={`tel:${lead.phone.replace(/[^0-9+]/g, "")}`}
@@ -1024,11 +1028,12 @@ export default function DashboardClient({ initialProjects }) {
                     <button
                       onClick={() => generateForLead(lead)}
                       style={{
+                        width: "100%",
                         background: accent,
                         color: "#0A0A10",
                         border: "none",
                         borderRadius: 8,
-                        padding: "8px 16px",
+                        padding: "9px 16px",
                         fontFamily: display,
                         fontWeight: 700,
                         fontSize: 12,
