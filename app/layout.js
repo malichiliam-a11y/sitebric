@@ -1,4 +1,4 @@
-
+import { Analytics } from "@vercel/analytics/react";
 export const metadata = {
   title: "sitebric",
   description: "Generate client websites with AI",
@@ -23,7 +23,8 @@ export default function RootLayout({ children }) {
           color: "#F2F0FA",
         }}
       >
-        {children}
+       {children}
+        <Analytics />
       </body>
     </html>
   );
