@@ -64,7 +64,7 @@ export async function POST(req) {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": process.env.GOOGLE_PLACES_API_KEY,
           "X-Goog-FieldMask":
-            "places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.id",
+            "places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.id,places.googleMapsUri",
         },
         body: JSON.stringify({
           textQuery: `${category} in ${location}`,
@@ -87,6 +87,7 @@ export async function POST(req) {
         name: p.displayName?.text || "Unknown business",
         address: p.formattedAddress || "",
         phone: p.nationalPhoneNumber || "",
+        mapsUrl: p.googleMapsUri || "",
       }));
 
     await supabaseAdmin
