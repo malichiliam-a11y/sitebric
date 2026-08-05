@@ -1,4 +1,4 @@
-# SiteForge — setup steps
+# SiteBric — setup steps
 
 ## 1. Run the database setup
 - Open your Supabase project → SQL Editor → New query
