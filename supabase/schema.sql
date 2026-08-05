@@ -52,6 +52,9 @@ create policy "Users can delete their own projects"
 -- Public routes (app/s/[id] and the custom-domain handler) serve a
 -- published project's HTML to anonymous visitors, so published sites
 -- need to be readable without a session.
+-- The first name below is what an earlier setup used; dropping both
+-- keeps a re-run from leaving two policies that do the same thing.
+drop policy if exists "Anyone can view published sites" on projects;
 drop policy if exists "Anyone can view published projects" on projects;
 create policy "Anyone can view published projects"
   on projects for select
