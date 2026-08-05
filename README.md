@@ -76,8 +76,13 @@ portal, and the fourth downgrades on cancellation.
 **Billing portal** — Settings → Billing → Customer portal. Turn on plan
 switching if you want customers to upgrade themselves.
 
-✅ Check: subscribe with test card `4242 4242 4242 4242`, then confirm
-your `profiles` row shows the new plan.
+✅ Check: subscribe, then confirm your `profiles` row shows the new plan
+and its `stripe_customer_id` matches the customer in Stripe.
+
+> This project currently runs in **live mode** — live keys, live price
+> ids, live webhook. Test cards like `4242 4242 4242 4242` are rejected
+> in live mode, so either use a real card and refund yourself, or switch
+> the secret key *and* the price ids to test mode together.
 
 ---
 
