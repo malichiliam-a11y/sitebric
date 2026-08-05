@@ -284,6 +284,7 @@ export default function DashboardClient({ initialProjects }) {
   const limits = PLAN_LIMITS[currentPlan] || PLAN_LIMITS.none;
   const sitesUsed = projects.length;
   const gensUsed = profile?.generations_used || 0;
+  const searchesUsedBilling = profile?.searches_used || 0;
 
   const navItems = [
     { id: "sites", label: "Sites", icon: "◆" },
@@ -1188,6 +1189,22 @@ export default function DashboardClient({ initialProjects }) {
                   <div
                     style={{
                       width: `${limits.generations ? Math.min(100, (gensUsed / limits.generations) * 100) : 0}%`,
+                      height: "100%",
+                      background: accent,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
+                  <span style={{ color: "rgba(255,255,255,0.5)" }}>Lead searches this month</span>
+                  <span>{searchesUsedBilling} / {limits.searches}</span>
+                </div>
+                <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${limits.searches ? Math.min(100, (searchesUsedBilling / limits.searches) * 100) : 0}%`,
                       height: "100%",
                       background: accent,
                     }}
