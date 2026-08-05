@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { limitsFor } from "@/lib/plans";
 
 // Used only for the generations_used increment — bypasses RLS since
 // users don't have update permission on their own profile row.
@@ -10,12 +11,6 @@ const supabaseAdmin = createAdminClient(
 );
 
 export const maxDuration = 300;
-
-const LIMITS = {
-  starter: { generations: 10 },
-  growth: { generations: 40 },
-  pro: { generations: 150 },
-};
 
 export async function POST(req) {
   const supabase = createClient();
@@ -41,7 +36,7 @@ export async function POST(req) {
     );
   }
 
-  const limit = LIMITS[plan];
+  const limit = limitsFor(plan);
   if (profile.generations_used >= limit.generations) {
     return NextResponse.json(
       {

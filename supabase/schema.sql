@@ -58,3 +58,19 @@ alter table profiles enable row level security;
 create policy "Users can view their own profile"
   on profiles for select
   using (auth.uid() = id);
+
+-- Storage bucket for the real business photos a reseller uploads before
+-- generating a site. Public, because the generated HTML references these
+-- URLs directly and is served to anonymous visitors.
+insert into storage.buckets (id, name, public)
+values ('client-photos', 'client-photos', true)
+on conflict (id) do nothing;
+
+create policy "Authenticated users can upload client photos"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'client-photos');
+
+create policy "Anyone can view client photos"
+  on storage.objects for select
+  using (bucket_id = 'client-photos');

@@ -2,14 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase-browser";
-
-const PLAN_LIMITS = {
-  none: { sites: 0, generations: 0, searches: 0, label: "No plan" },
-  trial: { sites: 2, generations: 2, searches: 2, label: "Free Trial" },
-  starter: { sites: 5, generations: 10, searches: 20, label: "Starter" },
-  growth: { sites: 20, generations: 40, searches: 50, label: "Growth" },
-  pro: { sites: 100, generations: 150, searches: 150, label: "Pro" },
-};
+import { PLAN_LIMITS } from "@/lib/plans";
 
 export default function DashboardClient({ initialProjects }) {
   const supabase = createClient();
@@ -327,7 +320,7 @@ export default function DashboardClient({ initialProjects }) {
   ];
 
   return (
-    <div style={{ height: "100vh", display: "flex", color: "#F2F0FA", background: "#0A0A10", fontFamily: body, position: "relative" }}>
+    <div className="sb-dash-shell" style={{ height: "100vh", display: "flex", color: "#F2F0FA", background: "#0A0A10", fontFamily: body, position: "relative" }}>
       <style>{`
         @keyframes sbDashDrift1 {
           0%   { transform: translate(-50%, 0) scale(1); }
@@ -369,9 +362,36 @@ export default function DashboardClient({ initialProjects }) {
         @media (prefers-reduced-motion: reduce) {
           .sb-dash-orb-a, .sb-dash-orb-b { animation: none; }
         }
+        /* The desktop layout is a fixed 300px sidebar beside the workspace.
+           On a phone that leaves almost nothing for the workspace, so stack
+           them instead and let the page scroll normally. */
+        @media (max-width: 860px) {
+          .sb-dash-shell {
+            flex-direction: column;
+            height: auto !important;
+            min-height: 100vh;
+            /* dvh accounts for the iOS Safari toolbar; vh above is the
+               fallback for browsers that don't support it. */
+            min-height: 100dvh;
+          }
+          .sb-dash-sidebar {
+            width: 100% !important;
+            border-right: none !important;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+          }
+          /* Cap the project list so a long list can't push the workspace
+             off the bottom of the screen. */
+          .sb-dash-projects { max-height: 45vh; }
+          .sb-dash-main {
+            overflow: visible !important;
+            min-height: 70vh;
+          }
+          .sb-dash-preview { min-height: 70vh; }
+        }
       `}</style>
 
       <div
+        className="sb-dash-sidebar"
         style={{
           width: 300,
           borderRight: "1px solid rgba(255,255,255,0.08)",
@@ -488,7 +508,7 @@ export default function DashboardClient({ initialProjects }) {
               />
             </div>
 
-            <div style={{ flex: 1, overflowY: "auto", padding: "0 12px" }}>
+            <div className="sb-dash-projects" style={{ flex: 1, overflowY: "auto", padding: "0 12px" }}>
               {projects.length === 0 && (
                 <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", padding: 12, lineHeight: 1.6 }}>
                   No client sites yet — type a business name and description above, then hit "Generate site" to
@@ -545,7 +565,7 @@ export default function DashboardClient({ initialProjects }) {
         )}
       </div>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+      <div className="sb-dash-main" style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
 
         {/* ===== SITES TAB ===== */}
         {tab === "sites" && !active && (
@@ -797,12 +817,14 @@ export default function DashboardClient({ initialProjects }) {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                flexWrap: "wrap",
+                gap: 10,
                 padding: "16px 20px",
                 borderBottom: "1px solid rgba(255,255,255,0.08)",
               }}
             >
               <span style={{ fontSize: 14, fontFamily: display, fontWeight: 600 }}>{active.client_name}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                 {active.published && (
                   <a
                     href={active.slug ? `https://${active.slug}.sitebric.com` : `/s/${active.id}`}
@@ -977,7 +999,7 @@ export default function DashboardClient({ initialProjects }) {
                 )}
               </div>
             )}
-            <div style={{ flex: 1, background: "#0A0A10", minHeight: 0 }}>
+            <div className="sb-dash-preview" style={{ flex: 1, background: "#0A0A10", minHeight: 0 }}>
               {active.status === "generating" && (
                 <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
                   Generating…

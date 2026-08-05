@@ -1,6 +1,9 @@
+import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const supabaseAdmin = createAdminClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -18,6 +21,26 @@ export async function POST(req) {
   }
 
   try {
+    // Cancel any live subscription first. The profile row below is the
+    // only record of their Stripe subscription id, so deleting it before
+    // cancelling would leave them being billed with nothing left to
+    // trace it back to.
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("stripe_subscription_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.stripe_subscription_id) {
+      try {
+        await stripe.subscriptions.cancel(profile.stripe_subscription_id);
+      } catch (err) {
+        // An already-cancelled or missing subscription shouldn't block
+        // the deletion the user asked for.
+        console.error("Subscription cancel during account deletion failed:", err.message);
+      }
+    }
+
     const { error: projectsError } = await supabaseAdmin
       .from("projects")
       .delete()

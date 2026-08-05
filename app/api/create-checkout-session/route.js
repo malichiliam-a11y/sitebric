@@ -1,14 +1,9 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { PRICE_IDS } from "@/lib/plans";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-const PRICE_IDS = {
-  starter: "price_1U08TIFnYMPDeqfeHune9w37",
-  growth: "price_1U08U6FnYMPDeqfeQaka6lO1",
-  pro: "price_1U08UrFnYMPDeqfeSY0pbFFd",
-};
 
 export async function POST(req) {
   try {
