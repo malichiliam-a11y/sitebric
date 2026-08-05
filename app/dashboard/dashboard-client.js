@@ -48,7 +48,14 @@ export default function DashboardClient({ initialProjects }) {
     } = await supabase.auth.getUser();
     setUser(user);
     if (user) {
-      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+      let { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+      if (!data) {
+        // Brand new user with no profile row yet — create their free
+        // trial row now so Billing shows it correctly right away.
+        await fetch("/api/ensure-profile", { method: "POST" });
+        const retry = await supabase.from("profiles").select("*").eq("id", user.id).single();
+        data = retry.data;
+      }
       setProfile(data);
     }
   }
