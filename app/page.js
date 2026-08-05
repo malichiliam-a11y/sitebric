@@ -43,34 +43,50 @@ export default function Home() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    if (rememberMe) {
-      window.localStorage.setItem("sitebric_email", email);
-    } else {
-      window.localStorage.removeItem("sitebric_email");
+    try {
+      if (rememberMe) {
+        window.localStorage.setItem("sitebric_email", email);
+      } else {
+        window.localStorage.removeItem("sitebric_email");
+      }
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: true },
+      });
+      if (error) {
+        setError(error.message || "Something went wrong sending your code. Try again.");
+      } else {
+        setSent(true);
+      }
+    } catch (err) {
+      setError(err?.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true },
-    });
-    setLoading(false);
-    if (error) setError(error.message);
-    else setSent(true);
   }
 
   async function verifyCode(e) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token: code,
-      type: "email",
-    });
-    setLoading(false);
-   if (error) setError(error.message);
-    else window.location.href = "/dashboard";
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: code,
+        type: "email",
+      });
+      if (error) {
+        setError(error.message || "That code didn't work. Please try again.");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      setError(err?.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const inputStyle = {
@@ -496,7 +512,7 @@ export default function Home() {
                   marginTop: 14,
                 }}
               >
-                {error}
+                {typeof error === "string" ? error : "Something went wrong. Please try again."}
               </div>
             )}
           </form>
