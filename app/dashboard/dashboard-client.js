@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase-browser";
 
 const PLAN_LIMITS = {
   none: { sites: 0, generations: 0, label: "No plan" },
+  trial: { sites: 2, generations: 2, label: "Free Trial" },
   starter: { sites: 5, generations: 10, label: "Starter" },
   growth: { sites: 20, generations: 40, label: "Growth" },
   pro: { sites: 100, generations: 150, label: "Pro" },
@@ -1120,7 +1121,7 @@ export default function DashboardClient({ initialProjects }) {
                     textDecoration: "none",
                   }}
                 >
-                  {currentPlan === "none" ? "Choose a plan" : "Change plan"}
+                  {currentPlan === "none" || currentPlan === "trial" ? "Choose a plan" : "Change plan"}
                 </a>
               </div>
 
@@ -1188,7 +1189,7 @@ export default function DashboardClient({ initialProjects }) {
                     alert(result.error || "Couldn't open billing portal.");
                   }
                 }}
-                disabled={currentPlan === "none"}
+                disabled={currentPlan === "none" || currentPlan === "trial"}
                 style={{
                   background: "rgba(255,255,255,0.06)",
                   color: "#F2F0FA",
@@ -1198,8 +1199,8 @@ export default function DashboardClient({ initialProjects }) {
                   fontFamily: display,
                   fontWeight: 700,
                   fontSize: 13,
-                  cursor: currentPlan === "none" ? "default" : "pointer",
-                  opacity: currentPlan === "none" ? 0.4 : 1,
+                  cursor: currentPlan === "none" || currentPlan === "trial" ? "default" : "pointer",
+                  opacity: currentPlan === "none" || currentPlan === "trial" ? 0.4 : 1,
                 }}
               >
                 Manage billing
