@@ -114,6 +114,7 @@ export default function DashboardClient({ initialProjects }) {
   const [editInstruction, setEditInstruction] = useState("");
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState("");
+  const [publishError, setPublishError] = useState("");
   const [leadLocation, setLeadLocation] = useState("");
   const [leadCategory, setLeadCategory] = useState("");
   const [leadResults, setLeadResults] = useState(null);
@@ -251,6 +252,7 @@ export default function DashboardClient({ initialProjects }) {
   }
 
   async function togglePublish(project) {
+    setPublishError("");
     const updates = { published: !project.published };
 
     // Generate a sitebric.com subdomain the first time a site is published.
@@ -277,12 +279,23 @@ export default function DashboardClient({ initialProjects }) {
       updates.slug = slug;
     }
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("projects")
       .update(updates)
       .eq("id", project.id)
       .select()
       .single();
+
+    // Without this the button just does nothing on failure. The usual
+    // cause is supabase/schema.sql not having been re-run, so the
+    // published/slug columns this writes don't exist yet.
+    if (error) {
+      setPublishError(
+        `Couldn't ${project.published ? "unpublish" : "publish"} this site: ${error.message}`
+      );
+      return;
+    }
+
     if (data) {
       setProjects((prev) => prev.map((p) => (p.id === data.id ? data : p)));
     }
@@ -887,6 +900,19 @@ export default function DashboardClient({ initialProjects }) {
                 </button>
               </div>
             </div>
+            {publishError && (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#FCA5A5",
+                  background: "rgba(220,38,38,0.1)",
+                  borderBottom: "1px solid rgba(220,38,38,0.25)",
+                  padding: "10px 20px",
+                }}
+              >
+                {publishError}
+              </div>
+            )}
             {active.published && (
               <div
                 style={{

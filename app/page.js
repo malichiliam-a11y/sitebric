@@ -33,11 +33,18 @@ export default function Home() {
   }, [router]);
 
   async function signInWithGoogle() {
+    setError("");
     const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/dashboard` },
     });
+    // On success this redirects away. It only returns an error if the
+    // Google provider isn't enabled in Supabase — without surfacing it
+    // the button just looks broken.
+    if (error) {
+      setError(error.message || "Google sign-in isn't available right now. Try your email instead.");
+    }
   }
 
   async function sendCode(e) {
