@@ -16,6 +16,7 @@ const supabaseAdmin = createAdminClient(
 export const maxDuration = 300;
 
 const LIMITS = {
+  trial: { sites: 2, generations: 2 },
   starter: { sites: 5, generations: 10 },
   growth: { sites: 20, generations: 40 },
   pro: { sites: 100, generations: 150 },
@@ -32,13 +33,25 @@ export async function POST(req) {
   }
 
   // ---- Plan + usage check ----
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from("profiles")
     .select("plan, generations_used")
     .eq("id", user.id)
     .single();
 
-  const plan = profile?.plan;
+  // Brand new users have no profile row at all yet (one only gets
+  // created today via Stripe checkout) — give them a free trial row
+  // instead of blocking them immediately.
+  if (!profile) {
+    await supabaseAdmin.from("profiles").upsert({
+      id: user.id,
+      plan: "trial",
+      generations_used: 0,
+    });
+    profile = { plan: "trial", generations_used: 0 };
+  }
+
+  const plan = profile.plan;
   if (!plan || plan === "none") {
     return NextResponse.json(
       { error: "no_plan", message: "Subscribe to a plan to generate sites." },
@@ -48,13 +61,11 @@ export async function POST(req) {
 
   const limit = LIMITS[plan];
   if (profile.generations_used >= limit.generations) {
-    return NextResponse.json(
-      {
-        error: "generation_limit",
-        message: `You've used all ${limit.generations} generations for this month. Upgrade for more.`,
-      },
-      { status: 402 }
-    );
+    const message =
+      plan === "trial"
+        ? "You've used your free trial generation. Subscribe to a plan to keep building."
+        : `You've used all ${limit.generations} generations for this month. Upgrade for more.`;
+    return NextResponse.json({ error: "generation_limit", message }, { status: 402 });
   }
 
   const { count: siteCount } = await supabase
