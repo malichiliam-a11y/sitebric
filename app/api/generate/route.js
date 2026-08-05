@@ -83,7 +83,8 @@ export async function POST(req) {
     );
   }
 
-  const { clientName, prompt } = await req.json();
+  const { clientName, prompt, photoUrls: rawPhotoUrls } = await req.json();
+  const photoUrls = Array.isArray(rawPhotoUrls) ? rawPhotoUrls.filter(Boolean) : [];
   if (!clientName || !prompt) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });
   }
@@ -118,40 +119,54 @@ export async function POST(req) {
         messages: [
           {
             role: "user",
-            content: `Generate a COMPLETE, SELF-CONTAINED, production-quality single HTML file for a small local business website. This needs to look like something a real design agency charged $2,000+ for — not a template, not a placeholder.
+            content: `Generate a COMPLETE, SELF-CONTAINED, production-quality single HTML file for a small local business website. This needs to look like a modern, award-worthy site — the kind that would win an "site of the day" award — not a generic template.
 
 Client/business: "${clientName}"
 Brief: "${prompt}"
+${photoUrls.length > 0 ? `\nREAL PHOTOS PROVIDED — use these actual URLs for the business's real photos (hero, gallery, about section) instead of stock images: ${photoUrls.join(", ")}. These are real photos of this specific business, so feature them prominently — they matter far more than any stock photo.` : ""}
 
-=== DESIGN ===
-- Vary the design every time: pick a color palette, font pairing, and layout style that genuinely fit THIS specific business and vibe. Do not default to the same purple/dark theme or the same section order every time — a bakery, a law firm, and an auto shop should look nothing alike. Choose colors and typography appropriate to the industry, tone, and audience implied by the brief.
-- Use at least two font families (a display/heading font + a body font) via Google Fonts, picked to match the brand's personality (e.g. a serif for a law firm, a bold rounded sans for a bakery, a sharp technical sans for an auto shop).
-- Add real visual polish: subtle shadows, hover states on buttons/cards, smooth scroll behavior, a sticky/blurred nav bar, and at least one tasteful CSS animation or transition (fade-in on scroll, hover lift on cards, etc.) — implemented with plain CSS/JS, no external animation libraries.
-- Make sure it's fully responsive: test your layout mentally at mobile widths (~375px) as well as desktop — stack columns, adjust font sizes with clamp(), and make sure nothing overflows or overlaps on a phone screen.
-- Add a favicon-less <title> tag and a meta description tag with real, relevant copy for this business (basic on-page SEO).
+=== DESIGN — make this genuinely impressive ===
+- Vary the design every time: pick a color palette, font pairing, and layout style that genuinely fit THIS specific business and vibe. Do not default to the same theme or section order every time — a bakery, a law firm, and an auto shop should look nothing alike.
+- Use at least two font families (a bold display/heading font + a clean body font) via Google Fonts, picked to match the brand's personality.
+- Push hard on modern, high-end visual techniques — pick whichever of these genuinely fit the business, and implement them for real, not just describe them:
+  - Scroll-triggered reveal animations (elements fade/slide into view using IntersectionObserver as the user scrolls — not everything visible at once on load)
+  - A subtle parallax effect on the hero (background moves slower than foreground on scroll)
+  - An animated gradient mesh or drifting blurred color-orb background in the hero (like premium SaaS sites), built in pure CSS/JS
+  - A horizontally scrolling marquee/ticker strip for things like service tags, certifications, or "as seen in" style trust badges
+  - Animated counting-up statistics (years in business, jobs completed, etc. counting up from 0 when scrolled into view)
+  - Magnetic or hover-tilt effects on buttons/cards (subtle transform following cursor position or a lift+glow on hover)
+  - Glassmorphism cards (translucent, blurred backgrounds) for pricing/service cards where it fits the aesthetic
+  - A sticky progress indicator or subtly animated nav bar that changes appearance on scroll
+- Don't cram in every technique on every site — pick 3-5 that genuinely fit this business's vibe and execute them well, rather than using all of them shallowly.
+- Make sure it's fully responsive: nothing should overflow or overlap on a ~375px mobile width. Disable or simplify heavy scroll/parallax effects on mobile if needed for performance.
+- Respect prefers-reduced-motion — disable non-essential animations for users who have that OS setting on.
+- Add a real <title> tag and a meta description tag with relevant copy for this business.
 
 === STRUCTURE (all required, in an order that makes sense for this business) ===
-1. Sticky nav — business name/logo text, a few anchor links to sections, and a phone number or "Call Now" / "Get a Quote" button
-2. Hero — a strong, specific headline (not generic filler like "Welcome to our business"), a supporting subheadline, a clear call-to-action button, and a hero image
-3. About/services — real, specific service descriptions for what THIS business actually does, based on the brief — not vague placeholder text
-4. "Why choose us" — 3-4 concrete differentiators (specific to the business type, e.g. licensed & insured for a locksmith, same-day service for a plumber)
-5. A process/"how it works" section OR a gallery/portfolio section — whichever fits the business better
-6. Social proof — at least 2-3 short testimonial blocks with realistic customer names and specific, believable quotes (not "Great service! - John D." — make them sound like a real customer wrote them, mentioning specifics)
+1. Sticky nav — business name/logo text, a few anchor links, and a phone number or "Call Now" / "Get a Quote" button
+2. Hero — a strong, specific headline (not generic filler), a supporting subheadline, a clear call-to-action button, and a hero image or animated background
+3. About/services — real, specific service descriptions for what THIS business actually does, based on the brief
+4. "Why choose us" — 3-4 concrete differentiators specific to the business type
+5. A process/"how it works" section OR a gallery/portfolio section — whichever fits better
+6. Social proof — 2-3 short, realistic-sounding testimonials with names
 7. A clear final call-to-action section before the footer
-8. Footer — business name, a plausible service area/city, contact info, and copyright line
+8. Footer — business name, plausible service area, contact info, copyright line
 
 === COPYWRITING ===
-- Write real, specific, persuasive copy throughout — headlines and body text should sound like a professional copywriter wrote them for this exact business, referencing details from the brief (services, location, vibe) wherever possible.
-- Avoid generic filler phrases like "we are dedicated to providing quality service." Be specific: what exactly do they do, for whom, and why should someone choose them over a competitor.
+- Write real, specific, persuasive copy — headlines and body text should sound professionally written for this exact business, referencing details from the brief.
+- Avoid generic filler like "we are dedicated to providing quality service." Be specific about what they do, for whom, and why choose them over a competitor.
 
 === IMAGES ===
-- Use REAL photos, not just gradients/CSS shapes: pull images from https://loremflickr.com/900/600/<single-keyword> for the hero, gallery, and service sections. Use exactly ONE simple, common, popular keyword per image (e.g. /900/600/restaurant, /900/600/pizza, /900/600/car, /900/600/lawyer) — never combine multiple keywords with commas. Multi-keyword combinations often fail to match any real photo and silently fall back to a random unrelated stock image (including animals), which looks broken on a real client site. Pick the single most relevant, common keyword for each image placement, and vary the size per placement (e.g. /600/400 for smaller cards).
-- If the business has a natural before/after angle (detailing, renovation, fitness, cleaning, landscaping, etc.), build a REAL functional before/after image comparison slider: two stacked images, a draggable handle (range input or mouse/touch drag) controlling a clip-path to reveal one image over the other. Make it actually work, not decorative.
+${photoUrls.length > 0
+  ? `- Use the real uploaded photo URLs listed above for the hero and key sections. Only fall back to stock images below for any additional supporting images beyond what was uploaded.`
+  : ""}
+- For any stock photos needed, pull from https://loremflickr.com/900/600/<single-keyword>. Use exactly ONE simple, common, popular keyword per image (e.g. /900/600/restaurant, /900/600/car, /900/600/lawyer) — never combine multiple keywords with commas, since combinations often fail to match and silently fall back to a random unrelated image. Vary the size per placement (e.g. /600/400 for smaller cards).
+- If the business has a natural before/after angle (detailing, renovation, fitness, cleaning, landscaping, etc.), build a REAL functional before/after image comparison slider with a draggable handle controlling a clip-path. Make it actually work.
 
 === TECHNICAL RULES ===
 - Output ONLY raw HTML, no markdown fences, no explanation before or after.
 - All CSS in a single <style> tag, all JS in a single <script> tag, everything in one file (Google Fonts <link> tags are fine).
-- Keep CSS efficient and avoid unnecessary repetition, so the full page always finishes generating within the response — prioritize finishing a complete, working page over adding extra sections if space runs tight.`,
+- Keep CSS/JS efficient so the full page finishes generating within the response — prioritize finishing a complete, working page over cramming in extra effects if space runs tight.`,
           },
         ],
       }),
