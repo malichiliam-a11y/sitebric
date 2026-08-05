@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase-browser";
 
 const PLAN_LIMITS = {
-  none: { sites: 0, generations: 0, label: "No plan" },
-  trial: { sites: 2, generations: 2, label: "Free Trial" },
-  starter: { sites: 5, generations: 10, label: "Starter" },
-  growth: { sites: 20, generations: 40, label: "Growth" },
-  pro: { sites: 100, generations: 150, label: "Pro" },
+  none: { sites: 0, generations: 0, searches: 0, label: "No plan" },
+  trial: { sites: 2, generations: 2, searches: 2, label: "Free Trial" },
+  starter: { sites: 5, generations: 10, searches: 20, label: "Starter" },
+  growth: { sites: 20, generations: 40, searches: 50, label: "Growth" },
+  pro: { sites: 100, generations: 150, searches: 150, label: "Pro" },
 };
 
 export default function DashboardClient({ initialProjects }) {
@@ -286,11 +286,11 @@ export default function DashboardClient({ initialProjects }) {
   const gensUsed = profile?.generations_used || 0;
 
   const navItems = [
-    { id: "sites", label: "Sites" },
-    { id: "leads", label: "Find Leads" },
-    { id: "billing", label: "Billing" },
-    { id: "profile", label: "Profile" },
-    { id: "settings", label: "Settings" },
+    { id: "sites", label: "Sites", icon: "◆" },
+    { id: "leads", label: "Find Leads", icon: "◎" },
+    { id: "billing", label: "Billing", icon: "▣" },
+    { id: "profile", label: "Profile", icon: "●" },
+    { id: "settings", label: "Settings", icon: "⚙" },
   ];
 
   return (
@@ -379,10 +379,14 @@ export default function DashboardClient({ initialProjects }) {
               }}
               className="sb-nav-tab"
               style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
                 textAlign: "left",
                 background: tab === item.id ? "rgba(139,92,246,0.1)" : "transparent",
                 color: tab === item.id ? "#F2F0FA" : "rgba(255,255,255,0.5)",
                 border: "none",
+                borderLeft: tab === item.id ? "2px solid #8B5CF6" : "2px solid transparent",
                 borderRadius: 10,
                 padding: "10px 12px",
                 fontSize: 13,
@@ -392,6 +396,17 @@ export default function DashboardClient({ initialProjects }) {
                 marginBottom: 4,
               }}
             >
+              <span
+                style={{
+                  fontSize: 13,
+                  background: tab === item.id ? accent : "transparent",
+                  WebkitBackgroundClip: tab === item.id ? "text" : "unset",
+                  WebkitTextFillColor: tab === item.id ? "transparent" : "inherit",
+                  opacity: tab === item.id ? 1 : 0.5,
+                }}
+              >
+                {item.icon}
+              </span>
               {item.label}
             </button>
           ))}
@@ -938,13 +953,29 @@ export default function DashboardClient({ initialProjects }) {
           </>
         )}
 
-        {/* ===== BILLING TAB ===== */}
         {/* ===== FIND LEADS TAB ===== */}
         {tab === "leads" && (
           <div style={{ padding: "48px 40px", maxWidth: 1200, overflowY: "auto" }}>
             <div style={{ fontFamily: display, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>Find Leads</div>
-            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 32 }}>
+            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 12 }}>
               Search for local businesses with no website — instant client leads.
+            </div>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 12,
+                fontWeight: 600,
+                color: "#C4B5FD",
+                background: "rgba(139,92,246,0.08)",
+                border: "1px solid rgba(139,92,246,0.2)",
+                borderRadius: 999,
+                padding: "5px 12px",
+                marginBottom: 20,
+              }}
+            >
+              {profile?.searches_used ?? 0} / {limits.searches} searches used this month
             </div>
 
             <div
