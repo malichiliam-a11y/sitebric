@@ -19,6 +19,8 @@ export default function DashboardClient({ initialProjects }) {
   const [view, setView] = useState("preview");
   const [clientName, setClientName] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [photoUrls, setPhotoUrls] = useState([]);
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [user, setUser] = useState(null);
@@ -81,7 +83,7 @@ export default function DashboardClient({ initialProjects }) {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName, prompt }),
+        body: JSON.stringify({ clientName, prompt, photoUrls }),
       });
       const result = await res.json();
 
@@ -104,6 +106,7 @@ export default function DashboardClient({ initialProjects }) {
       setActiveId(result.id);
       setClientName("");
       setPrompt("");
+      setPhotoUrls([]);
       loadProfile();
     } catch (err) {
       setError(err.message);
@@ -158,11 +161,40 @@ export default function DashboardClient({ initialProjects }) {
     setTab("sites");
     setActiveId(null);
     setClientName(lead.name);
+    setPhotoUrls([]);
     setPrompt(
       `${lead.name} is a local business${lead.address ? ` located at ${lead.address}` : ""}${
         lead.phone ? `, phone ${lead.phone}` : ""
       }. Build them a professional website that fits their industry.`
     );
+  }
+
+  async function handlePhotoUpload(e) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setPhotoUploading(true);
+    try {
+      const uploaded = [];
+      for (const file of files) {
+        const path = `${user?.id || "anon"}/${Date.now()}-${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from("client-photos")
+          .upload(path, file);
+        if (uploadError) throw uploadError;
+        const { data } = supabase.storage.from("client-photos").getPublicUrl(path);
+        uploaded.push(data.publicUrl);
+      }
+      setPhotoUrls((prev) => [...prev, ...uploaded]);
+    } catch (err) {
+      setError("Photo upload failed: " + err.message);
+    } finally {
+      setPhotoUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  function removePhoto(url) {
+    setPhotoUrls((prev) => prev.filter((u) => u !== url));
   }
 
   async function editSite() {
@@ -596,6 +628,74 @@ export default function DashboardClient({ initialProjects }) {
                   onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
                   onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
                 />
+
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    width: "100%",
+                    boxSizing: "border-box",
+                    border: "1px dashed rgba(255,255,255,0.2)",
+                    borderRadius: 12,
+                    padding: "12px 14px",
+                    marginBottom: 14,
+                    fontSize: 13,
+                    color: "rgba(255,255,255,0.5)",
+                    cursor: photoUploading ? "default" : "pointer",
+                  }}
+                >
+                  {photoUploading ? "Uploading…" : "📷 Upload real photos of the business (optional)"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoUpload}
+                    disabled={photoUploading}
+                    style={{ display: "none" }}
+                  />
+                </label>
+
+                {photoUrls.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+                    {photoUrls.map((url) => (
+                      <div key={url} style={{ position: "relative", width: 56, height: 56 }}>
+                        <img
+                          src={url}
+                          alt=""
+                          style={{
+                            width: 56,
+                            height: 56,
+                            objectFit: "cover",
+                            borderRadius: 8,
+                            border: "1px solid rgba(255,255,255,0.15)",
+                          }}
+                        />
+                        <button
+                          onClick={() => removePhoto(url)}
+                          style={{
+                            position: "absolute",
+                            top: -6,
+                            right: -6,
+                            width: 18,
+                            height: 18,
+                            borderRadius: "50%",
+                            background: "#F87171",
+                            color: "#fff",
+                            border: "none",
+                            fontSize: 11,
+                            cursor: "pointer",
+                            lineHeight: 1,
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <button
                   onClick={generate}
                   disabled={busy || !clientName.trim() || !prompt.trim()}
