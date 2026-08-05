@@ -13,6 +13,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [openFaq, setOpenFaq] = useState(null);
+  const [showLogin, setShowLogin] = useState(false);
 
   const accent = "linear-gradient(90deg, #8B5CF6, #22D3EE)";
   const display = "'Space Grotesk', sans-serif";
@@ -236,6 +237,25 @@ export default function Home() {
           <a href="/pricing" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>
             Pricing
           </a>
+          <button
+            onClick={() => {
+              setShowLogin(true);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            style={{
+              background: accent,
+              color: "#0A0A10",
+              border: "none",
+              borderRadius: 8,
+              padding: "8px 16px",
+              fontFamily: display,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            Get started
+          </button>
         </div>
       </nav>
 
@@ -318,7 +338,65 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Login card */}
+          {/* Login card / CTA */}
+          {!showLogin ? (
+            <div
+              className="sb-reveal"
+              style={{
+                width: "100%",
+                borderRadius: 20,
+                padding: "40px 32px",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                backdropFilter: "blur(20px)",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+                animationDelay: "0.3s",
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: display,
+                  fontWeight: 700,
+                  fontSize: 20,
+                  marginBottom: 10,
+                }}
+              >
+                See it in action first
+              </div>
+              <div
+                style={{
+                  fontSize: 14,
+                  color: "rgba(255,255,255,0.5)",
+                  lineHeight: 1.6,
+                  marginBottom: 26,
+                }}
+              >
+                Scroll around, check out how it works — no account needed until you're ready to build.
+              </div>
+              <button
+                onClick={() => setShowLogin(true)}
+                style={{
+                  width: "100%",
+                  background: accent,
+                  color: "#0A0A10",
+                  border: "none",
+                  borderRadius: 12,
+                  padding: "14px 10px",
+                  fontFamily: display,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: "pointer",
+                  boxShadow: "0 8px 24px rgba(139,92,246,0.35)",
+                }}
+              >
+                Get started free →
+              </button>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 12 }}>
+                2 free site generations included, no card required
+              </div>
+            </div>
+          ) : (
           <form
             onSubmit={sent ? verifyCode : sendCode}
             className="sb-reveal"
@@ -330,7 +408,6 @@ export default function Home() {
               border: "1px solid rgba(255,255,255,0.08)",
               backdropFilter: "blur(20px)",
               boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
-              animationDelay: "0.3s",
             }}
           >
             <div
@@ -516,6 +593,7 @@ export default function Home() {
               </div>
             )}
           </form>
+          )}
         </div>
       </div>
 
@@ -556,12 +634,12 @@ export default function Home() {
             }}
           >
             {[
-              ["Real sites, not templates", "Every site is generated fresh for that specific business — real copy, real design, not a reused shell."],
-              ["Minutes, not days", "Describe the client, get a finished site almost instantly. No back-and-forth design cycles."],
-              ["Built for reselling", "Manage every client under one dashboard, generate as many sites as your plan allows."],
-              ["No design skill required", "You don't need to know how to code or design — just describe the business."],
-              ["Shipped weekly, not yearly", "New features and improvements ship every week — your tools keep getting sharper while your competitors wait on their next big release."],
-            ].map(([title, desc]) => (
+              ["✦", "Real sites, not templates", "Every site is generated fresh for that specific business — real copy, real design, not a reused shell."],
+              ["⚡", "Minutes, not days", "Describe the client, get a finished site almost instantly. No back-and-forth design cycles."],
+              ["◆", "Built for reselling", "Manage every client under one dashboard, generate as many sites as your plan allows."],
+              ["✎", "No design skill required", "You don't need to know how to code or design — just describe the business."],
+              ["↻", "Shipped weekly, not yearly", "New features and improvements ship every week — your tools keep getting sharper while your competitors wait on their next big release."],
+            ].map(([icon, title, desc]) => (
               <div
                 key={title}
                 className="sb-glow-card"
@@ -572,6 +650,23 @@ export default function Home() {
                   border: "1px solid rgba(255,255,255,0.08)",
                 }}
               >
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: "rgba(139,92,246,0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 16,
+                    marginBottom: 14,
+                  }}
+                >
+                  <span style={{ background: accent, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                    {icon}
+                  </span>
+                </div>
                 <div style={{ fontFamily: display, fontWeight: 600, fontSize: 16, marginBottom: 10 }}>
                   {title}
                 </div>
@@ -753,7 +848,10 @@ export default function Home() {
           Sign up and generate your first site today.
         </div>
         <button
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          onClick={() => {
+            setShowLogin(true);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
           style={{
             background: accent,
             color: "#0A0A10",
