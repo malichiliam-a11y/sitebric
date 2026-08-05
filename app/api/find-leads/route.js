@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { limitsFor } from "@/lib/plans";
 
 // Used only to increment searches_used — bypasses RLS since users
 // don't have update permission on their own profile row.
@@ -8,13 +9,6 @@ const supabaseAdmin = createAdminClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-
-const SEARCH_LIMITS = {
-  trial: 2,
-  starter: 20,
-  growth: 50,
-  pro: 150,
-};
 
 // Fetching up to 3 pages with required delays between them can take
 // several seconds — give it more room than the default timeout.
@@ -57,7 +51,7 @@ export async function POST(req) {
     );
   }
 
-  const limit = SEARCH_LIMITS[plan];
+  const limit = limitsFor(plan).searches;
   if (profile.searches_used >= limit) {
     const message =
       plan === "trial"

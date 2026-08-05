@@ -33,11 +33,18 @@ export default function Home() {
   }, [router]);
 
   async function signInWithGoogle() {
+    setError("");
     const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/dashboard` },
     });
+    // On success this redirects away. It only returns an error if the
+    // Google provider isn't enabled in Supabase — without surfacing it
+    // the button just looks broken.
+    if (error) {
+      setError(error.message || "Google sign-in isn't available right now. Try your email instead.");
+    }
   }
 
   async function sendCode(e) {
@@ -198,6 +205,9 @@ export default function Home() {
         @media (prefers-reduced-motion: reduce) {
           .sb-orb-a, .sb-orb-b, .sb-orb-c, .sb-orb-d, .sb-reveal { animation: none; }
         }
+        @media (max-width: 780px) {
+          .sb-hero-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
       <div className="sb-grain" />
@@ -262,6 +272,7 @@ export default function Home() {
       {/* ===== HERO with embedded login ===== */}
       <div style={{ position: "relative", zIndex: 1, padding: "90px 6% 100px" }}>
         <div
+          className="sb-hero-grid"
           style={{
             maxWidth: 1100,
             margin: "0 auto",

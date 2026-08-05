@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { limitsFor } from "@/lib/plans";
 
 // Used only for the generations_used increment at the end — that write
 // needs to bypass RLS since users don't have update permission on their
@@ -14,13 +15,6 @@ const supabaseAdmin = createAdminClient(
 // genuinely take a few minutes, and cutting it short leaves things
 // stuck on "generating" with no error ever being recorded.
 export const maxDuration = 300;
-
-const LIMITS = {
-  trial: { sites: 2, generations: 2 },
-  starter: { sites: 5, generations: 10 },
-  growth: { sites: 20, generations: 40 },
-  pro: { sites: 100, generations: 150 },
-};
 
 export async function POST(req) {
   const supabase = createClient();
@@ -59,7 +53,7 @@ export async function POST(req) {
     );
   }
 
-  const limit = LIMITS[plan];
+  const limit = limitsFor(plan);
   if (profile.generations_used >= limit.generations) {
     const message =
       plan === "trial"

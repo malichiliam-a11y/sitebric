@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { planForPriceId } from "@/lib/plans";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -57,6 +58,24 @@ export async function POST(req) {
           .from("profiles")
           .update({ generations_used: 0, searches_used: 0 })
           .eq("stripe_customer_id", customerId);
+        break;
+      }
+
+      case "customer.subscription.updated": {
+        // Plan switches made from the Stripe billing portal only show up
+        // here — without this, someone who upgrades keeps their old
+        // plan's limits (and someone who downgrades keeps the higher
+        // ones) because nothing else writes the new plan back.
+        const subscription = event.data.object;
+        const priceId = subscription.items?.data?.[0]?.price?.id;
+        const plan = planForPriceId(priceId);
+
+        if (plan) {
+          await supabaseAdmin
+            .from("profiles")
+            .update({ plan, stripe_subscription_id: subscription.id })
+            .eq("stripe_customer_id", subscription.customer);
+        }
         break;
       }
 
