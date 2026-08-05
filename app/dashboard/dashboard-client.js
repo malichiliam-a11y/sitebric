@@ -312,11 +312,15 @@ export default function DashboardClient({ initialProjects }) {
     window.location.href = "/login";
   }
 
-  const statusMeta = {
-    generating: { color: "#22D3EE", label: "generating" },
-    done: { color: "#4ADE80", label: "live" },
-    error: { color: "#F87171", label: "failed" },
-  };
+  // Reflects whether a site is actually reachable, not just whether it
+  // finished generating. A finished-but-unpublished site isn't on the
+  // internet yet, so labelling it "live" was misleading.
+  function projectMeta(project) {
+    if (project.status === "generating") return { color: "#22D3EE", label: "generating" };
+    if (project.status === "error") return { color: "#F87171", label: "failed" };
+    if (project.published) return { color: "#4ADE80", label: "live" };
+    return { color: "rgba(255,255,255,0.45)", label: "ready to publish" };
+  }
 
   const currentPlan = profile?.plan || "none";
   const limits = PLAN_LIMITS[currentPlan] || PLAN_LIMITS.none;
@@ -538,7 +542,7 @@ export default function DashboardClient({ initialProjects }) {
               {projects
                 .filter((p) => p.client_name.toLowerCase().includes(siteSearch.toLowerCase()))
                 .map((p) => {
-                const meta = statusMeta[p.status] || statusMeta.generating;
+                const meta = projectMeta(p);
                 return (
                   <div
                     key={p.id}
@@ -774,7 +778,7 @@ export default function DashboardClient({ initialProjects }) {
                     {projects
                       .filter((p) => p.client_name.toLowerCase().includes(siteSearch.toLowerCase()))
                       .map((p) => {
-                      const meta = statusMeta[p.status] || statusMeta.generating;
+                      const meta = projectMeta(p);
                       return (
                         <div
                           key={p.id}
@@ -810,7 +814,6 @@ export default function DashboardClient({ initialProjects }) {
                             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: meta.color }}>
                               <span style={{ width: 6, height: 6, borderRadius: "50%", background: meta.color, boxShadow: `0 0 5px ${meta.color}` }} />
                               {meta.label}
-                              {p.published && <span style={{ color: "rgba(255,255,255,0.3)" }}>· published</span>}
                             </div>
                           </div>
                         </div>
