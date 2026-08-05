@@ -10,6 +10,7 @@ const supabaseAdmin = createAdminClient(
 );
 
 const SEARCH_LIMITS = {
+  trial: 2,
   starter: 20,
   growth: 50,
   pro: 150,
@@ -29,13 +30,26 @@ export async function POST(req) {
     return NextResponse.json({ error: "not authenticated" }, { status: 401 });
   }
 
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from("profiles")
     .select("plan, searches_used")
     .eq("id", user.id)
     .single();
 
-  const plan = profile?.plan;
+  // Brand new users have no profile row yet — give them a free trial
+  // instead of blocking immediately. If the generate route already
+  // created a trial row for them, this just reuses it.
+  if (!profile) {
+    await supabaseAdmin.from("profiles").upsert({
+      id: user.id,
+      plan: "trial",
+      generations_used: 0,
+      searches_used: 0,
+    });
+    profile = { plan: "trial", searches_used: 0 };
+  }
+
+  const plan = profile.plan;
   if (!plan || plan === "none") {
     return NextResponse.json(
       { error: "no_plan", message: "Subscribe to a plan to search for leads." },
@@ -45,13 +59,11 @@ export async function POST(req) {
 
   const limit = SEARCH_LIMITS[plan];
   if (profile.searches_used >= limit) {
-    return NextResponse.json(
-      {
-        error: "search_limit",
-        message: `You've used all ${limit} lead searches for this month. Upgrade for more.`,
-      },
-      { status: 402 }
-    );
+    const message =
+      plan === "trial"
+        ? "You've used your 2 free lead searches. Subscribe to a plan to keep searching."
+        : `You've used all ${limit} lead searches for this month. Upgrade for more.`;
+    return NextResponse.json({ error: "search_limit", message }, { status: 402 });
   }
 
   const { location, category } = await req.json();
