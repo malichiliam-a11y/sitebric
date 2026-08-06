@@ -98,7 +98,7 @@ export default function Login() {
           .sb-copy { display: none !important; }
           .sb-footer { flex-direction: column !important; gap: 20px !important; text-align: center; }
           .sb-footer-links { gap: 26px !important; flex-wrap: wrap; justify-content: center; }
-          .sb-art { opacity: 0.5 !important; }
+          .sb-art { opacity: 0.45 !important; }
         }
         @media (max-width: 720px) {
           .sb-nav { padding: 22px 6% !important; }
@@ -108,14 +108,14 @@ export default function Login() {
 
       {/* Ambient art. Sits under everything and stays out of the way. */}
       <div className="sb-art" style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
-        <div style={{ position: "absolute", left: "14%", right: "40%", top: "30%", bottom: "6%" }}>
+        <div style={{ position: "absolute", left: "16%", right: "26%", top: "22%", bottom: "2%" }}>
           <MeshTerrain style={{ width: "100%", height: "100%" }} />
         </div>
         <div
           style={{
             position: "absolute",
             inset: 0,
-            background: "radial-gradient(60% 50% at 45% 55%, rgba(255,255,255,0.035) 0%, transparent 100%)",
+            background: "radial-gradient(55% 48% at 42% 58%, rgba(255,255,255,0.06) 0%, transparent 100%)",
           }}
         />
       </div>
