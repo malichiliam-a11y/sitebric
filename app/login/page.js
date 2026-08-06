@@ -37,11 +37,16 @@ export default function Login() {
     <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: t.body, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
       <style>{`
         @media (max-width: 1040px) {
-          .sb-login-grid { grid-template-columns: 1fr !important; justify-items: center; gap: 0 !important; }
+          .sb-login-grid { grid-template-columns: 1fr !important; justify-items: center; gap: 0 !important; padding: 0 5% 24px !important; }
           .sb-login-copy { display: none !important; }
           .sb-login-footer { flex-direction: column !important; gap: 20px !important; text-align: center; }
           .sb-login-footer-links { gap: 24px !important; flex-wrap: wrap; justify-content: center; }
           .sb-mesh-wrap { opacity: 0.4 !important; }
+        }
+        @media (max-width: 720px) {
+          .sb-login-nav { padding: 22px 6% !important; }
+          .sb-login-nav-links { gap: 20px !important; }
+          .sb-login-nav-links a { display: none; }
         }
       `}</style>
 
@@ -50,10 +55,10 @@ export default function Login() {
         <div
           style={{
             position: "absolute",
-            left: "12%",
-            right: "38%",
-            top: "26%",
-            bottom: "6%",
+            left: "15%",
+            right: "40%",
+            top: "30%",
+            bottom: "7%",
           }}
         >
           <MeshTerrain style={{ width: "100%", height: "100%" }} />
@@ -68,9 +73,9 @@ export default function Login() {
         />
       </div>
 
-      <nav style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 5%" }}>
+      <nav className="sb-login-nav" style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 8.8% 30px 6.2%" }}>
         <Wordmark size={24} />
-        <div style={{ display: "flex", alignItems: "center", gap: 36, fontSize: 14.5 }}>
+        <div className="sb-login-nav-links" style={{ display: "flex", alignItems: "center", gap: 36, fontSize: 14.5 }}>
           <a href="/#how-it-works" style={{ color: t.textMuted, textDecoration: "none" }}>Documentation</a>
           <a href="mailto:supportsitebric@gmail.com" style={{ color: t.textMuted, textDecoration: "none" }}>Contact</a>
           {/* Decorative: the app is dark-only today, so this deliberately
@@ -101,12 +106,11 @@ export default function Login() {
           zIndex: 1,
           flex: 1,
           width: "100%",
-          maxWidth: 1360,
-          margin: "0 auto",
-          padding: "10px 5% 40px",
+          padding: "0 8.8% 30px 6.2%",
+          rowGap: 0,
           display: "grid",
-          gridTemplateColumns: "1fr 588px",
-          gap: 80,
+          gridTemplateColumns: "1fr 596px",
+          gap: 56,
           alignItems: "center",
           boxSizing: "border-box",
         }}
@@ -131,7 +135,7 @@ export default function Login() {
             AI-POWERED PLATFORM
           </div>
 
-          <h1 style={{ fontFamily: t.display, fontWeight: 700, fontSize: "clamp(40px, 4.6vw, 62px)", lineHeight: 1.07, letterSpacing: "-0.035em", margin: "0 0 28px" }}>
+          <h1 style={{ fontFamily: t.display, fontWeight: 700, fontSize: "clamp(36px, 3.7vw, 56px)", lineHeight: 1.05, letterSpacing: "-0.035em", margin: "0 0 30px" }}>
             Build stunning
             <br />
             websites in
@@ -222,7 +226,7 @@ export default function Login() {
           alignItems: "center",
           justifyContent: "space-between",
           gap: 24,
-          padding: "28px 5%",
+          padding: "28px 8.8% 28px 6.2%",
           fontSize: 13.5,
           color: t.textFaint,
         }}
