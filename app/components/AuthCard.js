@@ -5,17 +5,16 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { readReferralCode } from "@/lib/referral";
 import { t, cardBg } from "@/lib/theme";
-import { Wordmark } from "./Brand";
 import { IconMail, IconEye, IconEyeOff, IconArrowRight } from "./Icons";
 
-const labelStyle = { display: "block", fontSize: 13, color: t.text, marginBottom: 8, fontWeight: 500 };
+const labelStyle = { display: "block", fontSize: 14, color: t.text, marginBottom: 11, fontWeight: 500 };
 const inputStyle = {
   width: "100%",
   boxSizing: "border-box",
   background: t.bgInput,
   border: `1px solid ${t.border}`,
-  borderRadius: 10,
-  padding: "14px 44px 14px 16px",
+  borderRadius: 11,
+  padding: "17px 48px 17px 18px",
   color: t.text,
   fontFamily: t.body,
   fontSize: 14,
@@ -129,27 +128,37 @@ export default function AuthCard({ initialMode = "login" }) {
       onSubmit={handleSubmit}
       style={{
         width: "100%",
-        maxWidth: 470,
+        maxWidth: 588,
         borderRadius: 18,
-        padding: "44px 46px 40px",
+        padding: "52px 52px 44px",
         background: cardBg,
         border: `1px solid ${t.border}`,
         boxSizing: "border-box",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: 22 }}>
-        <Wordmark size={30} markSize={30} />
+      <div
+        style={{
+          fontFamily: t.display,
+          fontWeight: 500,
+          fontSize: 38,
+          letterSpacing: "-0.03em",
+          textAlign: "center",
+          color: t.text,
+          marginBottom: 26,
+        }}
+      >
+        sitebric
       </div>
 
-      <div style={{ fontFamily: t.display, fontWeight: 700, fontSize: 21, marginBottom: 8, textAlign: "center", color: t.text }}>
+      <div style={{ fontFamily: t.display, fontWeight: 700, fontSize: 22, marginBottom: 10, textAlign: "center", color: t.text }}>
         {heading}
       </div>
-      <div style={{ fontSize: 14, color: t.textMuted, marginBottom: 30, textAlign: "center" }}>
+      <div style={{ fontSize: 14.5, color: t.textMuted, marginBottom: 38, textAlign: "center" }}>
         {subheading}
       </div>
 
       <label style={labelStyle}>Email</label>
-      <div style={{ position: "relative", marginBottom: 20 }}>
+      <div style={{ position: "relative", marginBottom: 26 }}>
         <input
           type="email"
           required
@@ -167,7 +176,7 @@ export default function AuthCard({ initialMode = "login" }) {
       {mode !== "forgot" && (
         <>
           <label style={labelStyle}>Password</label>
-          <div style={{ position: "relative", marginBottom: 20 }}>
+          <div style={{ position: "relative", marginBottom: 26 }}>
             <input
               type={showPassword ? "text" : "password"}
               required
@@ -192,7 +201,7 @@ export default function AuthCard({ initialMode = "login" }) {
       )}
 
       {mode === "login" && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 26 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 13.5, color: t.textMuted, cursor: "pointer" }}>
             <input
               type="checkbox"
@@ -220,11 +229,11 @@ export default function AuthCard({ initialMode = "login" }) {
           background: "#FFFFFF",
           color: "#000000",
           border: "none",
-          borderRadius: 10,
-          padding: "15px 10px",
+          borderRadius: 11,
+          padding: "18px 10px",
           fontFamily: t.body,
           fontWeight: 600,
-          fontSize: 14.5,
+          fontSize: 15,
           cursor: loading ? "default" : "pointer",
           opacity: loading ? 0.7 : 1,
           display: "flex",
@@ -254,7 +263,7 @@ export default function AuthCard({ initialMode = "login" }) {
 
       {mode !== "forgot" && (
         <>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "24px 0", color: t.textFaint, fontSize: 13 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "26px 0", color: t.textFaint, fontSize: 13.5 }}>
             <div style={{ flex: 1, height: 1, background: t.border }} />
             or
             <div style={{ flex: 1, height: 1, background: t.border }} />
@@ -268,11 +277,11 @@ export default function AuthCard({ initialMode = "login" }) {
               background: t.bgInput,
               color: t.text,
               border: `1px solid ${t.border}`,
-              borderRadius: 10,
-              padding: "14px 10px",
+              borderRadius: 11,
+              padding: "17px 10px",
               fontFamily: t.body,
               fontWeight: 500,
-              fontSize: 14.5,
+              fontSize: 15,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -291,7 +300,7 @@ export default function AuthCard({ initialMode = "login" }) {
         </>
       )}
 
-      <div style={{ textAlign: "center", fontSize: 13.5, color: t.textMuted, marginTop: 26 }}>
+      <div style={{ textAlign: "center", fontSize: 14, color: t.textMuted, marginTop: 30 }}>
         {mode === "login" && (
           <>
             Don't have an account?{" "}
