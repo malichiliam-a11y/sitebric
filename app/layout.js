@@ -14,17 +14,20 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
+        {/* Inter only — Space Grotesk was dropped when the type system
+            consolidated onto one family, so it no longer has to load. */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>
       <body
         style={{
           margin: 0,
-          fontFamily: "'Inter', sans-serif",
-          background: "#0A0A0F",
-          color: "#F2F0FA",
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+          background: "#050505",
+          color: "#EDEDED",
+          WebkitFontSmoothing: "antialiased",
         }}
       >
        {children}

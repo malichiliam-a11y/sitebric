@@ -4,35 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { readReferralCode } from "@/lib/referral";
-import { t, cardBg } from "@/lib/theme";
+import { t, type, cardBg, CONTROL_H } from "@/lib/theme";
 import { IconMail, IconEye, IconEyeOff, IconArrowRight } from "./Icons";
-
-const labelStyle = { display: "block", fontSize: 14, color: t.text, marginBottom: 16, fontWeight: 500 };
-const inputStyle = {
-  width: "100%",
-  boxSizing: "border-box",
-  background: t.bgInput,
-  border: `1px solid ${t.border}`,
-  borderRadius: 11,
-  padding: "16px 48px 16px 18px",
-  color: t.text,
-  fontFamily: t.body,
-  fontSize: 14,
-  outline: "none",
-  transition: "border-color 0.15s",
-};
-const iconStyle = {
-  position: "absolute",
-  right: 15,
-  top: "50%",
-  transform: "translateY(-50%)",
-  color: t.textFaint,
-  display: "flex",
-  pointerEvents: "none",
-};
-
-function focusIn(e) { e.target.style.borderColor = t.borderStrong; }
-function focusOut(e) { e.target.style.borderColor = t.border; }
 
 // One card, three modes: signing in, creating an account, and recovering
 // a forgotten password — all against Supabase email/password auth.
@@ -47,6 +20,12 @@ export default function AuthCard({ initialMode = "login" }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
+  function switchMode(next) {
+    setError("");
+    setNotice("");
+    setMode(next);
+  }
+
   async function signInWithGoogle() {
     setError("");
     const supabase = createClient();
@@ -54,9 +33,7 @@ export default function AuthCard({ initialMode = "login" }) {
       provider: "google",
       options: { redirectTo: `${window.location.origin}/dashboard` },
     });
-    if (error) {
-      setError(error.message || "Google sign-in isn't available right now. Try email instead.");
-    }
+    if (error) setError(error.message || "Google sign-in isn't available right now. Try email instead.");
   }
 
   async function handleSubmit(e) {
@@ -65,11 +42,8 @@ export default function AuthCard({ initialMode = "login" }) {
     setNotice("");
     setLoading(true);
     try {
-      if (rememberMe) {
-        window.localStorage.setItem("sitebric_email", email);
-      } else {
-        window.localStorage.removeItem("sitebric_email");
-      }
+      if (rememberMe) window.localStorage.setItem("sitebric_email", email);
+      else window.localStorage.removeItem("sitebric_email");
 
       const supabase = createClient();
 
@@ -92,13 +66,9 @@ export default function AuthCard({ initialMode = "login" }) {
             data: ref ? { ref } : undefined,
           },
         });
-        if (error) {
-          setError(error.message);
-        } else if (data.session) {
-          router.push("/dashboard");
-        } else {
-          setNotice("Almost there — check your email to confirm your account.");
-        }
+        if (error) setError(error.message);
+        else if (data.session) router.push("/dashboard");
+        else setNotice("Almost there — check your email to confirm your account.");
         return;
       }
 
@@ -115,93 +85,183 @@ export default function AuthCard({ initialMode = "login" }) {
   const heading = mode === "signup" ? "Create your account" : mode === "forgot" ? "Reset your password" : "Welcome back \u{1F44B}";
   const subheading =
     mode === "signup"
-      ? "Start building client sites in minutes."
+      ? "Start building client sites in minutes"
       : mode === "forgot"
-      ? "Enter your email and we'll send you a reset link."
+      ? "We'll email you a link to set a new one"
       : "Log in to your account to continue";
   const submitLabel = loading
-    ? mode === "signup" ? "Creating account…" : mode === "forgot" ? "Sending…" : "Logging in…"
+    ? mode === "signup" ? "Creating account" : mode === "forgot" ? "Sending" : "Logging in"
     : mode === "signup" ? "Create account" : mode === "forgot" ? "Send reset link" : "Log in";
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="sb-auth-card"
-      style={{
-        width: "100%",
-        maxWidth: 596,
-        borderRadius: 18,
-        padding: "53px 52px 43px",
-        background: cardBg,
-        border: `1px solid ${t.border}`,
-        boxSizing: "border-box",
-      }}
-    >
-      <style>{`
-        @media (max-width: 560px) {
-          .sb-auth-card { padding: 34px 22px 30px !important; border-radius: 16px !important; }
-          .sb-auth-wordmark { font-size: 32px !important; margin-bottom: 28px !important; }
-          .sb-auth-remember { gap: 10px; }
-          .sb-auth-remember label, .sb-auth-remember span { font-size: 12.5px !important; }
+    <form onSubmit={handleSubmit} className="sb-card">
+      <style dangerouslySetInnerHTML={{ __html: `
+        .sb-card {
+          width: 100%;
+          max-width: 596px;
+          box-sizing: border-box;
+          padding: 52px 52px 44px;
+          border-radius: 20px;
+          border: 1px solid ${t.border};
+          background: ${cardBg};
+          box-shadow: 0 1px 1px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.35);
         }
-      `}</style>
-      <div
-        className="sb-auth-wordmark"
-        style={{
-          fontFamily: t.display,
-          fontWeight: 500,
-          fontSize: 40,
-          letterSpacing: "-0.03em",
-          textAlign: "center",
-          color: t.text,
-          marginBottom: 40,
-        }}
-      >
+        .sb-card * { font-family: ${t.body}; }
+
+        .sb-field {
+          width: 100%;
+          height: ${CONTROL_H}px;
+          box-sizing: border-box;
+          padding: 0 46px 0 16px;
+          border-radius: 10px;
+          border: 1px solid ${t.border};
+          background: ${t.bgInput};
+          color: ${t.text};
+          font-size: 14.5px;
+          outline: none;
+          transition: border-color 160ms ${t.ease}, background 160ms ${t.ease};
+        }
+        .sb-field::placeholder { color: ${t.textFaint}; }
+        .sb-field:hover { border-color: ${t.borderHover}; }
+        .sb-field:focus { border-color: ${t.borderStrong}; background: #0D0D0D; }
+
+        .sb-affix {
+          position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+          display: flex; color: ${t.textFaint}; pointer-events: none;
+          transition: color 160ms ${t.ease};
+        }
+        .sb-affix--action { pointer-events: auto; cursor: pointer; }
+        .sb-affix--action:hover { color: ${t.textMuted}; }
+
+        /* Primary action. The lift is 1px and the press is 0.5% — enough
+           to feel responsive, small enough that it stays below conscious notice. */
+        .sb-cta {
+          position: relative;
+          width: 100%;
+          height: ${CONTROL_H}px;
+          display: flex; align-items: center; justify-content: center;
+          border: none; border-radius: 10px;
+          background: #FFFFFF; color: #0A0A0A;
+          font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
+          cursor: pointer;
+          transition: transform 160ms ${t.ease}, box-shadow 160ms ${t.ease}, background 160ms ${t.ease};
+        }
+        .sb-cta:hover:not(:disabled) {
+          background: #F2F2F2;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+        }
+        .sb-cta:active:not(:disabled) { transform: translateY(0) scale(0.995); box-shadow: none; }
+        .sb-cta:disabled { cursor: default; opacity: 0.55; }
+        .sb-cta-arrow {
+          position: absolute; right: 18px; display: flex;
+          transition: transform 200ms ${t.ease};
+        }
+        .sb-cta:hover:not(:disabled) .sb-cta-arrow { transform: translateX(3px); }
+
+        .sb-oauth {
+          width: 100%;
+          height: ${CONTROL_H}px;
+          display: flex; align-items: center; justify-content: center; gap: 11px;
+          border-radius: 10px; border: 1px solid ${t.border};
+          background: ${t.bgInput}; color: ${t.text};
+          font-size: 15px; font-weight: 500; cursor: pointer;
+          transition: border-color 160ms ${t.ease}, background 160ms ${t.ease};
+        }
+        .sb-oauth:hover { border-color: ${t.borderHover}; background: #0E0E0E; }
+
+        .sb-link { color: ${t.textMuted}; cursor: pointer; transition: color 160ms ${t.ease}; }
+        .sb-link:hover { color: ${t.text}; }
+        .sb-link--strong { color: ${t.text}; font-weight: 500; }
+        .sb-link--strong:hover { color: #FFFFFF; }
+
+        /* Native checkbox restyled rather than replaced, so it stays
+           keyboard- and screen-reader-addressable. */
+        .sb-check {
+          appearance: none; -webkit-appearance: none;
+          width: 17px; height: 17px; margin: 0; flex-shrink: 0;
+          border: 1px solid rgba(255,255,255,0.2); border-radius: 5px;
+          background: ${t.bgInput}; cursor: pointer; position: relative;
+          transition: background 140ms ${t.ease}, border-color 140ms ${t.ease};
+        }
+        .sb-check:hover { border-color: ${t.borderStrong}; }
+        .sb-check:checked { background: #FFFFFF; border-color: #FFFFFF; }
+        .sb-check:checked::after {
+          content: ""; position: absolute; left: 5.5px; top: 2px;
+          width: 4px; height: 8px;
+          border: solid #0A0A0A; border-width: 0 1.8px 1.8px 0;
+          transform: rotate(45deg);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .sb-cta, .sb-cta-arrow, .sb-field, .sb-oauth, .sb-link, .sb-check { transition: none; }
+          .sb-cta:hover:not(:disabled) { transform: none; }
+        }
+
+        @media (max-width: 560px) {
+          .sb-card { padding: 34px 22px 30px; border-radius: 16px; }
+          .sb-card-title { font-size: 32px !important; margin-bottom: 26px !important; }
+          .sb-remember { font-size: 13px !important; }
+        }
+      ` }} />
+
+      <div className="sb-card-title" style={{ ...type.title, textAlign: "center", color: t.text, marginBottom: 38 }}>
         sitebric
       </div>
 
-      <div style={{ fontFamily: t.display, fontWeight: 700, fontSize: 21, marginBottom: 22, textAlign: "center", color: t.text }}>
+      <div style={{ ...type.heading, textAlign: "center", color: t.text, marginBottom: 10 }}>
         {heading}
       </div>
-      <div style={{ fontSize: 15, color: t.textMuted, marginBottom: 51, textAlign: "center" }}>
+      <div style={{ ...type.body, textAlign: "center", color: t.textMuted, marginBottom: 44 }}>
         {subheading}
       </div>
 
-      <label style={labelStyle}>Email</label>
-      <div style={{ position: "relative", marginBottom: 36 }}>
+      <label htmlFor="sb-email" style={{ ...type.label, display: "block", color: t.text, marginBottom: 10 }}>
+        Email
+      </label>
+      <div style={{ position: "relative", marginBottom: 24 }}>
         <input
+          id="sb-email"
+          className="sb-field"
           type="email"
           required
           autoFocus
+          autoComplete="email"
           placeholder="Enter your email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          style={inputStyle}
-          onFocus={focusIn}
-          onBlur={focusOut}
         />
-        <span style={iconStyle}><IconMail size={17} /></span>
+        <span className="sb-affix"><IconMail size={17} /></span>
       </div>
 
       {mode !== "forgot" && (
         <>
-          <label style={labelStyle}>Password</label>
-          <div style={{ position: "relative", marginBottom: 36 }}>
+          <label htmlFor="sb-password" style={{ ...type.label, display: "block", color: t.text, marginBottom: 10 }}>
+            Password
+          </label>
+          <div style={{ position: "relative", marginBottom: 24 }}>
             <input
+              id="sb-password"
+              className="sb-field"
               type={showPassword ? "text" : "password"}
               required
               minLength={6}
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              style={inputStyle}
-              onFocus={focusIn}
-              onBlur={focusOut}
             />
             <span
-              style={{ ...iconStyle, cursor: "pointer", pointerEvents: "auto" }}
+              className="sb-affix sb-affix--action"
               onClick={() => setShowPassword((v) => !v)}
               role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setShowPassword((v) => !v);
+                }
+              }}
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? <IconEyeOff size={17} /> : <IconEye size={17} />}
@@ -211,94 +271,42 @@ export default function AuthCard({ initialMode = "login" }) {
       )}
 
       {mode === "login" && (
-        <div className="sb-auth-remember" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 30 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 13.5, color: t.textMuted, cursor: "pointer", whiteSpace: "nowrap" }}>
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              style={{ accentColor: "#FFFFFF", width: 15, height: 15 }}
-            />
+        <div className="sb-remember" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, ...type.small }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 10, color: t.textMuted, cursor: "pointer", whiteSpace: "nowrap" }}>
+            <input className="sb-check" type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
             Remember me
           </label>
-          <span
-            onClick={() => { setError(""); setNotice(""); setMode("forgot"); }}
-            style={{ fontSize: 13.5, color: t.textMuted, cursor: "pointer", whiteSpace: "nowrap" }}
-          >
+          <span className="sb-link" onClick={() => switchMode("forgot")} style={{ whiteSpace: "nowrap" }}>
             Forgot password?
           </span>
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        style={{
-          position: "relative",
-          width: "100%",
-          background: "#FFFFFF",
-          color: "#000000",
-          border: "none",
-          borderRadius: 11,
-          padding: "17px 10px",
-          fontFamily: t.body,
-          fontWeight: 600,
-          fontSize: 15,
-          cursor: loading ? "default" : "pointer",
-          opacity: loading ? 0.7 : 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          marginTop: mode === "login" ? 0 : 4,
-        }}
-      >
+      <button type="submit" className="sb-cta" disabled={loading}>
         {submitLabel}
-        {!loading && (
-          <span style={{ position: "absolute", right: 18, display: "flex" }}>
-            <IconArrowRight size={17} />
-          </span>
-        )}
+        {!loading && <span className="sb-cta-arrow"><IconArrowRight size={17} /></span>}
       </button>
 
       {notice && (
-        <div style={{ fontSize: 12.5, color: t.positive, background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 10, padding: "11px 14px", marginTop: 16 }}>
+        <div style={{ ...type.small, color: t.positive, background: "rgba(74,222,128,0.07)", border: "1px solid rgba(74,222,128,0.18)", borderRadius: 10, padding: "12px 14px", marginTop: 16 }}>
           {notice}
         </div>
       )}
       {error && (
-        <div style={{ fontSize: 12.5, color: t.negative, background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 10, padding: "11px 14px", marginTop: 16 }}>
+        <div style={{ ...type.small, color: t.negative, background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.18)", borderRadius: 10, padding: "12px 14px", marginTop: 16 }}>
           {error}
         </div>
       )}
 
       {mode !== "forgot" && (
         <>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "32px 0 26px", color: t.textFaint, fontSize: 13.5 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, margin: "28px 0", color: t.textFaint, ...type.small }}>
             <div style={{ flex: 1, height: 1, background: t.border }} />
             or
             <div style={{ flex: 1, height: 1, background: t.border }} />
           </div>
 
-          <button
-            type="button"
-            onClick={signInWithGoogle}
-            style={{
-              width: "100%",
-              background: t.bgInput,
-              color: t.text,
-              border: `1px solid ${t.border}`,
-              borderRadius: 11,
-              padding: "17px 10px",
-              fontFamily: t.body,
-              fontWeight: 500,
-              fontSize: 15,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 11,
-            }}
-          >
+          <button type="button" className="sb-oauth" onClick={signInWithGoogle}>
             <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
               <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z" />
               <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.9v2.33A9 9 0 0 0 9 18z" />
@@ -310,36 +318,15 @@ export default function AuthCard({ initialMode = "login" }) {
         </>
       )}
 
-      <div style={{ textAlign: "center", fontSize: 14, color: t.textMuted, marginTop: 40 }}>
+      <div style={{ textAlign: "center", color: t.textMuted, marginTop: 32, ...type.small }}>
         {mode === "login" && (
-          <>
-            Don't have an account?{" "}
-            <span
-              onClick={() => { setError(""); setNotice(""); setMode("signup"); }}
-              style={{ color: t.text, fontWeight: 600, cursor: "pointer" }}
-            >
-              Sign up
-            </span>
-          </>
+          <>Don&apos;t have an account? <span className="sb-link sb-link--strong" onClick={() => switchMode("signup")}>Sign up</span></>
         )}
         {mode === "signup" && (
-          <>
-            Already have an account?{" "}
-            <span
-              onClick={() => { setError(""); setNotice(""); setMode("login"); }}
-              style={{ color: t.text, fontWeight: 600, cursor: "pointer" }}
-            >
-              Log in
-            </span>
-          </>
+          <>Already have an account? <span className="sb-link sb-link--strong" onClick={() => switchMode("login")}>Log in</span></>
         )}
         {mode === "forgot" && (
-          <span
-            onClick={() => { setError(""); setNotice(""); setMode("login"); }}
-            style={{ color: t.text, fontWeight: 600, cursor: "pointer" }}
-          >
-            ← Back to log in
-          </span>
+          <span className="sb-link sb-link--strong" onClick={() => switchMode("login")}>Back to log in</span>
         )}
       </div>
     </form>
