@@ -4,34 +4,39 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { readReferralCode } from "@/lib/referral";
+import { t, cardBg } from "@/lib/theme";
+import { Wordmark } from "./Brand";
+import { IconMail, IconEye, IconEyeOff, IconArrowRight } from "./Icons";
 
-const accent = "linear-gradient(90deg, #8B5CF6, #22D3EE)";
-const display = "'Space Grotesk', sans-serif";
-const body = "'Inter', sans-serif";
-
-const inputWrapStyle = { position: "relative", marginBottom: 18 };
+const labelStyle = { display: "block", fontSize: 13, color: t.text, marginBottom: 8, fontWeight: 500 };
 const inputStyle = {
   width: "100%",
   boxSizing: "border-box",
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: "13px 42px 13px 16px",
-  color: "#fff",
-  fontFamily: body,
+  background: t.bgInput,
+  border: `1px solid ${t.border}`,
+  borderRadius: 10,
+  padding: "14px 44px 14px 16px",
+  color: t.text,
+  fontFamily: t.body,
   fontSize: 14,
   outline: "none",
-  transition: "border-color 0.2s",
+  transition: "border-color 0.15s",
 };
-const labelStyle = { display: "block", fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 8, fontWeight: 500 };
-const iconStyle = { position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.35)", pointerEvents: "none" };
+const iconStyle = {
+  position: "absolute",
+  right: 15,
+  top: "50%",
+  transform: "translateY(-50%)",
+  color: t.textFaint,
+  display: "flex",
+  pointerEvents: "none",
+};
 
-function focusIn(e) { e.target.style.borderColor = "#8B5CF6"; }
-function focusOut(e) { e.target.style.borderColor = "rgba(255,255,255,0.12)"; }
+function focusIn(e) { e.target.style.borderColor = t.borderStrong; }
+function focusOut(e) { e.target.style.borderColor = t.border; }
 
 // One card, three modes: signing in, creating an account, and recovering
-// a forgotten password — all against Supabase's own email/password auth
-// instead of the one-time-code flow this replaced.
+// a forgotten password — all against Supabase email/password auth.
 export default function AuthCard({ initialMode = "login" }) {
   const router = useRouter();
   const [mode, setMode] = useState(initialMode); // "login" | "signup" | "forgot"
@@ -98,7 +103,6 @@ export default function AuthCard({ initialMode = "login" }) {
         return;
       }
 
-      // mode === "login"
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
       else router.push("/dashboard");
@@ -109,111 +113,61 @@ export default function AuthCard({ initialMode = "login" }) {
     }
   }
 
-  const heading =
-    mode === "signup" ? "Create your account" : mode === "forgot" ? "Reset your password" : "Welcome back \u{1F44B}";
+  const heading = mode === "signup" ? "Create your account" : mode === "forgot" ? "Reset your password" : "Welcome back \u{1F44B}";
   const subheading =
     mode === "signup"
       ? "Start building client sites in minutes."
       : mode === "forgot"
       ? "Enter your email and we'll send you a reset link."
-      : "Log in to your dashboard to continue.";
+      : "Log in to your account to continue";
   const submitLabel = loading
-    ? mode === "signup"
-      ? "Creating account…"
-      : mode === "forgot"
-      ? "Sending…"
-      : "Logging in…"
-    : mode === "signup"
-    ? "Create account"
-    : mode === "forgot"
-    ? "Send reset link"
-    : "Log in";
+    ? mode === "signup" ? "Creating account…" : mode === "forgot" ? "Sending…" : "Logging in…"
+    : mode === "signup" ? "Create account" : mode === "forgot" ? "Send reset link" : "Log in";
 
   return (
     <form
       onSubmit={handleSubmit}
       style={{
         width: "100%",
-        borderRadius: 20,
-        padding: "36px 32px",
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.08)",
-        backdropFilter: "blur(20px)",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+        maxWidth: 470,
+        borderRadius: 18,
+        padding: "44px 46px 40px",
+        background: cardBg,
+        border: `1px solid ${t.border}`,
         boxSizing: "border-box",
       }}
     >
-      <div style={{ fontFamily: display, fontWeight: 700, fontSize: 22, marginBottom: 6, textAlign: "center" }}>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 22 }}>
+        <Wordmark size={30} markSize={30} />
+      </div>
+
+      <div style={{ fontFamily: t.display, fontWeight: 700, fontSize: 21, marginBottom: 8, textAlign: "center", color: t.text }}>
         {heading}
       </div>
-      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 26, textAlign: "center" }}>
+      <div style={{ fontSize: 14, color: t.textMuted, marginBottom: 30, textAlign: "center" }}>
         {subheading}
       </div>
 
-      {mode !== "forgot" && (
-        <>
-          <button
-            type="button"
-            onClick={signInWithGoogle}
-            style={{
-              width: "100%",
-              background: "#fff",
-              color: "#1a1a1a",
-              border: "none",
-              borderRadius: 12,
-              padding: "12px 10px",
-              fontFamily: body,
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              marginBottom: 20,
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18">
-              <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z" />
-              <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.9v2.33A9 9 0 0 0 9 18z" />
-              <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.9A9 9 0 0 0 0 9c0 1.45.35 2.83.9 4.03l3.05-2.33z" />
-              <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .9 4.97L3.95 7.3C4.66 5.17 6.65 3.58 9 3.58z" />
-            </svg>
-            Continue with Google
-          </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, color: "rgba(255,255,255,0.3)", fontSize: 12 }}>
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
-            or
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
-          </div>
-        </>
-      )}
-
       <label style={labelStyle}>Email</label>
-      <div style={inputWrapStyle}>
+      <div style={{ position: "relative", marginBottom: 20 }}>
         <input
           type="email"
           required
           autoFocus
-          placeholder="you@example.com"
+          placeholder="Enter your email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           style={inputStyle}
           onFocus={focusIn}
           onBlur={focusOut}
         />
-        <span style={iconStyle}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="2" y="4" width="20" height="16" rx="2" />
-            <path d="m22 6-10 7L2 6" />
-          </svg>
-        </span>
+        <span style={iconStyle}><IconMail size={17} /></span>
       </div>
 
       {mode !== "forgot" && (
         <>
           <label style={labelStyle}>Password</label>
-          <div style={inputWrapStyle}>
+          <div style={{ position: "relative", marginBottom: 20 }}>
             <input
               type={showPassword ? "text" : "password"}
               required
@@ -231,40 +185,26 @@ export default function AuthCard({ initialMode = "login" }) {
               role="button"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.6 18.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                  <path d="M1 1l22 22" />
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              )}
+              {showPassword ? <IconEyeOff size={17} /> : <IconEye size={17} />}
             </span>
           </div>
         </>
       )}
 
       {mode === "login" && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(255,255,255,0.5)", cursor: "pointer" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 13.5, color: t.textMuted, cursor: "pointer" }}>
             <input
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              style={{ accentColor: "#8B5CF6", width: 14, height: 14 }}
+              style={{ accentColor: "#FFFFFF", width: 15, height: 15 }}
             />
             Remember me
           </label>
           <span
-            onClick={() => {
-              setError("");
-              setNotice("");
-              setMode("forgot");
-            }}
-            style={{ fontSize: 13, color: "#22D3EE", cursor: "pointer" }}
+            onClick={() => { setError(""); setNotice(""); setMode("forgot"); }}
+            style={{ fontSize: 13.5, color: t.textMuted, cursor: "pointer" }}
           >
             Forgot password?
           </span>
@@ -275,66 +215,89 @@ export default function AuthCard({ initialMode = "login" }) {
         type="submit"
         disabled={loading}
         style={{
+          position: "relative",
           width: "100%",
-          background: accent,
-          color: "#0A0A10",
+          background: "#FFFFFF",
+          color: "#000000",
           border: "none",
-          borderRadius: 12,
-          padding: "14px 10px",
-          fontFamily: display,
-          fontWeight: 700,
-          fontSize: 14,
+          borderRadius: 10,
+          padding: "15px 10px",
+          fontFamily: t.body,
+          fontWeight: 600,
+          fontSize: 14.5,
           cursor: loading ? "default" : "pointer",
           opacity: loading ? 0.7 : 1,
-          boxShadow: "0 8px 24px rgba(139,92,246,0.35)",
-          marginTop: mode === "login" ? 18 : 6,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginTop: mode === "login" ? 0 : 4,
         }}
       >
         {submitLabel}
+        {!loading && (
+          <span style={{ position: "absolute", right: 18, display: "flex" }}>
+            <IconArrowRight size={17} />
+          </span>
+        )}
       </button>
 
       {notice && (
-        <div
-          style={{
-            fontSize: 12,
-            color: "#86EFAC",
-            background: "rgba(34,197,94,0.1)",
-            border: "1px solid rgba(34,197,94,0.25)",
-            borderRadius: 10,
-            padding: "10px 14px",
-            marginTop: 14,
-          }}
-        >
+        <div style={{ fontSize: 12.5, color: t.positive, background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 10, padding: "11px 14px", marginTop: 16 }}>
           {notice}
         </div>
       )}
       {error && (
-        <div
-          style={{
-            fontSize: 12,
-            color: "#FCA5A5",
-            background: "rgba(220,38,38,0.1)",
-            border: "1px solid rgba(220,38,38,0.25)",
-            borderRadius: 10,
-            padding: "10px 14px",
-            marginTop: 14,
-          }}
-        >
+        <div style={{ fontSize: 12.5, color: t.negative, background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 10, padding: "11px 14px", marginTop: 16 }}>
           {error}
         </div>
       )}
 
-      <div style={{ textAlign: "center", fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 22 }}>
+      {mode !== "forgot" && (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "24px 0", color: t.textFaint, fontSize: 13 }}>
+            <div style={{ flex: 1, height: 1, background: t.border }} />
+            or
+            <div style={{ flex: 1, height: 1, background: t.border }} />
+          </div>
+
+          <button
+            type="button"
+            onClick={signInWithGoogle}
+            style={{
+              width: "100%",
+              background: t.bgInput,
+              color: t.text,
+              border: `1px solid ${t.border}`,
+              borderRadius: 10,
+              padding: "14px 10px",
+              fontFamily: t.body,
+              fontWeight: 500,
+              fontSize: 14.5,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 11,
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z" />
+              <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.9v2.33A9 9 0 0 0 9 18z" />
+              <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.9A9 9 0 0 0 0 9c0 1.45.35 2.83.9 4.03l3.05-2.33z" />
+              <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .9 4.97L3.95 7.3C4.66 5.17 6.65 3.58 9 3.58z" />
+            </svg>
+            Continue with Google
+          </button>
+        </>
+      )}
+
+      <div style={{ textAlign: "center", fontSize: 13.5, color: t.textMuted, marginTop: 26 }}>
         {mode === "login" && (
           <>
             Don't have an account?{" "}
             <span
-              onClick={() => {
-                setError("");
-                setNotice("");
-                setMode("signup");
-              }}
-              style={{ color: "#F2F0FA", fontWeight: 600, cursor: "pointer" }}
+              onClick={() => { setError(""); setNotice(""); setMode("signup"); }}
+              style={{ color: t.text, fontWeight: 600, cursor: "pointer" }}
             >
               Sign up
             </span>
@@ -344,12 +307,8 @@ export default function AuthCard({ initialMode = "login" }) {
           <>
             Already have an account?{" "}
             <span
-              onClick={() => {
-                setError("");
-                setNotice("");
-                setMode("login");
-              }}
-              style={{ color: "#F2F0FA", fontWeight: 600, cursor: "pointer" }}
+              onClick={() => { setError(""); setNotice(""); setMode("login"); }}
+              style={{ color: t.text, fontWeight: 600, cursor: "pointer" }}
             >
               Log in
             </span>
@@ -357,12 +316,8 @@ export default function AuthCard({ initialMode = "login" }) {
         )}
         {mode === "forgot" && (
           <span
-            onClick={() => {
-              setError("");
-              setNotice("");
-              setMode("login");
-            }}
-            style={{ color: "#F2F0FA", fontWeight: 600, cursor: "pointer" }}
+            onClick={() => { setError(""); setNotice(""); setMode("login"); }}
+            style={{ color: t.text, fontWeight: 600, cursor: "pointer" }}
           >
             ← Back to log in
           </span>

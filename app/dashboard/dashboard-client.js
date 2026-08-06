@@ -4,6 +4,13 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { PLAN_LIMITS } from "@/lib/plans";
 import { readReferralCode, clearReferralCode } from "@/lib/referral";
+import { t, cardBg } from "@/lib/theme";
+import { Wordmark } from "@/app/components/Brand";
+import {
+  IconHome, IconSites, IconLeads, IconBilling, IconSettings, IconUser,
+  IconSearch, IconBell, IconPlus, IconArrowRight, IconChevronRight, IconSparkle,
+  IconRocket as IconRocketish,
+} from "@/app/components/Icons";
 
 export default function DashboardClient({ initialProjects }) {
   const supabase = createClient();
@@ -21,7 +28,7 @@ export default function DashboardClient({ initialProjects }) {
   const [profile, setProfile] = useState(null);
 
   const active = projects.find((p) => p.id === activeId);
-  const accent = "linear-gradient(90deg, #8B5CF6, #22D3EE)";
+  const accent = "#FFFFFF";
   const display = "'Space Grotesk', sans-serif";
   const body = "'Inter', sans-serif";
   const [billingStatus, setBillingStatus] = useState(null);
@@ -323,7 +330,7 @@ export default function DashboardClient({ initialProjects }) {
   // finished generating. A finished-but-unpublished site isn't on the
   // internet yet, so labelling it "live" was misleading.
   function projectMeta(project) {
-    if (project.status === "generating") return { color: "#22D3EE", label: "generating" };
+    if (project.status === "generating") return { color: "rgba(255,255,255,0.85)", label: "generating" };
     if (project.status === "error") return { color: "#F87171", label: "failed" };
     if (project.published) return { color: "#4ADE80", label: "live" };
     // Amber, not grey: an unpublished site is waiting on the user, so it
@@ -372,16 +379,16 @@ export default function DashboardClient({ initialProjects }) {
   })();
 
   const navItems = [
-    { id: "overview", label: "Overview", icon: "▦" },
-    { id: "sites", label: "Sites", icon: "◆" },
-    { id: "leads", label: "Find Leads", icon: "◎" },
-    { id: "billing", label: "Billing", icon: "▣" },
-    { id: "profile", label: "Profile", icon: "●" },
-    { id: "settings", label: "Settings", icon: "⚙" },
+    { id: "overview", label: "Overview", Icon: IconHome },
+    { id: "sites", label: "Sites", Icon: IconSites },
+    { id: "leads", label: "Find Leads", Icon: IconLeads },
+    { id: "billing", label: "Billing", Icon: IconBilling },
+    { id: "profile", label: "Profile", Icon: IconUser },
+    { id: "settings", label: "Settings", Icon: IconSettings },
   ];
 
   return (
-    <div className="sb-dash-shell" style={{ height: "100vh", display: "flex", color: "#F2F0FA", background: "#0A0A10", fontFamily: body, position: "relative" }}>
+    <div className="sb-dash-shell" style={{ height: "100vh", display: "flex", color: t.text, background: t.bg, fontFamily: body, position: "relative" }}>
       <style>{`
         @keyframes sbDashDrift1 {
           0%   { transform: translate(-50%, 0) scale(1); }
@@ -397,12 +404,12 @@ export default function DashboardClient({ initialProjects }) {
         .sb-dash-orb { position: absolute; border-radius: 50%; filter: blur(60px); }
         .sb-dash-orb-a {
           top: -30%; left: 50%; width: 1100px; height: 1100px;
-          background: radial-gradient(circle, rgba(139,92,246,0.26) 0%, rgba(34,211,238,0.12) 45%, transparent 70%);
+          background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 65%);
           animation: sbDashDrift1 12s ease-in-out infinite;
         }
         .sb-dash-orb-b {
           bottom: -20%; right: -10%; width: 700px; height: 700px;
-          background: radial-gradient(circle, rgba(34,211,238,0.18) 0%, transparent 70%);
+          background: radial-gradient(circle, rgba(255,255,255,0.035) 0%, transparent 68%);
           animation: sbDashDrift2 15s ease-in-out infinite;
         }
         .sb-project-card {
@@ -411,8 +418,8 @@ export default function DashboardClient({ initialProjects }) {
         }
         .sb-project-card:hover {
           transform: translateY(-4px);
-          box-shadow: 0 16px 36px rgba(139,92,246,0.18);
-          border-color: rgba(139,92,246,0.35);
+          box-shadow: 0 16px 36px rgba(0,0,0,0.5);
+          border-color: rgba(255,255,255,0.2);
         }
         .sb-sidebar-item {
           transition: background 0.15s ease, border-color 0.15s ease;
@@ -432,7 +439,7 @@ export default function DashboardClient({ initialProjects }) {
             height: auto !important;
             min-height: 100vh;
             /* dvh accounts for the iOS Safari toolbar; vh above is the
-               fallback for browsers that don't support it. */
+               fallback for browsers without dvh support. */
             min-height: 100dvh;
           }
           .sb-dash-sidebar {
@@ -440,7 +447,7 @@ export default function DashboardClient({ initialProjects }) {
             border-right: none !important;
             border-bottom: 1px solid rgba(255,255,255,0.08);
           }
-          /* Cap the project list so a long list can't push the workspace
+          /* Cap the project list so a long list cannot push the workspace
              off the bottom of the screen. */
           .sb-dash-projects { max-height: 45vh; }
           .sb-dash-main {
@@ -461,29 +468,23 @@ export default function DashboardClient({ initialProjects }) {
       <div
         className={`sb-dash-sidebar${tab === "sites" && active ? " sb-dash-sidebar--project-open" : ""}`}
         style={{
-          width: 300,
-          borderRight: "1px solid rgba(255,255,255,0.08)",
+          width: 272,
+          borderRight: `1px solid ${t.border}`,
           display: "flex",
           flexDirection: "column",
-          background: "rgba(255,255,255,0.015)",
+          background: t.bgPanel,
           zIndex: 2,
         }}
       >
         <div
           style={{
-            padding: "18px 20px",
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            padding: "24px 20px 20px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
           }}
         >
-          <span style={{ fontFamily: display, fontWeight: 700, fontSize: 17 }}>
-            site
-            <span style={{ background: accent, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              bric
-            </span>
-          </span>
+          <Wordmark size={19} />
           <button onClick={signOut} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 12, cursor: "pointer" }}>
             Sign out
           </button>
@@ -502,32 +503,21 @@ export default function DashboardClient({ initialProjects }) {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
+                gap: 12,
                 textAlign: "left",
-                background: tab === item.id ? "rgba(139,92,246,0.1)" : "transparent",
-                color: tab === item.id ? "#F2F0FA" : "rgba(255,255,255,0.5)",
-                border: "none",
-                borderLeft: tab === item.id ? "2px solid #8B5CF6" : "2px solid transparent",
-                borderRadius: 10,
-                padding: "10px 12px",
-                fontSize: 13,
-                fontWeight: 600,
-                fontFamily: display,
+                background: tab === item.id ? "rgba(255,255,255,0.06)" : "transparent",
+                color: tab === item.id ? "#FFFFFF" : "rgba(255,255,255,0.5)",
+                border: `1px solid ${tab === item.id ? "rgba(255,255,255,0.1)" : "transparent"}`,
+                borderRadius: 11,
+                padding: "11px 14px",
+                fontSize: 13.5,
+                fontWeight: 500,
+                fontFamily: body,
                 cursor: "pointer",
-                marginBottom: 4,
+                marginBottom: 3,
               }}
             >
-              <span
-                style={{
-                  fontSize: 13,
-                  background: tab === item.id ? accent : "transparent",
-                  WebkitBackgroundClip: tab === item.id ? "text" : "unset",
-                  WebkitTextFillColor: tab === item.id ? "transparent" : "inherit",
-                  opacity: tab === item.id ? 1 : 0.5,
-                }}
-              >
-                {item.icon}
-              </span>
+              <item.Icon size={18} />
               {item.label}
             </button>
           ))}
@@ -549,7 +539,7 @@ export default function DashboardClient({ initialProjects }) {
                   fontWeight: 700,
                   fontSize: 13,
                   cursor: "pointer",
-                  boxShadow: "0 6px 20px rgba(139,92,246,0.3)",
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
                 }}
               >
                 + New client site
@@ -605,8 +595,8 @@ export default function DashboardClient({ initialProjects }) {
                       borderRadius: 12,
                       marginBottom: 8,
                       fontSize: 13,
-                      border: p.id === activeId ? "1px solid rgba(139,92,246,0.5)" : "1px solid rgba(255,255,255,0.06)",
-                      background: p.id === activeId ? "rgba(139,92,246,0.08)" : "transparent",
+                      border: p.id === activeId ? "1px solid rgba(255,255,255,0.28)" : "1px solid rgba(255,255,255,0.06)",
+                      background: p.id === activeId ? "rgba(255,255,255,0.05)" : "transparent",
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -634,20 +624,13 @@ export default function DashboardClient({ initialProjects }) {
 
         <div style={{ marginTop: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
           {currentPlan !== "pro" && (
-            <div
-              style={{
-                borderRadius: 14,
-                padding: 16,
-                background: "rgba(139,92,246,0.06)",
-                border: "1px solid rgba(139,92,246,0.2)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: display, fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-                <span style={{ background: accent, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>⚡</span>
+            <div style={{ borderRadius: 14, padding: 18, background: cardBg, border: `1px solid ${t.border}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600, fontSize: 13.5, marginBottom: 8 }}>
+                <IconSparkle size={15} />
                 Upgrade to Pro
               </div>
-              <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", lineHeight: 1.5, marginBottom: 12 }}>
-                Unlock more sites, generations and leads to grow your business.
+              <div style={{ fontSize: 12, color: t.textMuted, lineHeight: 1.55, marginBottom: 16 }}>
+                Unlock advanced features and grow your business.
               </div>
               <a
                 href="/pricing"
@@ -655,14 +638,17 @@ export default function DashboardClient({ initialProjects }) {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  fontSize: 12,
-                  fontFamily: display,
-                  fontWeight: 700,
-                  color: "#F2F0FA",
+                  fontSize: 12.5,
+                  fontWeight: 500,
+                  color: t.text,
                   textDecoration: "none",
+                  background: t.bgInput,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 9,
+                  padding: "11px 14px",
                 }}
               >
-                Upgrade now <span>→</span>
+                Upgrade now <IconArrowRight size={15} />
               </a>
             </div>
           )}
@@ -675,40 +661,39 @@ export default function DashboardClient({ initialProjects }) {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 10,
-              padding: "8px 4px",
-              borderTop: "1px solid rgba(255,255,255,0.08)",
-              paddingTop: 16,
+              gap: 11,
+              borderTop: `1px solid ${t.border}`,
+              paddingTop: 18,
               cursor: "pointer",
             }}
           >
             <div
               style={{
-                width: 32,
-                height: 32,
+                width: 36,
+                height: 36,
                 flexShrink: 0,
                 borderRadius: "50%",
-                background: accent,
+                background: t.bgHover,
+                border: `1px solid ${t.border}`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontFamily: display,
-                fontWeight: 700,
-                fontSize: 13,
-                color: "#0A0A10",
+                fontWeight: 600,
+                fontSize: 13.5,
+                color: t.text,
               }}
             >
               {displayName?.[0]?.toUpperCase() || "?"}
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {displayName}
               </div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: 11.5, color: t.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {user?.email}
               </div>
             </div>
-            <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>›</span>
+            <span style={{ color: t.textFaint, display: "flex" }}><IconChevronRight size={14} /></span>
           </div>
         </div>
       </div>
@@ -725,33 +710,41 @@ export default function DashboardClient({ initialProjects }) {
             <div style={{ position: "relative", zIndex: 1 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16, marginBottom: 28 }}>
                 <div>
-                  <div style={{ fontFamily: display, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>
+                  <div style={{ fontFamily: display, fontWeight: 700, fontSize: 28, letterSpacing: "-0.02em", marginBottom: 8 }}>
                     Welcome back, {displayName} 👋
                   </div>
-                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>
-                    Here's what's happening with your sites.
+                  <div style={{ fontSize: 14, color: t.textMuted }}>
+                    Here's what's happening with your sites today.
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <input
-                    value={siteSearch}
-                    onChange={(e) => setSiteSearch(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") setTab("sites");
-                    }}
-                    placeholder="Search your sites…"
-                    style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: 10,
-                      padding: "10px 14px",
-                      color: "#fff",
-                      fontFamily: body,
-                      fontSize: 13,
-                      outline: "none",
-                      width: 220,
-                    }}
-                  />
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <span style={{ position: "absolute", left: 14, color: t.textFaint, display: "flex", pointerEvents: "none" }}>
+                      <IconSearch size={16} />
+                    </span>
+                    <input
+                      value={siteSearch}
+                      onChange={(e) => setSiteSearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") setTab("sites");
+                      }}
+                      placeholder="Search your sites..."
+                      style={{
+                        background: t.bgInput,
+                        border: `1px solid ${t.border}`,
+                        borderRadius: 10,
+                        padding: "11px 14px 11px 40px",
+                        color: t.text,
+                        fontFamily: body,
+                        fontSize: 13.5,
+                        outline: "none",
+                        width: 250,
+                      }}
+                    />
+                  </div>
+                  <div style={{ color: t.textMuted, display: "flex", cursor: "default" }} title="Notifications">
+                    <IconBell size={19} />
+                  </div>
                   <div
                     onClick={() => {
                       setTab("profile");
@@ -762,14 +755,14 @@ export default function DashboardClient({ initialProjects }) {
                       height: 34,
                       flexShrink: 0,
                       borderRadius: "50%",
-                      background: accent,
+                      background: t.bgHover,
+                      border: `1px solid ${t.border}`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontFamily: display,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       fontSize: 13,
-                      color: "#0A0A10",
+                      color: t.text,
                       cursor: "pointer",
                     }}
                   >
@@ -782,51 +775,52 @@ export default function DashboardClient({ initialProjects }) {
                   usage. No fabricated "views"/"conversion"/"revenue" widgets — Sitebric
                   doesn't track visitor analytics on published sites (yet), so it doesn't
                   claim to. */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(215px, 1fr))", gap: 18, marginBottom: 18 }}>
                 {[
-                  ["Client Sites", "◆", sitesUsed, `of ${limits.sites} on your plan`],
-                  ["Published Live", "●", publishedCount, `${sitesUsed - publishedCount} not yet published`],
-                  ["Generations Used", "✎", gensUsed, `of ${limits.generations} this month`],
-                  ["Leads Found", "◎", searchesUsedBilling, `of ${limits.searches} searches this month`],
-                ].map(([label, icon, value, sub]) => (
+                  ["Client Sites", IconSites, sitesUsed, `of ${limits.sites} on your plan`],
+                  ["Published Live", IconRocketish, publishedCount, `${sitesUsed - publishedCount} not yet published`],
+                  ["Generations Used", IconSparkle, gensUsed, `of ${limits.generations} this month`],
+                  ["Leads Found", IconLeads, searchesUsedBilling, `of ${limits.searches} searches this month`],
+                ].map(([label, Icon, value, sub]) => (
                   <div
                     key={label}
                     style={{
                       borderRadius: 16,
-                      padding: "18px 20px",
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      padding: "22px 24px",
+                      background: cardBg,
+                      border: `1px solid ${t.border}`,
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{label}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                      <div style={{ fontSize: 13.5, color: t.textMuted }}>{label}</div>
                       <div
                         style={{
-                          width: 26,
-                          height: 26,
-                          borderRadius: 8,
-                          background: "rgba(139,92,246,0.1)",
+                          width: 32,
+                          height: 32,
+                          borderRadius: 9,
+                          background: t.bgInput,
+                          border: `1px solid ${t.border}`,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: 11,
+                          color: t.text,
                           flexShrink: 0,
                         }}
                       >
-                        <span style={{ background: accent, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{icon}</span>
+                        <Icon size={15} />
                       </div>
                     </div>
-                    <div style={{ fontFamily: display, fontWeight: 700, fontSize: 28, marginBottom: 6 }}>{value}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{sub}</div>
+                    <div style={{ fontFamily: display, fontWeight: 700, fontSize: 32, letterSpacing: "-0.02em", marginBottom: 10 }}>{value}</div>
+                    <div style={{ fontSize: 12.5, color: t.textFaint }}>{sub}</div>
                   </div>
                 ))}
               </div>
 
               <div className="sb-overview-grid" style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 16, marginBottom: 16 }}>
                 {/* Real chart: sites created per week, from created_at — not simulated traffic. */}
-                <div style={{ borderRadius: 16, padding: 22, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <div style={{ fontFamily: display, fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Sites created</div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 18 }}>Last 8 weeks</div>
+                <div style={{ borderRadius: 16, padding: 24, background: cardBg, border: `1px solid ${t.border}` }}>
+                  <div style={{ fontFamily: display, fontWeight: 600, fontSize: 16, marginBottom: 5 }}>Sites created</div>
+                  <div style={{ fontSize: 12.5, color: t.textFaint, marginBottom: 22 }}>Last 8 weeks</div>
                   {(() => {
                     const w = 100,
                       h = 46,
@@ -839,30 +833,30 @@ export default function DashboardClient({ initialProjects }) {
                       <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: "100%", height: 140, overflow: "visible" }}>
                         <defs>
                           <linearGradient id="ovChartFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.35" />
-                            <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0" />
+                            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.28" />
+                            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
                           </linearGradient>
                         </defs>
                         <path d={areaPath} fill="url(#ovChartFill)" stroke="none" />
-                        <path d={linePath} fill="none" stroke="#8B5CF6" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+                        <path d={linePath} fill="none" stroke="#FFFFFF" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
                         {points.map(([x, y], i) => (
-                          <circle key={i} cx={x} cy={y} r="1.6" fill="#22D3EE" vectorEffect="non-scaling-stroke" />
+                          <circle key={i} cx={x} cy={y} r="1.6" fill="#FFFFFF" vectorEffect="non-scaling-stroke" />
                         ))}
                       </svg>
                     );
                   })()}
                   {sitesUsed === 0 && (
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 8 }}>
+                    <div style={{ fontSize: 12.5, color: t.textFaint, marginTop: 8 }}>
                       Generate your first site to see activity here.
                     </div>
                   )}
                 </div>
 
                 {/* Recent activity — real project rows, not a simulated event feed. */}
-                <div style={{ borderRadius: 16, padding: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <div style={{ fontFamily: display, fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Recent Activity</div>
+                <div style={{ borderRadius: 16, padding: 24, background: cardBg, border: `1px solid ${t.border}` }}>
+                  <div style={{ fontFamily: display, fontWeight: 600, fontSize: 16, marginBottom: 18 }}>Recent Activity</div>
                   {recentProjects.length === 0 && (
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>Nothing yet — create your first site to get started.</div>
+                    <div style={{ fontSize: 12.5, color: t.textFaint }}>Nothing yet — create your first site to get started.</div>
                   )}
                   {recentProjects.map((p) => {
                     const meta = projectMeta(p);
@@ -873,7 +867,7 @@ export default function DashboardClient({ initialProjects }) {
                           setTab("sites");
                           setActiveId(p.id);
                         }}
-                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", cursor: "pointer" }}
+                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${t.border}`, cursor: "pointer" }}
                       >
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontSize: 12.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -893,18 +887,18 @@ export default function DashboardClient({ initialProjects }) {
 
               <div className="sb-overview-grid" style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 16 }}>
                 {/* Sites snapshot */}
-                <div style={{ borderRadius: 16, padding: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                    <div style={{ fontFamily: display, fontWeight: 600, fontSize: 14 }}>Sites</div>
+                <div style={{ borderRadius: 16, padding: 24, background: cardBg, border: `1px solid ${t.border}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                    <div style={{ fontFamily: display, fontWeight: 600, fontSize: 16 }}>Sites</div>
                     <span
                       onClick={() => setTab("sites")}
-                      style={{ fontSize: 12, color: "#22D3EE", cursor: "pointer" }}
+                      style={{ fontSize: 12.5, color: t.text, cursor: "pointer", background: t.bgInput, border: `1px solid ${t.border}`, borderRadius: 8, padding: "7px 13px" }}
                     >
-                      View all sites →
+                      View all sites
                     </span>
                   </div>
                   {projects.length === 0 && (
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>No sites yet.</div>
+                    <div style={{ fontSize: 12.5, color: t.textFaint }}>No sites yet.</div>
                   )}
                   {recentProjects.slice(0, 3).map((p) => {
                     const meta = projectMeta(p);
@@ -915,7 +909,7 @@ export default function DashboardClient({ initialProjects }) {
                           setTab("sites");
                           setActiveId(p.id);
                         }}
-                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", cursor: "pointer" }}
+                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${t.border}`, cursor: "pointer" }}
                       >
                         <span style={{ fontSize: 13, fontWeight: 500 }}>{p.client_name}</span>
                         <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: meta.color }}>
@@ -928,25 +922,34 @@ export default function DashboardClient({ initialProjects }) {
                 </div>
 
                 {/* Quick actions */}
-                <div style={{ borderRadius: 16, padding: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <div style={{ fontFamily: display, fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Quick Actions</div>
+                <div style={{ borderRadius: 16, padding: 24, background: cardBg, border: `1px solid ${t.border}` }}>
+                  <div style={{ fontFamily: display, fontWeight: 600, fontSize: 16, marginBottom: 18 }}>Quick Actions</div>
                   {[
-                    ["+", "Create New Site", "Start building a new website", () => { setTab("sites"); setActiveId(null); }],
-                    ["◎", "Find Leads", "Search for local businesses to pitch", () => setTab("leads")],
-                    ["▣", "Manage Billing", "View plan, usage and invoices", () => setTab("billing")],
-                  ].map(([icon, title, desc, onClick]) => (
+                    [IconPlus, "Create New Site", "Start building a new website", () => { setTab("sites"); setActiveId(null); }],
+                    [IconLeads, "Find Leads", "Search for local businesses to pitch", () => setTab("leads")],
+                    [IconBilling, "Manage Billing", "View plan, usage and invoices", () => setTab("billing")],
+                  ].map(([Icon, title, desc, onClick]) => (
                     <div
                       key={title}
                       onClick={onClick}
-                      style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", cursor: "pointer" }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14,
+                        padding: "14px 16px",
+                        marginBottom: 10,
+                        borderRadius: 11,
+                        background: t.bgInput,
+                        border: `1px solid ${t.border}`,
+                        cursor: "pointer",
+                      }}
                     >
-                      <div style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 8, background: "rgba(139,92,246,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>
-                        {icon}
+                      <span style={{ color: t.text, display: "flex", flexShrink: 0 }}><Icon size={17} /></span>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 500 }}>{title}</div>
+                        <div style={{ fontSize: 12, color: t.textFaint, marginTop: 2 }}>{desc}</div>
                       </div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 12.5, fontWeight: 500 }}>{title}</div>
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{desc}</div>
-                      </div>
+                      <span style={{ color: t.textFaint, display: "flex" }}><IconChevronRight size={15} /></span>
                     </div>
                   ))}
                 </div>
@@ -1011,7 +1014,7 @@ export default function DashboardClient({ initialProjects }) {
                     marginBottom: 12,
                     outline: "none",
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
+                  onFocus={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.4)")}
                   onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
                 />
                 <textarea
@@ -1033,7 +1036,7 @@ export default function DashboardClient({ initialProjects }) {
                     outline: "none",
                     marginBottom: 14,
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
+                  onFocus={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.4)")}
                   onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
                 />
 
@@ -1118,7 +1121,7 @@ export default function DashboardClient({ initialProjects }) {
                     fontWeight: 700,
                     fontSize: 14,
                     cursor: busy ? "default" : "pointer",
-                    boxShadow: busy ? "none" : "0 6px 20px rgba(139,92,246,0.3)",
+                    boxShadow: busy ? "none" : "0 6px 20px rgba(0,0,0,0.4)",
                   }}
                 >
                   {busy ? "Generating…" : "Generate site →"}
@@ -1167,7 +1170,7 @@ export default function DashboardClient({ initialProjects }) {
                               height: 100,
                               background:
                                 p.status === "done"
-                                  ? "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(34,211,238,0.15))"
+                                  ? "linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04))"
                                   : "rgba(255,255,255,0.03)",
                               display: "flex",
                               alignItems: "center",
@@ -1237,7 +1240,7 @@ export default function DashboardClient({ initialProjects }) {
                     href={active.slug ? `https://${active.slug}.sitebric.com` : `/s/${active.id}`}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ fontSize: 12, color: "#22D3EE", textDecoration: "none" }}
+                    style={{ fontSize: 12, color: "#FFFFFF", textDecoration: "none" }}
                   >
                     {active.slug ? `${active.slug}.sitebric.com` : "View live link"} →
                   </a>
@@ -1317,16 +1320,16 @@ export default function DashboardClient({ initialProjects }) {
                 {active.custom_domain ? (
                   <div>
                     <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
-                      Connected domain: <span style={{ color: "#22D3EE" }}>{active.custom_domain}</span>
+                      Connected domain: <span style={{ color: "#FFFFFF" }}>{active.custom_domain}</span>
                     </span>
                     <div
                       style={{
                         marginTop: 10,
                         fontSize: 12,
                         lineHeight: 1.6,
-                        color: "#C4B5FD",
-                        background: "rgba(139,92,246,0.08)",
-                        border: "1px solid rgba(139,92,246,0.15)",
+                        color: "rgba(255,255,255,0.72)",
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.1)",
                         borderRadius: 10,
                         padding: "12px 14px",
                         maxWidth: 520,
@@ -1474,7 +1477,7 @@ export default function DashboardClient({ initialProjects }) {
                       fontSize: 13,
                       outline: "none",
                     }}
-                    onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
+                    onFocus={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.4)")}
                     onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
                   />
                   <button
@@ -1518,9 +1521,9 @@ export default function DashboardClient({ initialProjects }) {
                 gap: 8,
                 fontSize: 12,
                 fontWeight: 600,
-                color: "#C4B5FD",
-                background: "rgba(139,92,246,0.08)",
-                border: "1px solid rgba(139,92,246,0.2)",
+                color: "rgba(255,255,255,0.72)",
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.12)",
                 borderRadius: 999,
                 padding: "5px 12px",
                 marginBottom: 20,
@@ -1631,7 +1634,7 @@ export default function DashboardClient({ initialProjects }) {
                         {lead.phone ? (
                           <a
                             href={`tel:${lead.phone.replace(/[^0-9+]/g, "")}`}
-                            style={{ color: "#22D3EE", textDecoration: "none" }}
+                            style={{ color: "#FFFFFF", textDecoration: "none" }}
                           >
                             📞 {lead.phone}
                           </a>
@@ -1643,7 +1646,7 @@ export default function DashboardClient({ initialProjects }) {
                             href={lead.mapsUrl}
                             target="_blank"
                             rel="noreferrer"
-                            style={{ color: "#C4B5FD", textDecoration: "none" }}
+                            style={{ color: "rgba(255,255,255,0.72)", textDecoration: "none" }}
                           >
                             View on Maps →
                           </a>
@@ -1987,7 +1990,7 @@ export default function DashboardClient({ initialProjects }) {
               <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>Need help?</div>
               <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 4 }}>
                 Questions, bugs, or feedback — reach out anytime at{" "}
-                <a href="mailto:supportsitebric@gmail.com" style={{ color: "#22D3EE" }}>
+                <a href="mailto:supportsitebric@gmail.com" style={{ color: "#FFFFFF" }}>
                   supportsitebric@gmail.com
                 </a>
               </div>
