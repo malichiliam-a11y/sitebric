@@ -12,7 +12,7 @@ export default function Home() {
   const [showLogin, setShowLogin] = useState(false);
 
   const accent = "linear-gradient(90deg, #8B5CF6, #22D3EE)";
-  const display = "'Space Grotesk', sans-serif";
+  const display = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
   const body = "'Inter', sans-serif";
 
   useEffect(() => {

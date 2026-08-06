@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { captureReferralCode } from "@/lib/referral";
-import { t, cardBg } from "@/lib/theme";
+import { t, type, cardBg } from "@/lib/theme";
 import AuthCard from "@/app/components/AuthCard";
 import { Wordmark } from "@/app/components/Brand";
 import MeshTerrain from "@/app/components/MeshTerrain";
@@ -18,6 +18,10 @@ const features = [
   [IconPencil, "Fully Customizable", "Edit and personalize every detail to match your brand."],
   [IconRocket, "Launch Instantly", "Publish your website in one click and go live."],
 ];
+
+// Monochrome fractal noise, inlined so the grain costs no extra request.
+const GRAIN =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
 export default function Login() {
   const router = useRouter();
@@ -34,142 +38,159 @@ export default function Login() {
   }, [router]);
 
   return (
-    <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: t.body, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
-      <style>{`
+    <div className="sb-login">
+      <style dangerouslySetInnerHTML={{ __html: `
+        .sb-login {
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          position: relative;
+          overflow: hidden;
+          background: ${t.bg};
+          color: ${t.text};
+          font-family: ${t.body};
+          -webkit-font-smoothing: antialiased;
+        }
+        /* Film grain. Fixed so it does not crawl with scroll, and low
+           enough that it only reads as texture on the flat black. */
+        .sb-login::after {
+          content: "";
+          position: fixed;
+          inset: 0;
+          z-index: 3;
+          pointer-events: none;
+          opacity: 0.032;
+          background-image: ${GRAIN};
+        }
+
+        .sb-nav-link {
+          color: ${t.textMuted};
+          text-decoration: none;
+          transition: color 160ms ${t.ease};
+        }
+        .sb-nav-link:hover { color: ${t.text}; }
+
+        .sb-toggle {
+          width: 40px; height: 40px;
+          border-radius: 10px;
+          border: 1px solid ${t.border};
+          background: ${t.bgPanel};
+          display: flex; align-items: center; justify-content: center;
+          color: ${t.textMuted};
+        }
+
+        .sb-tile {
+          width: 48px; height: 48px; flex-shrink: 0;
+          border-radius: 12px;
+          border: 1px solid ${t.border};
+          background: ${t.bgCard};
+          display: flex; align-items: center; justify-content: center;
+          color: ${t.text};
+          transition: border-color 200ms ${t.ease};
+        }
+        .sb-feature:hover .sb-tile { border-color: ${t.borderHover}; }
+
+        @media (prefers-reduced-motion: reduce) {
+          .sb-nav-link, .sb-tile { transition: none; }
+        }
         @media (max-width: 1040px) {
-          .sb-login-grid { grid-template-columns: 1fr !important; justify-items: center; gap: 0 !important; padding: 0 5% 24px !important; }
-          .sb-login-copy { display: none !important; }
-          .sb-login-footer { flex-direction: column !important; gap: 20px !important; text-align: center; }
-          .sb-login-footer-links { gap: 24px !important; flex-wrap: wrap; justify-content: center; }
-          .sb-mesh-wrap { opacity: 0.4 !important; }
+          .sb-grid { grid-template-columns: 1fr !important; justify-items: center; padding: 0 5% 28px !important; }
+          .sb-copy { display: none !important; }
+          .sb-footer { flex-direction: column !important; gap: 20px !important; text-align: center; }
+          .sb-footer-links { gap: 26px !important; flex-wrap: wrap; justify-content: center; }
+          .sb-art { opacity: 0.5 !important; }
         }
         @media (max-width: 720px) {
-          .sb-login-nav { padding: 22px 6% !important; }
-          .sb-login-nav-links { gap: 20px !important; }
-          .sb-login-nav-links a { display: none; }
+          .sb-nav { padding: 22px 6% !important; }
+          .sb-nav-link { display: none; }
         }
-      `}</style>
+      ` }} />
 
-      {/* Ambient art layer */}
-      <div className="sb-mesh-wrap" style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
-        <div
-          style={{
-            position: "absolute",
-            left: "15%",
-            right: "40%",
-            top: "30%",
-            bottom: "7%",
-          }}
-        >
+      {/* Ambient art. Sits under everything and stays out of the way. */}
+      <div className="sb-art" style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
+        <div style={{ position: "absolute", left: "14%", right: "40%", top: "30%", bottom: "6%" }}>
           <MeshTerrain style={{ width: "100%", height: "100%" }} />
         </div>
         <div
           style={{
             position: "absolute",
             inset: 0,
-            background:
-              "radial-gradient(circle at 46% 56%, rgba(255,255,255,0.06) 0%, transparent 46%), radial-gradient(circle at 88% 40%, rgba(255,255,255,0.03) 0%, transparent 40%)",
+            background: "radial-gradient(60% 50% at 45% 55%, rgba(255,255,255,0.035) 0%, transparent 100%)",
           }}
         />
       </div>
 
-      <nav className="sb-login-nav" style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 8.8% 30px 6.2%" }}>
-        <Wordmark size={24} />
-        <div className="sb-login-nav-links" style={{ display: "flex", alignItems: "center", gap: 36, fontSize: 14.5 }}>
-          <a href="/#how-it-works" style={{ color: t.textMuted, textDecoration: "none" }}>Documentation</a>
-          <a href="mailto:supportsitebric@gmail.com" style={{ color: t.textMuted, textDecoration: "none" }}>Contact</a>
-          {/* Decorative: the app is dark-only today, so this deliberately
-              isn't wired to a handler rather than pretending to toggle. */}
-          <span
-            title="Light mode isn't available yet"
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 11,
-              border: `1px solid ${t.border}`,
-              background: t.bgPanel,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: t.textMuted,
-            }}
-          >
+      <nav
+        className="sb-nav"
+        style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 8.8% 30px 6.2%" }}
+      >
+        <Wordmark size={23} />
+        <div style={{ display: "flex", alignItems: "center", gap: 34, fontSize: 14.5 }}>
+          <a className="sb-nav-link" href="/#how-it-works">Documentation</a>
+          <a className="sb-nav-link" href="mailto:supportsitebric@gmail.com">Contact</a>
+          {/* Decorative: the app is dark-only, so this is rendered without
+              a handler rather than pretending to switch themes. */}
+          <span className="sb-toggle" title="Light mode isn't available yet">
             <IconSun size={17} />
           </span>
         </div>
       </nav>
 
       <div
-        className="sb-login-grid"
+        className="sb-grid"
         style={{
           position: "relative",
           zIndex: 1,
           flex: 1,
           width: "100%",
+          boxSizing: "border-box",
           padding: "0 8.8% 30px 6.2%",
-          rowGap: 0,
           display: "grid",
           gridTemplateColumns: "1fr 596px",
           gap: 56,
           alignItems: "center",
-          boxSizing: "border-box",
         }}
       >
-        <div className="sb-login-copy">
+        <div className="sb-copy">
           <div
             style={{
+              ...type.micro,
               display: "inline-flex",
               alignItems: "center",
               gap: 10,
-              fontSize: 11.5,
-              fontWeight: 500,
-              letterSpacing: "0.1em",
-              color: "rgba(255,255,255,0.78)",
+              color: t.textMuted,
               border: `1px solid ${t.border}`,
               borderRadius: 999,
-              padding: "9px 18px",
-              marginBottom: 34,
+              padding: "8px 16px",
+              marginBottom: 36,
             }}
           >
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(255,255,255,0.65)" }} />
+            <span style={{ width: 5, height: 5, borderRadius: "50%", background: t.textMuted }} />
             AI-POWERED PLATFORM
           </div>
 
-          <h1 style={{ fontFamily: t.display, fontWeight: 700, fontSize: "clamp(36px, 3.7vw, 56px)", lineHeight: 1.05, letterSpacing: "-0.035em", margin: "0 0 30px" }}>
+          <h1 style={{ ...type.display, fontSize: "clamp(36px, 3.7vw, 56px)", margin: "0 0 28px", color: t.text }}>
             Build stunning
             <br />
             websites in
             <br />
-            <span style={{ color: "rgba(255,255,255,0.38)" }}>seconds.</span>
+            <span style={{ color: t.textFaint }}>seconds.</span>
           </h1>
 
-          <p style={{ fontSize: 15.5, color: t.textMuted, lineHeight: 1.75, maxWidth: 396, margin: "0 0 44px" }}>
+          <p style={{ ...type.bodyLg, color: t.textMuted, maxWidth: 392, margin: "0 0 44px" }}>
             Sitebric is the AI-powered platform that helps you generate, customize, and launch professional
             websites — faster than ever.
           </p>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 28, marginBottom: 50 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 26, marginBottom: 48 }}>
             {features.map(([Icon, title, desc]) => (
-              <div key={title} style={{ display: "flex", gap: 18, alignItems: "flex-start" }}>
-                <div
-                  style={{
-                    width: 50,
-                    height: 50,
-                    flexShrink: 0,
-                    borderRadius: 13,
-                    background: t.bgCard,
-                    border: `1px solid ${t.border}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: t.text,
-                  }}
-                >
-                  <Icon size={20} />
-                </div>
+              <div key={title} className="sb-feature" style={{ display: "flex", gap: 18, alignItems: "flex-start" }}>
+                <span className="sb-tile"><Icon size={19} /></span>
                 <div style={{ paddingTop: 3 }}>
-                  <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>{title}</div>
-                  <div style={{ fontSize: 13.5, color: t.textMuted, lineHeight: 1.55, maxWidth: 236 }}>{desc}</div>
+                  <div style={{ fontSize: 14.5, fontWeight: 500, letterSpacing: "-0.01em", marginBottom: 5, color: t.text }}>
+                    {title}
+                  </div>
+                  <div style={{ ...type.small, color: t.textMuted, lineHeight: 1.55, maxWidth: 232 }}>{desc}</div>
                 </div>
               </div>
             ))}
@@ -179,9 +200,9 @@ export default function Login() {
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 22,
+              gap: 20,
               borderRadius: 14,
-              padding: "22px 26px",
+              padding: "20px 24px",
               background: cardBg,
               border: `1px solid ${t.border}`,
             }}
@@ -191,21 +212,21 @@ export default function Login() {
                 <div
                   key={i}
                   style={{
-                    width: 38,
-                    height: 38,
+                    width: 34,
+                    height: 34,
                     borderRadius: "50%",
-                    marginLeft: i === 0 ? 0 : -13,
-                    border: "2px solid #101010",
-                    background: `linear-gradient(140deg, rgba(255,255,255,${0.3 - i * 0.05}), rgba(255,255,255,0.07))`,
+                    marginLeft: i === 0 ? 0 : -12,
+                    border: `2px solid ${t.bgCard}`,
+                    background: `linear-gradient(140deg, rgba(255,255,255,${0.24 - i * 0.04}), rgba(255,255,255,0.06))`,
                   }}
                 />
               ))}
             </div>
             <div>
-              <div style={{ display: "flex", gap: 3, color: "rgba(255,255,255,0.9)", marginBottom: 9 }}>
-                {[0, 1, 2, 3, 4].map((i) => <IconStar key={i} size={14} />)}
+              <div style={{ display: "flex", gap: 3, color: t.textMuted, marginBottom: 8 }}>
+                {[0, 1, 2, 3, 4].map((i) => <IconStar key={i} size={12} />)}
               </div>
-              <div style={{ fontSize: 13, color: t.textMuted, lineHeight: 1.5, maxWidth: 208 }}>
+              <div style={{ ...type.small, color: t.textMuted, lineHeight: 1.5, maxWidth: 228 }}>
                 Trusted by creators and businesses to build the future of the web.
               </div>
             </div>
@@ -218,7 +239,7 @@ export default function Login() {
       </div>
 
       <footer
-        className="sb-login-footer"
+        className="sb-footer"
         style={{
           position: "relative",
           zIndex: 1,
@@ -227,20 +248,20 @@ export default function Login() {
           justifyContent: "space-between",
           gap: 24,
           padding: "28px 8.8% 28px 6.2%",
-          fontSize: 13.5,
+          ...type.small,
           color: t.textFaint,
         }}
       >
         <span>© {new Date().getFullYear()} Sitebric. All rights reserved.</span>
-        <div className="sb-login-footer-links" style={{ display: "flex", gap: 46 }}>
-          <a href="/terms" style={{ color: t.textMuted, textDecoration: "none" }}>Terms of Service</a>
-          <a href="/privacy" style={{ color: t.textMuted, textDecoration: "none" }}>Privacy Policy</a>
-          <a href="mailto:supportsitebric@gmail.com" style={{ color: t.textMuted, textDecoration: "none" }}>Contact Us</a>
+        <div className="sb-footer-links" style={{ display: "flex", gap: 44 }}>
+          <a className="sb-nav-link" href="/terms">Terms of Service</a>
+          <a className="sb-nav-link" href="/privacy">Privacy Policy</a>
+          <a className="sb-nav-link" href="mailto:supportsitebric@gmail.com">Contact Us</a>
         </div>
-        <div style={{ display: "flex", gap: 22, color: t.textMuted }}>
-          <IconX size={17} />
-          <IconDiscord size={18} />
-          <IconGitHub size={18} />
+        <div style={{ display: "flex", gap: 20, color: t.textFaint }}>
+          <IconX size={16} />
+          <IconDiscord size={17} />
+          <IconGitHub size={17} />
         </div>
       </footer>
     </div>

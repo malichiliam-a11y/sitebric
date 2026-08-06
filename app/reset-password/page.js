@@ -3,23 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
-
-const accent = "linear-gradient(90deg, #8B5CF6, #22D3EE)";
-const display = "'Space Grotesk', sans-serif";
-const body = "'Inter', sans-serif";
-const inputStyle = {
-  width: "100%",
-  boxSizing: "border-box",
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: "13px 16px",
-  color: "#fff",
-  fontFamily: body,
-  fontSize: 14,
-  marginBottom: 18,
-  outline: "none",
-};
+import { t, type, cardBg, CONTROL_H } from "@/lib/theme";
 
 // Landing target for the link in Supabase's password-reset email. Clicking
 // that link gives the browser a recovery session automatically (the
@@ -51,85 +35,89 @@ export default function ResetPassword() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#0A0A10",
-        color: "#F2F0FA",
-        fontFamily: body,
+        background: t.bg,
+        color: t.text,
+        fontFamily: t.body,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         padding: "40px 20px",
       }}
     >
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          width: "100%",
-          maxWidth: 420,
-          borderRadius: 20,
-          padding: "36px 32px",
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          backdropFilter: "blur(20px)",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
-          boxSizing: "border-box",
-        }}
-      >
-        <div style={{ fontFamily: display, fontWeight: 700, fontSize: 22, marginBottom: 6, textAlign: "center" }}>
+      <form onSubmit={handleSubmit} className="sb-reset">
+        <style dangerouslySetInnerHTML={{ __html: `
+          .sb-reset {
+            width: 100%;
+            max-width: 440px;
+            box-sizing: border-box;
+            padding: 44px 44px 38px;
+            border-radius: 20px;
+            border: 1px solid ${t.border};
+            background: ${cardBg};
+            box-shadow: 0 1px 1px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.35);
+          }
+          .sb-reset-field {
+            width: 100%; height: ${CONTROL_H}px; box-sizing: border-box;
+            padding: 0 16px; border-radius: 10px;
+            border: 1px solid ${t.border}; background: ${t.bgInput};
+            color: ${t.text}; font-family: ${t.body}; font-size: 14.5px; outline: none;
+            transition: border-color 160ms ${t.ease}, background 160ms ${t.ease};
+          }
+          .sb-reset-field::placeholder { color: ${t.textFaint}; }
+          .sb-reset-field:hover { border-color: ${t.borderHover}; }
+          .sb-reset-field:focus { border-color: ${t.borderStrong}; background: #0D0D0D; }
+          .sb-reset-cta {
+            width: 100%; height: ${CONTROL_H}px; margin-top: 20px;
+            border: none; border-radius: 10px;
+            background: #FFFFFF; color: #0A0A0A;
+            font-family: ${t.body}; font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
+            cursor: pointer;
+            transition: transform 160ms ${t.ease}, box-shadow 160ms ${t.ease}, background 160ms ${t.ease};
+          }
+          .sb-reset-cta:hover:not(:disabled) {
+            background: #F2F2F2; transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+          }
+          .sb-reset-cta:active:not(:disabled) { transform: translateY(0) scale(0.995); box-shadow: none; }
+          .sb-reset-cta:disabled { cursor: default; opacity: 0.55; }
+          @media (prefers-reduced-motion: reduce) {
+            .sb-reset-field, .sb-reset-cta { transition: none; }
+            .sb-reset-cta:hover:not(:disabled) { transform: none; }
+          }
+        ` }} />
+
+        <div style={{ ...type.heading, textAlign: "center", color: t.text, marginBottom: 10 }}>
           Set a new password
         </div>
-        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 26, textAlign: "center" }}>
-          {done ? "Password updated — taking you to your dashboard…" : "Choose a new password for your account."}
+        <div style={{ ...type.body, textAlign: "center", color: t.textMuted, marginBottom: 32 }}>
+          {done ? "Password updated — taking you to your dashboard" : "Choose a new password for your account"}
         </div>
 
         {!done && (
           <>
+            <label htmlFor="sb-new-password" style={{ ...type.label, display: "block", color: t.text, marginBottom: 10 }}>
+              New password
+            </label>
             <input
+              id="sb-new-password"
+              className="sb-reset-field"
               type="password"
               required
               autoFocus
               minLength={6}
-              placeholder="New password"
+              autoComplete="new-password"
+              placeholder="Enter a new password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              style={inputStyle}
-              onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
-              onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
             />
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: "100%",
-                background: accent,
-                color: "#0A0A10",
-                border: "none",
-                borderRadius: 12,
-                padding: "14px 10px",
-                fontFamily: display,
-                fontWeight: 700,
-                fontSize: 14,
-                cursor: loading ? "default" : "pointer",
-                opacity: loading ? 0.7 : 1,
-                boxShadow: "0 8px 24px rgba(139,92,246,0.35)",
-              }}
-            >
-              {loading ? "Updating…" : "Update password"}
+            <button type="submit" className="sb-reset-cta" disabled={loading}>
+              {loading ? "Updating" : "Update password"}
             </button>
           </>
         )}
 
         {error && (
-          <div
-            style={{
-              fontSize: 12,
-              color: "#FCA5A5",
-              background: "rgba(220,38,38,0.1)",
-              border: "1px solid rgba(220,38,38,0.25)",
-              borderRadius: 10,
-              padding: "10px 14px",
-              marginTop: 14,
-            }}
-          >
+          <div style={{ ...type.small, color: t.negative, background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.18)", borderRadius: 10, padding: "12px 14px", marginTop: 16 }}>
             {error}
           </div>
         )}

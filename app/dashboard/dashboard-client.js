@@ -29,7 +29,7 @@ export default function DashboardClient({ initialProjects }) {
 
   const active = projects.find((p) => p.id === activeId);
   const accent = "#FFFFFF";
-  const display = "'Space Grotesk', sans-serif";
+  const display = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
   const body = "'Inter', sans-serif";
   const [billingStatus, setBillingStatus] = useState(null);
   const [cancelBusy, setCancelBusy] = useState(false);

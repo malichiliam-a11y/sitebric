@@ -10,11 +10,18 @@ export function LogoMark({ size = 26 }) {
   );
 }
 
-export function Wordmark({ size = 22, gap = 12, markSize }) {
+export function Wordmark({ size = 22, gap = 11, markSize, color = "#EDEDED" }) {
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap, color: "#FFFFFF" }}>
-      <LogoMark size={markSize || size + 6} />
-      <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: size, letterSpacing: "-0.02em" }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap, color }}>
+      <LogoMark size={markSize || size + 5} />
+      <span
+        style={{
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+          fontWeight: 500,
+          fontSize: size,
+          letterSpacing: "-0.025em",
+        }}
+      >
         sitebric
       </span>
     </span>
