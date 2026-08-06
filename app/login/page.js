@@ -1,29 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { captureReferralCode } from "@/lib/referral";
+import AuthCard from "@/app/components/AuthCard";
 
-export default function Home() {
+const accent = "linear-gradient(90deg, #8B5CF6, #22D3EE)";
+const display = "'Space Grotesk', sans-serif";
+const body = "'Inter', sans-serif";
+
+const features = [
+  ["⚡", "AI-Powered", "Generate a complete client website from a one-line brief."],
+  ["✎", "Fully Customizable", "Edit anything after the fact — just describe the change."],
+  ["🚀", "Launch Instantly", "Publish live, or hand off the code — either way, in one click."],
+];
+
+export default function Login() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
-
-  const accent = "linear-gradient(90deg, #8B5CF6, #22D3EE)";
-  const display = "'Space Grotesk', sans-serif";
-  const body = "'Inter', sans-serif";
 
   useEffect(() => {
     captureReferralCode();
-
-    const saved = window.localStorage.getItem("sitebric_email");
-    if (saved) setEmail(saved);
-
     (async () => {
       const supabase = createClient();
       const {
@@ -33,468 +30,115 @@ export default function Home() {
     })();
   }, [router]);
 
-  async function signInWithGoogle() {
-    setError("");
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/dashboard` },
-    });
-    // On success this redirects away. It only returns an error if the
-    // Google provider isn't enabled in Supabase — without surfacing it
-    // the button just looks broken.
-    if (error) {
-      setError(error.message || "Google sign-in isn't available right now. Try your email instead.");
-    }
-  }
-
-  async function sendCode(e) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    if (rememberMe) {
-      window.localStorage.setItem("sitebric_email", email);
-    } else {
-      window.localStorage.removeItem("sitebric_email");
-    }
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true },
-    });
-    setLoading(false);
-    if (error) setError(error.message);
-    else setSent(true);
-  }
-
-  async function verifyCode(e) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token: code,
-      type: "email",
-    });
-    setLoading(false);
-    if (error) setError(error.message);
-    else router.push("/dashboard");
-  }
-
-  const inputStyle = {
-    width: "100%",
-    boxSizing: "border-box",
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: 12,
-    padding: "13px 16px",
-    color: "#fff",
-    fontFamily: body,
-    fontSize: 14,
-    marginBottom: 18,
-    outline: "none",
-    transition: "border-color 0.2s",
-  };
-
   return (
-    <div style={{ background: "#0A0A10", color: "#F2F0FA", fontFamily: body }}>
+    <div style={{ minHeight: "100vh", background: "#0A0A10", color: "#F2F0FA", fontFamily: body, position: "relative", overflow: "hidden" }}>
       <style>{`
-        @media (max-width: 780px) {
-          .sb-hero-grid { grid-template-columns: 1fr !important; }
-        }
+        @keyframes sbLoginDrift1 { 0%{transform:translate(-50%,0) scale(1);} 50%{transform:translate(-42%,8%) scale(1.15);} 100%{transform:translate(-50%,0) scale(1);} }
+        @keyframes sbLoginDrift2 { 0%{transform:translate(0,0) scale(1); opacity:0.35;} 50%{transform:translate(10%,-8%) scale(1.2); opacity:0.6;} 100%{transform:translate(0,0) scale(1); opacity:0.35;} }
+        .sb-login-orb { position:absolute; border-radius:50%; filter:blur(70px); pointer-events:none; }
+        .sb-login-orb-a { top:-25%; left:30%; width:900px; height:900px; background:radial-gradient(circle, rgba(139,92,246,0.22) 0%, rgba(34,211,238,0.1) 45%, transparent 70%); animation: sbLoginDrift1 14s ease-in-out infinite; }
+        .sb-login-orb-b { bottom:-20%; right:5%; width:600px; height:600px; background:radial-gradient(circle, rgba(34,211,238,0.14) 0%, transparent 70%); animation: sbLoginDrift2 17s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) { .sb-login-orb-a, .sb-login-orb-b { animation: none; } }
+        @media (max-width: 900px) { .sb-login-grid { grid-template-columns: 1fr !important; } .sb-login-copy { display: none !important; } }
       `}</style>
-      {/* ===== HERO with embedded login ===== */}
-      <div
+
+      <div style={{ position: "absolute", inset: 0, overflow: "hidden", zIndex: 0 }}>
+        <div className="sb-login-orb sb-login-orb-a" />
+        <div className="sb-login-orb sb-login-orb-b" />
+      </div>
+
+      <nav
         style={{
-          minHeight: "100vh",
+          position: "relative",
+          zIndex: 1,
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
-          position: "relative",
-          overflow: "hidden",
-          padding: "80px 6%",
+          justifyContent: "space-between",
+          padding: "22px 6%",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            top: "-20%",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: 1100,
-            height: 1100,
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle, rgba(139,92,246,0.28) 0%, rgba(34,211,238,0.12) 45%, transparent 70%)",
-            filter: "blur(50px)",
-            pointerEvents: "none",
-          }}
-        />
+        <span style={{ fontFamily: display, fontWeight: 700, fontSize: 18 }}>
+          site
+          <span style={{ background: accent, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>bric</span>
+        </span>
+        <a href="/pricing" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>
+          Pricing
+        </a>
+      </nav>
 
-        <div
-          className="sb-hero-grid"
-          style={{
-            position: "relative",
-            zIndex: 1,
-            width: "100%",
-            maxWidth: 1100,
-            display: "grid",
-            gridTemplateColumns: "1.1fr 0.9fr",
-            gap: 60,
-            alignItems: "center",
-          }}
-        >
-          {/* Marketing copy */}
-          <div>
-            <div
-              style={{
-                fontFamily: display,
-                fontWeight: 700,
-                fontSize: 20,
-                marginBottom: 24,
-              }}
-            >
-              site
-              <span
-                style={{
-                  background: accent,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                }}
-              >
-                bric
-              </span>
-            </div>
-            <h1
-              style={{
-                fontFamily: display,
-                fontWeight: 700,
-                fontSize: "clamp(32px, 4vw, 48px)",
-                lineHeight: 1.15,
-                marginBottom: 20,
-              }}
-            >
-              Generate real client websites
-              <br />
-              with AI, in seconds.
-            </h1>
-            <p
-              style={{
-                fontSize: 16,
-                color: "rgba(255,255,255,0.5)",
-                lineHeight: 1.7,
-                maxWidth: 480,
-              }}
-            >
-              Built for resellers — describe a business, get a polished,
-              ready-to-ship website. No coding, no design work, no waiting.
-            </p>
-          </div>
-
-          {/* Login card */}
-          <form
-            onSubmit={sent ? verifyCode : sendCode}
+      <div
+        className="sb-login-grid"
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: 1100,
+          margin: "0 auto",
+          padding: "60px 6% 80px",
+          display: "grid",
+          gridTemplateColumns: "1.05fr 0.95fr",
+          gap: 60,
+          alignItems: "center",
+          minHeight: "calc(100vh - 76px)",
+        }}
+      >
+        <div className="sb-login-copy">
+          <div
             style={{
-              width: "100%",
-              borderRadius: 20,
-              padding: "36px 32px",
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              backdropFilter: "blur(20px)",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#C4B5FD",
+              background: "rgba(139,92,246,0.1)",
+              border: "1px solid rgba(139,92,246,0.25)",
+              borderRadius: 999,
+              padding: "6px 14px",
+              marginBottom: 24,
             }}
           >
-            <div
-              style={{
-                fontSize: 13,
-                color: "rgba(255,255,255,0.45)",
-                marginBottom: 22,
-              }}
-            >
-              {sent ? "Enter the code we sent you" : "Sign in to your dashboard"}
-            </div>
-
-            {!sent && (
-              <>
-                <button
-                  type="button"
-                  onClick={signInWithGoogle}
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#8B5CF6" }} />
+            Built for website resellers
+          </div>
+          <h1 style={{ fontFamily: display, fontWeight: 700, fontSize: "clamp(32px, 3.6vw, 46px)", lineHeight: 1.15, marginBottom: 18 }}>
+            Build stunning
+            <br />
+            websites in seconds.
+          </h1>
+          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, maxWidth: 440, marginBottom: 36 }}>
+            Sitebric is the AI platform that helps you generate, customize, and launch client websites — faster
+            than ever.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {features.map(([icon, title, desc]) => (
+              <div key={title} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                <div
                   style={{
-                    width: "100%",
-                    background: "#fff",
-                    color: "#1a1a1a",
-                    border: "none",
-                    borderRadius: 12,
-                    padding: "12px 10px",
-                    fontFamily: body,
-                    fontWeight: 600,
-                    fontSize: 14,
-                    cursor: "pointer",
+                    width: 38,
+                    height: 38,
+                    flexShrink: 0,
+                    borderRadius: 10,
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.08)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: 10,
-                    marginBottom: 20,
+                    fontSize: 15,
                   }}
                 >
-                  <svg width="18" height="18" viewBox="0 0 18 18">
-                    <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z" />
-                    <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.9v2.33A9 9 0 0 0 9 18z" />
-                    <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.9A9 9 0 0 0 0 9c0 1.45.35 2.83.9 4.03l3.05-2.33z" />
-                    <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .9 4.97L3.95 7.3C4.66 5.17 6.65 3.58 9 3.58z" />
-                  </svg>
-                  Continue with Google
-                </button>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    marginBottom: 20,
-                    color: "rgba(255,255,255,0.3)",
-                    fontSize: 12,
-                  }}
-                >
-                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
-                  or
-                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+                  {icon}
                 </div>
-              </>
-            )}
-
-            {sent ? (
-              <>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: 12,
-                    color: "rgba(255,255,255,0.5)",
-                    marginBottom: 8,
-                    fontWeight: 500,
-                  }}
-                >
-                  Code sent to {email}
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  required
-                  autoFocus
-                  placeholder="Enter code"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  style={{ ...inputStyle, fontSize: 16, letterSpacing: "0.15em" }}
-                  onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
-                  onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{
-                    width: "100%",
-                    background: accent,
-                    color: "#0A0A10",
-                    border: "none",
-                    borderRadius: 12,
-                    padding: "14px 10px",
-                    fontFamily: display,
-                    fontWeight: 700,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    boxShadow: "0 8px 24px rgba(139,92,246,0.35)",
-                  }}
-                >
-                  {loading ? "Verifying..." : "Verify & sign in"}
-                </button>
-              </>
-            ) : (
-              <>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: 12,
-                    color: "rgba(255,255,255,0.5)",
-                    marginBottom: 8,
-                    fontWeight: 500,
-                  }}
-                >
-                  Email
-                </label>
-                <input
-                  type="email"
-                  required
-                  autoFocus
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={inputStyle}
-                  onFocus={(e) => (e.target.style.borderColor = "#8B5CF6")}
-                  onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
-                />
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 18,
-                    fontSize: 13,
-                    color: "rgba(255,255,255,0.5)",
-                    cursor: "pointer",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    style={{ accentColor: "#8B5CF6", width: 14, height: 14 }}
-                  />
-                  Remember me on this device
-                </label>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{
-                    width: "100%",
-                    background: accent,
-                    color: "#0A0A10",
-                    border: "none",
-                    borderRadius: 12,
-                    padding: "14px 10px",
-                    fontFamily: display,
-                    fontWeight: 700,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    boxShadow: "0 8px 24px rgba(139,92,246,0.35)",
-                  }}
-                >
-                  {loading ? "Sending..." : "Send login code"}
-                </button>
-              </>
-            )}
-            {error && (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "#FCA5A5",
-                  background: "rgba(220,38,38,0.1)",
-                  border: "1px solid rgba(220,38,38,0.25)",
-                  borderRadius: 10,
-                  padding: "10px 14px",
-                  marginTop: 14,
-                }}
-              >
-                {error}
-              </div>
-            )}
-          </form>
-        </div>
-      </div>
-
-      {/* ===== WHY CHOOSE US ===== */}
-      <div style={{ padding: "100px 6%", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div
-            style={{
-              fontFamily: display,
-              fontWeight: 700,
-              fontSize: "clamp(26px, 3vw, 36px)",
-              marginBottom: 50,
-              textAlign: "center",
-            }}
-          >
-            Why resellers choose site
-            <span style={{ background: accent, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              bric
-            </span>
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 24,
-            }}
-          >
-            {[
-              ["Real sites, not templates", "Every site is generated fresh for that specific business — real copy, real design, not a reused shell."],
-              ["Minutes, not days", "Describe the client, get a finished site almost instantly. No back-and-forth design cycles."],
-              ["Built for reselling", "Manage every client under one dashboard, generate as many sites as you need."],
-              ["No design skill required", "You don't need to know how to code or design — just describe the business."],
-            ].map(([title, desc]) => (
-              <div
-                key={title}
-                style={{
-                  borderRadius: 16,
-                  padding: 24,
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                }}
-              >
-                <div style={{ fontFamily: display, fontWeight: 600, fontSize: 16, marginBottom: 10 }}>
-                  {title}
-                </div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
-                  {desc}
+                <div>
+                  <div style={{ fontFamily: display, fontWeight: 600, fontSize: 14, marginBottom: 3 }}>{title}</div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>{desc}</div>
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </div>
 
-      {/* ===== HOW IT WORKS ===== */}
-      <div style={{ padding: "100px 6%", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div
-            style={{
-              fontFamily: display,
-              fontWeight: 700,
-              fontSize: "clamp(26px, 3vw, 36px)",
-              marginBottom: 50,
-              textAlign: "center",
-            }}
-          >
-            How it works
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 24,
-            }}
-          >
-            {[
-              ["1", "Describe the client", "Type the business name and a short description of what the site needs."],
-              ["2", "AI builds the site", "A full, polished website gets generated in seconds — real copy, real design."],
-              ["3", "Deliver it", "Preview it, hand it off, and move on to the next client."],
-            ].map(([num, title, desc]) => (
-              <div key={title} style={{ textAlign: "center" }}>
-                <div
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
-                    background: accent,
-                    color: "#0A0A10",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontFamily: display,
-                    fontWeight: 700,
-                    margin: "0 auto 16px",
-                  }}
-                >
-                  {num}
-                </div>
-                <div style={{ fontFamily: display, fontWeight: 600, fontSize: 16, marginBottom: 8 }}>
-                  {title}
-                </div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.6, maxWidth: 260, margin: "0 auto" }}>
-                  {desc}
-                </div>
-              </div>
-            ))}
-          </div>
+        <div style={{ width: "100%" }}>
+          <AuthCard />
         </div>
       </div>
     </div>
