@@ -92,7 +92,8 @@ Rules:
 - Output ONLY the complete, updated raw HTML file, no markdown fences, no explanation.
 - Keep everything else about the site exactly the same — same sections, same content, same images — unless the request implies changing them.
 - Make the smallest change that fully satisfies the request; don't rewrite unrelated parts of the page.
-- The result must still be a complete, valid, self-contained single HTML file (CSS in <style>, JS in <script>).`,
+- The result must still be a complete, valid, self-contained single HTML file (CSS in <style>, JS in <script>).
+- If <head> is missing <meta name="viewport" content="width=device-width, initial-scale=1">, add it — without that exact tag, mobile browsers ignore responsive CSS and render at a shrunk-down fake desktop width.`,
           },
         ],
       }),
