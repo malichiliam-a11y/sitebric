@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
-import { t, type, cardBg, CONTROL_H } from "@/lib/theme";
+import { t, type } from "@/lib/theme";
 
 // Landing target for the link in Supabase's password-reset email. Clicking
 // that link gives the browser a recovery session automatically (the
@@ -52,25 +52,25 @@ export default function ResetPassword() {
             box-sizing: border-box;
             padding: 44px 44px 38px;
             border-radius: 20px;
-            border: 1px solid ${t.border};
-            background: ${cardBg};
+            border: 1px solid ${t.borderCard};
+            background: ${t.bgCard};
             box-shadow: 0 1px 1px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.35);
           }
           .sb-reset-field {
-            width: 100%; height: ${CONTROL_H}px; box-sizing: border-box;
-            padding: 0 16px; border-radius: 10px;
-            border: 1px solid ${t.border}; background: ${t.bgInput};
+            width: 100%; box-sizing: border-box;
+            padding: 13px 16px; border-radius: 10px;
+            border: 1px solid ${t.borderInput}; background: ${t.bgInput};
             color: ${t.text}; font-family: ${t.body}; font-size: 14.5px; outline: none;
             transition: border-color 160ms ${t.ease}, background 160ms ${t.ease};
           }
           .sb-reset-field::placeholder { color: ${t.textFaint}; }
-          .sb-reset-field:hover { border-color: ${t.borderHover}; }
-          .sb-reset-field:focus { border-color: ${t.borderStrong}; background: #0D0D0D; }
+          
+          .sb-reset-field:focus { border-color: ${t.borderFocus}; }
           .sb-reset-cta {
-            width: 100%; height: ${CONTROL_H}px; margin-top: 20px;
+            width: 100%; margin-top: 20px; padding: 14px 10px;
             border: none; border-radius: 10px;
             background: #FFFFFF; color: #0A0A0A;
-            font-family: ${t.body}; font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
+            font-family: ${t.body}; font-size: 14px; font-weight: 700;
             cursor: pointer;
             transition: transform 160ms ${t.ease}, box-shadow 160ms ${t.ease}, background 160ms ${t.ease};
           }
