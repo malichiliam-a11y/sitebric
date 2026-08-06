@@ -413,11 +413,17 @@ export default function DashboardClient({ initialProjects }) {
             min-height: 70vh;
           }
           .sb-dash-preview { min-height: 70vh; }
+          /* With a project open, the list above adds nothing but eats
+             most of the screen — hide it and rely on the back button
+             instead so the preview actually gets room to breathe. */
+          .sb-dash-sidebar--project-open { display: none; }
+          .sb-mobile-back { display: inline-flex !important; }
         }
+        .sb-mobile-back { display: none; }
       `}</style>
 
       <div
-        className="sb-dash-sidebar"
+        className={`sb-dash-sidebar${tab === "sites" && active ? " sb-dash-sidebar--project-open" : ""}`}
         style={{
           width: 300,
           borderRight: "1px solid rgba(255,255,255,0.08)",
@@ -848,7 +854,27 @@ export default function DashboardClient({ initialProjects }) {
                 borderBottom: "1px solid rgba(255,255,255,0.08)",
               }}
             >
-              <span style={{ fontSize: 14, fontFamily: display, fontWeight: 600 }}>{active.client_name}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                <button
+                  onClick={() => setActiveId(null)}
+                  className="sb-mobile-back"
+                  style={{
+                    alignItems: "center",
+                    gap: 4,
+                    background: "none",
+                    border: "none",
+                    color: "rgba(255,255,255,0.6)",
+                    fontSize: 13,
+                    fontFamily: body,
+                    cursor: "pointer",
+                    padding: "4px 4px 4px 0",
+                    flexShrink: 0,
+                  }}
+                >
+                  ← Sites
+                </button>
+                <span style={{ fontSize: 14, fontFamily: display, fontWeight: 600 }}>{active.client_name}</span>
+              </div>
               <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                 {active.published && (
                   <a
