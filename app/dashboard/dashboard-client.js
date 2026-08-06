@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { PLAN_LIMITS } from "@/lib/plans";
+import { readReferralCode, clearReferralCode } from "@/lib/referral";
 
 export default function DashboardClient({ initialProjects }) {
   const supabase = createClient();
@@ -46,8 +47,14 @@ export default function DashboardClient({ initialProjects }) {
       let { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
       if (!data) {
         // Brand new user with no profile row yet — create their free
-        // trial row now so Billing shows it correctly right away.
-        await fetch("/api/ensure-profile", { method: "POST" });
+        // trial row now so Billing shows it correctly right away, and
+        // pass along whatever referral code was captured on landing.
+        await fetch("/api/ensure-profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ref: readReferralCode() }),
+        });
+        clearReferralCode();
         const retry = await supabase.from("profiles").select("*").eq("id", user.id).single();
         data = retry.data;
       }
@@ -319,7 +326,9 @@ export default function DashboardClient({ initialProjects }) {
     if (project.status === "generating") return { color: "#22D3EE", label: "generating" };
     if (project.status === "error") return { color: "#F87171", label: "failed" };
     if (project.published) return { color: "#4ADE80", label: "live" };
-    return { color: "rgba(255,255,255,0.45)", label: "ready to publish" };
+    // Amber, not grey: an unpublished site is waiting on the user, so it
+    // should read as a pending action rather than blend into the card.
+    return { color: "#FBBF24", label: "ready to publish" };
   }
 
   const currentPlan = profile?.plan || "none";
