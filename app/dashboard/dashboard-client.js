@@ -7,7 +7,7 @@ import { readReferralCode, clearReferralCode } from "@/lib/referral";
 
 export default function DashboardClient({ initialProjects }) {
   const supabase = createClient();
-  const [tab, setTab] = useState("sites");
+  const [tab, setTab] = useState("overview");
   const [projects, setProjects] = useState(initialProjects);
   const [activeId, setActiveId] = useState(null);
   const [view, setView] = useState("preview");
@@ -336,8 +336,43 @@ export default function DashboardClient({ initialProjects }) {
   const sitesUsed = projects.length;
   const gensUsed = profile?.generations_used || 0;
   const searchesUsedBilling = profile?.searches_used || 0;
+  const publishedCount = projects.filter((p) => p.published).length;
+  const displayName =
+    user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "there";
+
+  const recentProjects = [...projects]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 5);
+
+  function timeAgo(dateString) {
+    const diffMs = Date.now() - new Date(dateString).getTime();
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    return new Date(dateString).toLocaleDateString();
+  }
+
+  // Real activity, not a fabricated traffic chart: how many sites were
+  // created in each of the last 8 weeks, straight from created_at.
+  const weeklyCounts = (() => {
+    const weeks = 8;
+    const buckets = Array(weeks).fill(0);
+    const now = Date.now();
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    projects.forEach((p) => {
+      const age = now - new Date(p.created_at).getTime();
+      const idx = weeks - 1 - Math.floor(age / weekMs);
+      if (idx >= 0 && idx < weeks) buckets[idx] += 1;
+    });
+    return buckets;
+  })();
 
   const navItems = [
+    { id: "overview", label: "Overview", icon: "▦" },
     { id: "sites", label: "Sites", icon: "◆" },
     { id: "leads", label: "Find Leads", icon: "◎" },
     { id: "billing", label: "Billing", icon: "▣" },
@@ -418,6 +453,7 @@ export default function DashboardClient({ initialProjects }) {
              instead so the preview actually gets room to breathe. */
           .sb-dash-sidebar--project-open { display: none; }
           .sb-mobile-back { display: inline-flex !important; }
+          .sb-overview-grid { grid-template-columns: 1fr !important; }
         }
         .sb-mobile-back { display: none; }
       `}</style>
@@ -598,6 +634,204 @@ export default function DashboardClient({ initialProjects }) {
       </div>
 
       <div className="sb-dash-main" style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+
+        {/* ===== OVERVIEW TAB ===== */}
+        {tab === "overview" && (
+          <div style={{ flex: 1, overflowY: "auto", padding: "36px 40px 60px", position: "relative", zIndex: 1 }}>
+            <div className="sb-dash-ambient">
+              <div className="sb-dash-orb sb-dash-orb-a" />
+              <div className="sb-dash-orb sb-dash-orb-b" />
+            </div>
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16, marginBottom: 28 }}>
+                <div>
+                  <div style={{ fontFamily: display, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>
+                    Welcome back, {displayName} 👋
+                  </div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>
+                    Here's what's happening with your sites.
+                  </div>
+                </div>
+                <input
+                  value={siteSearch}
+                  onChange={(e) => setSiteSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") setTab("sites");
+                  }}
+                  placeholder="Search your sites…"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    color: "#fff",
+                    fontFamily: body,
+                    fontSize: 13,
+                    outline: "none",
+                    width: 240,
+                  }}
+                />
+              </div>
+
+              {/* Stat cards — real numbers only: sites, published, generations and leads
+                  usage. No fabricated "views"/"conversion"/"revenue" widgets — Sitebric
+                  doesn't track visitor analytics on published sites (yet), so it doesn't
+                  claim to. */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
+                {[
+                  ["Client Sites", sitesUsed, `of ${limits.sites} on your plan`],
+                  ["Published Live", publishedCount, `${sitesUsed - publishedCount} not yet published`],
+                  ["Generations Used", gensUsed, `of ${limits.generations} this month`],
+                  ["Leads Found", searchesUsedBilling, `of ${limits.searches} searches this month`],
+                ].map(([label, value, sub]) => (
+                  <div
+                    key={label}
+                    style={{
+                      borderRadius: 16,
+                      padding: "18px 20px",
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 10 }}>{label}</div>
+                    <div style={{ fontFamily: display, fontWeight: 700, fontSize: 28, marginBottom: 6 }}>{value}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{sub}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="sb-overview-grid" style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 16, marginBottom: 16 }}>
+                {/* Real chart: sites created per week, from created_at — not simulated traffic. */}
+                <div style={{ borderRadius: 16, padding: 22, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <div style={{ fontFamily: display, fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Sites created</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 18 }}>Last 8 weeks</div>
+                  {(() => {
+                    const w = 100,
+                      h = 46,
+                      max = Math.max(1, ...weeklyCounts);
+                    const stepX = w / (weeklyCounts.length - 1 || 1);
+                    const points = weeklyCounts.map((v, i) => [i * stepX, h - (v / max) * h]);
+                    const linePath = points.map(([x, y], i) => `${i === 0 ? "M" : "L"} ${x},${y}`).join(" ");
+                    const areaPath = `${linePath} L ${w},${h} L 0,${h} Z`;
+                    return (
+                      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: "100%", height: 140, overflow: "visible" }}>
+                        <defs>
+                          <linearGradient id="ovChartFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.35" />
+                            <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+                        <path d={areaPath} fill="url(#ovChartFill)" stroke="none" />
+                        <path d={linePath} fill="none" stroke="#8B5CF6" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+                        {points.map(([x, y], i) => (
+                          <circle key={i} cx={x} cy={y} r="1.6" fill="#22D3EE" vectorEffect="non-scaling-stroke" />
+                        ))}
+                      </svg>
+                    );
+                  })()}
+                  {sitesUsed === 0 && (
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 8 }}>
+                      Generate your first site to see activity here.
+                    </div>
+                  )}
+                </div>
+
+                {/* Recent activity — real project rows, not a simulated event feed. */}
+                <div style={{ borderRadius: 16, padding: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <div style={{ fontFamily: display, fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Recent Activity</div>
+                  {recentProjects.length === 0 && (
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>Nothing yet — create your first site to get started.</div>
+                  )}
+                  {recentProjects.map((p) => {
+                    const meta = projectMeta(p);
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => {
+                          setTab("sites");
+                          setActiveId(p.id);
+                        }}
+                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", cursor: "pointer" }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {p.client_name}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, marginTop: 2, color: meta.color }}>
+                            <span style={{ width: 5, height: 5, borderRadius: "50%", background: meta.color }} />
+                            {meta.label}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", flexShrink: 0, marginLeft: 10 }}>{timeAgo(p.created_at)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="sb-overview-grid" style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 16 }}>
+                {/* Sites snapshot */}
+                <div style={{ borderRadius: 16, padding: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <div style={{ fontFamily: display, fontWeight: 600, fontSize: 14 }}>Sites</div>
+                    <span
+                      onClick={() => setTab("sites")}
+                      style={{ fontSize: 12, color: "#22D3EE", cursor: "pointer" }}
+                    >
+                      View all sites →
+                    </span>
+                  </div>
+                  {projects.length === 0 && (
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>No sites yet.</div>
+                  )}
+                  {recentProjects.slice(0, 3).map((p) => {
+                    const meta = projectMeta(p);
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => {
+                          setTab("sites");
+                          setActiveId(p.id);
+                        }}
+                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", cursor: "pointer" }}
+                      >
+                        <span style={{ fontSize: 13, fontWeight: 500 }}>{p.client_name}</span>
+                        <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: meta.color }}>
+                          <span style={{ width: 5, height: 5, borderRadius: "50%", background: meta.color }} />
+                          {meta.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Quick actions */}
+                <div style={{ borderRadius: 16, padding: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <div style={{ fontFamily: display, fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Quick Actions</div>
+                  {[
+                    ["+", "Create New Site", "Start building a new website", () => { setTab("sites"); setActiveId(null); }],
+                    ["◎", "Find Leads", "Search for local businesses to pitch", () => setTab("leads")],
+                    ["▣", "Manage Billing", "View plan, usage and invoices", () => setTab("billing")],
+                  ].map(([icon, title, desc, onClick]) => (
+                    <div
+                      key={title}
+                      onClick={onClick}
+                      style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", cursor: "pointer" }}
+                    >
+                      <div style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 8, background: "rgba(139,92,246,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>
+                        {icon}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 500 }}>{title}</div>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ===== SITES TAB ===== */}
         {tab === "sites" && !active && (
