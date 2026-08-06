@@ -146,3 +146,35 @@ export const IconBolt = (p) => (
     <path d="M13.5 3 6 13.5h5L10.5 21 18 10.5h-5L13.5 3Z" />
   </Svg>
 );
+
+export const IconSun = (p) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4" />
+  </Svg>
+);
+
+export const IconStar = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="m12 2.6 2.9 5.9 6.5.9-4.7 4.6 1.1 6.4-5.8-3-5.8 3 1.1-6.4L2.6 9.4l6.5-.9L12 2.6Z" />
+  </svg>
+);
+
+// Brand glyphs for the footer. Solid-fill marks, not the outline set.
+export const IconX = ({ size = 17 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M17.5 3h3.1l-6.8 7.7L21.8 21h-6.2l-4.9-6.4L5.1 21H2l7.2-8.3L2.5 3h6.4l4.4 5.8L17.5 3Zm-1.1 16.1h1.7L7.7 4.8H5.9l10.5 14.3Z" />
+  </svg>
+);
+
+export const IconDiscord = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M19.3 5.6A16.1 16.1 0 0 0 15.4 4.4l-.2.4c1.3.3 2.4.8 3.4 1.5-1.7-.9-3.4-1.4-5.6-1.4s-3.9.5-5.6 1.4c1-.6 2.2-1.2 3.4-1.5l-.2-.4c-1.5.3-2.9.7-4 1.2C3.2 9 2.4 13.1 2.7 17.3A16.3 16.3 0 0 0 7.6 19.8l1-1.7c-.8-.3-1.6-.7-2.3-1.2l.5-.4c2.1 1 4.3 1.5 6.4 1.5s4.3-.5 6.4-1.5l.5.4c-.7.5-1.5.9-2.3 1.2l1 1.7a16.3 16.3 0 0 0 4.9-2.5c.4-4.9-.8-8.9-3.4-11.7ZM9.2 14.9c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm5.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Z" />
+  </svg>
+);
+
+export const IconGitHub = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.4-3.4-1.4-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.4 1.1 3 .8.1-.7.4-1.1.7-1.4-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7 1 .7 2v2.9c0 .3.2.6.7.5A10 10 0 0 0 12 2Z" />
+  </svg>
+);

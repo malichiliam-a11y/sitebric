@@ -7,7 +7,11 @@ import { captureReferralCode } from "@/lib/referral";
 import { t, cardBg } from "@/lib/theme";
 import AuthCard from "@/app/components/AuthCard";
 import { Wordmark } from "@/app/components/Brand";
-import { IconBolt, IconPencil, IconRocket } from "@/app/components/Icons";
+import MeshTerrain from "@/app/components/MeshTerrain";
+import {
+  IconBolt, IconPencil, IconRocket, IconSun, IconStar,
+  IconX, IconDiscord, IconGitHub,
+} from "@/app/components/Icons";
 
 const features = [
   [IconBolt, "AI-Powered", "Generate complete websites with a simple prompt."],
@@ -32,41 +36,61 @@ export default function Login() {
   return (
     <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: t.body, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
       <style>{`
-        .sb-mesh {
-          position: absolute; inset: 0; pointer-events: none; z-index: 0;
-          background:
-            radial-gradient(circle at 42% 62%, rgba(255,255,255,0.07) 0%, transparent 42%),
-            radial-gradient(circle at 8% 12%, rgba(255,255,255,0.04) 0%, transparent 34%);
-        }
-        /* Faint perspective grid, standing in for the wireframe terrain in
-           the reference art without shipping a heavy image asset. */
-        .sb-mesh::after {
-          content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 62%;
-          background-image:
-            linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
-          background-size: 46px 46px;
-          transform: perspective(340px) rotateX(62deg);
-          transform-origin: bottom center;
-          mask-image: radial-gradient(ellipse 70% 80% at 50% 100%, #000 10%, transparent 72%);
-          -webkit-mask-image: radial-gradient(ellipse 70% 80% at 50% 100%, #000 10%, transparent 72%);
-          opacity: 0.7;
-        }
-        @media (max-width: 980px) {
-          .sb-login-grid { grid-template-columns: 1fr !important; justify-items: center; }
+        @media (max-width: 1040px) {
+          .sb-login-grid { grid-template-columns: 1fr !important; justify-items: center; gap: 0 !important; }
           .sb-login-copy { display: none !important; }
-          .sb-login-footer { flex-direction: column !important; gap: 18px !important; text-align: center; }
-          .sb-login-footer-links { gap: 22px !important; }
+          .sb-login-footer { flex-direction: column !important; gap: 20px !important; text-align: center; }
+          .sb-login-footer-links { gap: 24px !important; flex-wrap: wrap; justify-content: center; }
+          .sb-mesh-wrap { opacity: 0.4 !important; }
         }
       `}</style>
 
-      <div className="sb-mesh" />
+      {/* Ambient art layer */}
+      <div className="sb-mesh-wrap" style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
+        <div
+          style={{
+            position: "absolute",
+            left: "12%",
+            right: "38%",
+            top: "26%",
+            bottom: "6%",
+          }}
+        >
+          <MeshTerrain style={{ width: "100%", height: "100%" }} />
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "radial-gradient(circle at 46% 56%, rgba(255,255,255,0.06) 0%, transparent 46%), radial-gradient(circle at 88% 40%, rgba(255,255,255,0.03) 0%, transparent 40%)",
+          }}
+        />
+      </div>
 
-      <nav style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "26px 5%" }}>
-        <Wordmark size={22} />
-        <div style={{ display: "flex", alignItems: "center", gap: 34, fontSize: 14 }}>
-          <a href="/pricing" style={{ color: t.textMuted, textDecoration: "none" }}>Pricing</a>
+      <nav style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 5%" }}>
+        <Wordmark size={24} />
+        <div style={{ display: "flex", alignItems: "center", gap: 36, fontSize: 14.5 }}>
+          <a href="/#how-it-works" style={{ color: t.textMuted, textDecoration: "none" }}>Documentation</a>
           <a href="mailto:supportsitebric@gmail.com" style={{ color: t.textMuted, textDecoration: "none" }}>Contact</a>
+          {/* Decorative: the app is dark-only today, so this deliberately
+              isn't wired to a handler rather than pretending to toggle. */}
+          <span
+            title="Light mode isn't available yet"
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 11,
+              border: `1px solid ${t.border}`,
+              background: t.bgPanel,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: t.textMuted,
+            }}
+          >
+            <IconSun size={17} />
+          </span>
         </div>
       </nav>
 
@@ -77,12 +101,12 @@ export default function Login() {
           zIndex: 1,
           flex: 1,
           width: "100%",
-          maxWidth: 1320,
+          maxWidth: 1360,
           margin: "0 auto",
-          padding: "30px 5% 60px",
+          padding: "10px 5% 40px",
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 70,
+          gridTemplateColumns: "1fr 588px",
+          gap: 80,
           alignItems: "center",
           boxSizing: "border-box",
         }}
@@ -92,43 +116,43 @@ export default function Login() {
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 9,
+              gap: 10,
               fontSize: 11.5,
               fontWeight: 500,
-              letterSpacing: "0.09em",
-              color: t.textMuted,
+              letterSpacing: "0.1em",
+              color: "rgba(255,255,255,0.78)",
               border: `1px solid ${t.border}`,
               borderRadius: 999,
-              padding: "8px 17px",
-              marginBottom: 30,
+              padding: "9px 18px",
+              marginBottom: 34,
             }}
           >
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(255,255,255,0.7)" }} />
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(255,255,255,0.65)" }} />
             AI-POWERED PLATFORM
           </div>
 
-          <h1 style={{ fontFamily: t.display, fontWeight: 700, fontSize: "clamp(38px, 4.4vw, 58px)", lineHeight: 1.08, letterSpacing: "-0.03em", margin: "0 0 26px" }}>
+          <h1 style={{ fontFamily: t.display, fontWeight: 700, fontSize: "clamp(40px, 4.6vw, 62px)", lineHeight: 1.07, letterSpacing: "-0.035em", margin: "0 0 28px" }}>
             Build stunning
             <br />
             websites in
             <br />
-            <span style={{ color: "rgba(255,255,255,0.42)" }}>seconds.</span>
+            <span style={{ color: "rgba(255,255,255,0.38)" }}>seconds.</span>
           </h1>
 
-          <p style={{ fontSize: 15.5, color: t.textMuted, lineHeight: 1.72, maxWidth: 400, margin: "0 0 40px" }}>
+          <p style={{ fontSize: 15.5, color: t.textMuted, lineHeight: 1.75, maxWidth: 396, margin: "0 0 44px" }}>
             Sitebric is the AI-powered platform that helps you generate, customize, and launch professional
             websites — faster than ever.
           </p>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 26, marginBottom: 46 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 28, marginBottom: 50 }}>
             {features.map(([Icon, title, desc]) => (
-              <div key={title} style={{ display: "flex", gap: 17, alignItems: "flex-start" }}>
+              <div key={title} style={{ display: "flex", gap: 18, alignItems: "flex-start" }}>
                 <div
                   style={{
-                    width: 46,
-                    height: 46,
+                    width: 50,
+                    height: 50,
                     flexShrink: 0,
-                    borderRadius: 12,
+                    borderRadius: 13,
                     background: t.bgCard,
                     border: `1px solid ${t.border}`,
                     display: "flex",
@@ -137,11 +161,11 @@ export default function Login() {
                     color: t.text,
                   }}
                 >
-                  <Icon size={19} />
+                  <Icon size={20} />
                 </div>
-                <div style={{ paddingTop: 2 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14.5, marginBottom: 5 }}>{title}</div>
-                  <div style={{ fontSize: 13.5, color: t.textMuted, lineHeight: 1.55, maxWidth: 250 }}>{desc}</div>
+                <div style={{ paddingTop: 3 }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>{title}</div>
+                  <div style={{ fontSize: 13.5, color: t.textMuted, lineHeight: 1.55, maxWidth: 236 }}>{desc}</div>
                 </div>
               </div>
             ))}
@@ -151,9 +175,9 @@ export default function Login() {
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 20,
+              gap: 22,
               borderRadius: 14,
-              padding: "20px 24px",
+              padding: "22px 26px",
               background: cardBg,
               border: `1px solid ${t.border}`,
             }}
@@ -163,18 +187,23 @@ export default function Login() {
                 <div
                   key={i}
                   style={{
-                    width: 34,
-                    height: 34,
+                    width: 38,
+                    height: 38,
                     borderRadius: "50%",
-                    marginLeft: i === 0 ? 0 : -11,
-                    border: "2px solid #0F0F0F",
-                    background: `linear-gradient(135deg, rgba(255,255,255,${0.22 - i * 0.03}), rgba(255,255,255,0.06))`,
+                    marginLeft: i === 0 ? 0 : -13,
+                    border: "2px solid #101010",
+                    background: `linear-gradient(140deg, rgba(255,255,255,${0.3 - i * 0.05}), rgba(255,255,255,0.07))`,
                   }}
                 />
               ))}
             </div>
-            <div style={{ fontSize: 13, color: t.textMuted, lineHeight: 1.5, maxWidth: 210 }}>
-              Trusted by creators and businesses to build the future of the web.
+            <div>
+              <div style={{ display: "flex", gap: 3, color: "rgba(255,255,255,0.9)", marginBottom: 9 }}>
+                {[0, 1, 2, 3, 4].map((i) => <IconStar key={i} size={14} />)}
+              </div>
+              <div style={{ fontSize: 13, color: t.textMuted, lineHeight: 1.5, maxWidth: 208 }}>
+                Trusted by creators and businesses to build the future of the web.
+              </div>
             </div>
           </div>
         </div>
@@ -193,17 +222,21 @@ export default function Login() {
           alignItems: "center",
           justifyContent: "space-between",
           gap: 24,
-          padding: "26px 5%",
-          borderTop: `1px solid ${t.border}`,
-          fontSize: 13,
+          padding: "28px 5%",
+          fontSize: 13.5,
           color: t.textFaint,
         }}
       >
         <span>© {new Date().getFullYear()} Sitebric. All rights reserved.</span>
-        <div className="sb-login-footer-links" style={{ display: "flex", gap: 40 }}>
+        <div className="sb-login-footer-links" style={{ display: "flex", gap: 46 }}>
           <a href="/terms" style={{ color: t.textMuted, textDecoration: "none" }}>Terms of Service</a>
           <a href="/privacy" style={{ color: t.textMuted, textDecoration: "none" }}>Privacy Policy</a>
           <a href="mailto:supportsitebric@gmail.com" style={{ color: t.textMuted, textDecoration: "none" }}>Contact Us</a>
+        </div>
+        <div style={{ display: "flex", gap: 22, color: t.textMuted }}>
+          <IconX size={17} />
+          <IconDiscord size={18} />
+          <IconGitHub size={18} />
         </div>
       </footer>
     </div>
