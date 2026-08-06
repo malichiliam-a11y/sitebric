@@ -631,6 +631,86 @@ export default function DashboardClient({ initialProjects }) {
             </div>
           </>
         )}
+
+        <div style={{ marginTop: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+          {currentPlan !== "pro" && (
+            <div
+              style={{
+                borderRadius: 14,
+                padding: 16,
+                background: "rgba(139,92,246,0.06)",
+                border: "1px solid rgba(139,92,246,0.2)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: display, fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
+                <span style={{ background: accent, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>⚡</span>
+                Upgrade to Pro
+              </div>
+              <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", lineHeight: 1.5, marginBottom: 12 }}>
+                Unlock more sites, generations and leads to grow your business.
+              </div>
+              <a
+                href="/pricing"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: 12,
+                  fontFamily: display,
+                  fontWeight: 700,
+                  color: "#F2F0FA",
+                  textDecoration: "none",
+                }}
+              >
+                Upgrade now <span>→</span>
+              </a>
+            </div>
+          )}
+
+          <div
+            onClick={() => {
+              setTab("profile");
+              setActiveId(null);
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "8px 4px",
+              borderTop: "1px solid rgba(255,255,255,0.08)",
+              paddingTop: 16,
+              cursor: "pointer",
+            }}
+          >
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                flexShrink: 0,
+                borderRadius: "50%",
+                background: accent,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: display,
+                fontWeight: 700,
+                fontSize: 13,
+                color: "#0A0A10",
+              }}
+            >
+              {displayName?.[0]?.toUpperCase() || "?"}
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {displayName}
+              </div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {user?.email}
+              </div>
+            </div>
+            <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>›</span>
+          </div>
+        </div>
       </div>
 
       <div className="sb-dash-main" style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
@@ -652,25 +732,50 @@ export default function DashboardClient({ initialProjects }) {
                     Here's what's happening with your sites.
                   </div>
                 </div>
-                <input
-                  value={siteSearch}
-                  onChange={(e) => setSiteSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") setTab("sites");
-                  }}
-                  placeholder="Search your sites…"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: 10,
-                    padding: "10px 14px",
-                    color: "#fff",
-                    fontFamily: body,
-                    fontSize: 13,
-                    outline: "none",
-                    width: 240,
-                  }}
-                />
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <input
+                    value={siteSearch}
+                    onChange={(e) => setSiteSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") setTab("sites");
+                    }}
+                    placeholder="Search your sites…"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 10,
+                      padding: "10px 14px",
+                      color: "#fff",
+                      fontFamily: body,
+                      fontSize: 13,
+                      outline: "none",
+                      width: 220,
+                    }}
+                  />
+                  <div
+                    onClick={() => {
+                      setTab("profile");
+                      setActiveId(null);
+                    }}
+                    style={{
+                      width: 34,
+                      height: 34,
+                      flexShrink: 0,
+                      borderRadius: "50%",
+                      background: accent,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontFamily: display,
+                      fontWeight: 700,
+                      fontSize: 13,
+                      color: "#0A0A10",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {displayName?.[0]?.toUpperCase() || "?"}
+                  </div>
+                </div>
               </div>
 
               {/* Stat cards — real numbers only: sites, published, generations and leads
@@ -679,11 +784,11 @@ export default function DashboardClient({ initialProjects }) {
                   claim to. */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
                 {[
-                  ["Client Sites", sitesUsed, `of ${limits.sites} on your plan`],
-                  ["Published Live", publishedCount, `${sitesUsed - publishedCount} not yet published`],
-                  ["Generations Used", gensUsed, `of ${limits.generations} this month`],
-                  ["Leads Found", searchesUsedBilling, `of ${limits.searches} searches this month`],
-                ].map(([label, value, sub]) => (
+                  ["Client Sites", "◆", sitesUsed, `of ${limits.sites} on your plan`],
+                  ["Published Live", "●", publishedCount, `${sitesUsed - publishedCount} not yet published`],
+                  ["Generations Used", "✎", gensUsed, `of ${limits.generations} this month`],
+                  ["Leads Found", "◎", searchesUsedBilling, `of ${limits.searches} searches this month`],
+                ].map(([label, icon, value, sub]) => (
                   <div
                     key={label}
                     style={{
@@ -693,7 +798,24 @@ export default function DashboardClient({ initialProjects }) {
                       border: "1px solid rgba(255,255,255,0.08)",
                     }}
                   >
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 10 }}>{label}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{label}</div>
+                      <div
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 8,
+                          background: "rgba(139,92,246,0.1)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 11,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <span style={{ background: accent, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{icon}</span>
+                      </div>
+                    </div>
                     <div style={{ fontFamily: display, fontWeight: 700, fontSize: 28, marginBottom: 6 }}>{value}</div>
                     <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{sub}</div>
                   </div>
