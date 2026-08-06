@@ -7,14 +7,14 @@ import { readReferralCode } from "@/lib/referral";
 import { t, cardBg } from "@/lib/theme";
 import { IconMail, IconEye, IconEyeOff, IconArrowRight } from "./Icons";
 
-const labelStyle = { display: "block", fontSize: 14, color: t.text, marginBottom: 11, fontWeight: 500 };
+const labelStyle = { display: "block", fontSize: 14, color: t.text, marginBottom: 16, fontWeight: 500 };
 const inputStyle = {
   width: "100%",
   boxSizing: "border-box",
   background: t.bgInput,
   border: `1px solid ${t.border}`,
   borderRadius: 11,
-  padding: "17px 48px 17px 18px",
+  padding: "16px 48px 16px 18px",
   color: t.text,
   fontFamily: t.body,
   fontSize: 14,
@@ -126,39 +126,49 @@ export default function AuthCard({ initialMode = "login" }) {
   return (
     <form
       onSubmit={handleSubmit}
+      className="sb-auth-card"
       style={{
         width: "100%",
-        maxWidth: 588,
+        maxWidth: 596,
         borderRadius: 18,
-        padding: "52px 52px 44px",
+        padding: "53px 52px 43px",
         background: cardBg,
         border: `1px solid ${t.border}`,
         boxSizing: "border-box",
       }}
     >
+      <style>{`
+        @media (max-width: 560px) {
+          .sb-auth-card { padding: 34px 22px 30px !important; border-radius: 16px !important; }
+          .sb-auth-wordmark { font-size: 32px !important; margin-bottom: 28px !important; }
+          .sb-auth-remember { gap: 10px; }
+          .sb-auth-remember label, .sb-auth-remember span { font-size: 12.5px !important; }
+        }
+      `}</style>
       <div
+        className="sb-auth-wordmark"
         style={{
           fontFamily: t.display,
           fontWeight: 500,
-          fontSize: 38,
+          fontSize: 40,
           letterSpacing: "-0.03em",
           textAlign: "center",
           color: t.text,
-          marginBottom: 26,
+          marginBottom: 40,
         }}
       >
         sitebric
       </div>
 
-      <div style={{ fontFamily: t.display, fontWeight: 700, fontSize: 22, marginBottom: 10, textAlign: "center", color: t.text }}>
+      <div style={{ fontFamily: t.display, fontWeight: 700, fontSize: 21, marginBottom: 22, textAlign: "center", color: t.text }}>
         {heading}
       </div>
-      <div style={{ fontSize: 14.5, color: t.textMuted, marginBottom: 38, textAlign: "center" }}>
+      <div style={{ fontSize: 15, color: t.textMuted, marginBottom: 51, textAlign: "center" }}>
         {subheading}
       </div>
 
       <label style={labelStyle}>Email</label>
-      <div style={{ position: "relative", marginBottom: 26 }}>
+      <div style={{ position: "relative", marginBottom: 36 }}>
         <input
           type="email"
           required
@@ -176,7 +186,7 @@ export default function AuthCard({ initialMode = "login" }) {
       {mode !== "forgot" && (
         <>
           <label style={labelStyle}>Password</label>
-          <div style={{ position: "relative", marginBottom: 26 }}>
+          <div style={{ position: "relative", marginBottom: 36 }}>
             <input
               type={showPassword ? "text" : "password"}
               required
@@ -201,8 +211,8 @@ export default function AuthCard({ initialMode = "login" }) {
       )}
 
       {mode === "login" && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 26 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 13.5, color: t.textMuted, cursor: "pointer" }}>
+        <div className="sb-auth-remember" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 30 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 13.5, color: t.textMuted, cursor: "pointer", whiteSpace: "nowrap" }}>
             <input
               type="checkbox"
               checked={rememberMe}
@@ -213,7 +223,7 @@ export default function AuthCard({ initialMode = "login" }) {
           </label>
           <span
             onClick={() => { setError(""); setNotice(""); setMode("forgot"); }}
-            style={{ fontSize: 13.5, color: t.textMuted, cursor: "pointer" }}
+            style={{ fontSize: 13.5, color: t.textMuted, cursor: "pointer", whiteSpace: "nowrap" }}
           >
             Forgot password?
           </span>
@@ -230,7 +240,7 @@ export default function AuthCard({ initialMode = "login" }) {
           color: "#000000",
           border: "none",
           borderRadius: 11,
-          padding: "18px 10px",
+          padding: "17px 10px",
           fontFamily: t.body,
           fontWeight: 600,
           fontSize: 15,
@@ -263,7 +273,7 @@ export default function AuthCard({ initialMode = "login" }) {
 
       {mode !== "forgot" && (
         <>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "26px 0", color: t.textFaint, fontSize: 13.5 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "32px 0 26px", color: t.textFaint, fontSize: 13.5 }}>
             <div style={{ flex: 1, height: 1, background: t.border }} />
             or
             <div style={{ flex: 1, height: 1, background: t.border }} />
@@ -300,7 +310,7 @@ export default function AuthCard({ initialMode = "login" }) {
         </>
       )}
 
-      <div style={{ textAlign: "center", fontSize: 14, color: t.textMuted, marginTop: 30 }}>
+      <div style={{ textAlign: "center", fontSize: 14, color: t.textMuted, marginTop: 40 }}>
         {mode === "login" && (
           <>
             Don't have an account?{" "}
