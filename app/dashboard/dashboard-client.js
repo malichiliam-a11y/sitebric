@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { PLAN_LIMITS } from "@/lib/plans";
+import { readReferralCode, clearReferralCode } from "@/lib/referral";
 
 export default function DashboardClient({ initialProjects }) {
   const supabase = createClient();
@@ -46,8 +47,14 @@ export default function DashboardClient({ initialProjects }) {
       let { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
       if (!data) {
         // Brand new user with no profile row yet — create their free
-        // trial row now so Billing shows it correctly right away.
-        await fetch("/api/ensure-profile", { method: "POST" });
+        // trial row now so Billing shows it correctly right away, and
+        // pass along whatever referral code was captured on landing.
+        await fetch("/api/ensure-profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ref: readReferralCode() }),
+        });
+        clearReferralCode();
         const retry = await supabase.from("profiles").select("*").eq("id", user.id).single();
         data = retry.data;
       }

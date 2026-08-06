@@ -75,6 +75,9 @@ alter table profiles add column if not exists generations_used int default 0;
 alter table profiles add column if not exists searches_used int default 0;
 alter table profiles add column if not exists stripe_customer_id text;
 alter table profiles add column if not exists stripe_subscription_id text;
+-- Which referral code (if any) brought this signup in, e.g. 'APEX'.
+-- Set once at profile creation and never overwritten afterwards.
+alter table profiles add column if not exists referred_by text;
 
 -- The Stripe webhook finds users by customer id, which is a lookup on
 -- every billing event.

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
+import { captureReferralCode } from "@/lib/referral";
 
 export default function Home() {
   const router = useRouter();
@@ -20,6 +21,8 @@ export default function Home() {
   const body = "'Inter', sans-serif";
 
   useEffect(() => {
+    captureReferralCode();
+
     const saved = window.localStorage.getItem("sitebric_email");
     if (saved) setEmail(saved);
 
