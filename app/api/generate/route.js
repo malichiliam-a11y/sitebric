@@ -135,6 +135,7 @@ ${photoUrls.length > 0 ? `\nREAL PHOTOS PROVIDED — use these actual URLs for t
 - Make sure it's fully responsive: nothing should overflow or overlap on a ~375px mobile width. Disable or simplify heavy scroll/parallax effects on mobile if needed for performance.
 - Respect prefers-reduced-motion — disable non-essential animations for users who have that OS setting on.
 - Add a real <title> tag and a meta description tag with relevant copy for this business.
+- REQUIRED, first thing in <head>: <meta name="viewport" content="width=device-width, initial-scale=1">. Without this exact tag, mobile Safari and Chrome ignore all responsive CSS and render the page at a fake ~980px desktop width, shrunk to fit — that's what makes a page "not fit" on a phone even when the CSS itself is correct.
 
 === STRUCTURE (all required, in an order that makes sense for this business) ===
 1. Sticky nav — business name/logo text, a few anchor links, and a phone number or "Call Now" / "Get a Quote" button
