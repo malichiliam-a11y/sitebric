@@ -1063,18 +1063,26 @@ export default function DashboardClient({ initialProjects }) {
                 )}
               </div>
             )}
-            <div className="sb-dash-preview" style={{ flex: 1, background: "#0A0A10", minHeight: 0 }}>
+            <div className="sb-dash-preview" style={{ flex: 1, background: "#0A0A10", minHeight: 0, position: "relative" }}>
               {active.status === "generating" && (
                 <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
                   Generating…
                 </div>
               )}
               {active.status === "done" && view === "preview" && (
+                // An iframe's percentage height doesn't reliably resolve
+                // through a chain of flex containers (a long-standing
+                // browser quirk for replaced elements) — it was silently
+                // collapsing to the ~150px UA default on mobile, where the
+                // shell layout switches to a stack of nested flex boxes
+                // with no single ancestor giving it an explicit height.
+                // Absolute-positioning it against this relatively
+                // positioned parent sidesteps that entirely.
                 <iframe
                   title="preview"
                   srcDoc={active.code}
                   sandbox="allow-scripts allow-modals allow-forms"
-                  style={{ width: "100%", height: "100%", border: "none", background: "white" }}
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none", background: "white" }}
                 />
               )}
               {active.status === "done" && view === "code" && (
