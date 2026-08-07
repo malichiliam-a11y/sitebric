@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { captureReferralCode } from "@/lib/referral";
 import { palette, metrics } from "@/lib/design";
-import TerrainCanvas from "./TerrainCanvas";
+import TerrainBackdrop from "./TerrainBackdrop";
 import { FilmGrain } from "./primitives";
 import { TopNav, BottomBar } from "./Chrome";
 import HeroCopy from "./HeroCopy";
@@ -67,32 +67,6 @@ export default function LoginScreen() {
           background: rgba(255,255,255,0.055);
         }
 
-        /* The reference keeps the terrain to the left of centre. */
-        .sb-art-stage {
-          position: absolute;
-          left: 13%; right: 38%; top: 24%; bottom: 15%;
-        }
-        /* Veils both edges: the copy column on the left and the card
-           column on the right both sit on clean black in the reference. */
-        .sb-art-veil {
-          position: absolute; inset: 0; pointer-events: none;
-          background:
-            linear-gradient(90deg,
-              ${palette.bg} 0%,
-              ${palette.bg} 8%,
-              rgba(5,5,5,0.78) 18%,
-              rgba(5,5,5,0.28) 31%,
-              rgba(5,5,5,0) 44%),
-            linear-gradient(270deg,
-              ${palette.bg} 0%,
-              rgba(5,5,5,0.96) 10%,
-              rgba(5,5,5,0.7) 19%,
-              rgba(5,5,5,0) 31%),
-            linear-gradient(0deg,
-              ${palette.bg} 0%,
-              rgba(5,5,5,0.7) 8%,
-              rgba(5,5,5,0) 22%);
-        }
 
         @media (prefers-reduced-motion: reduce) {
           .sb-tile { transition: none; }
@@ -115,10 +89,7 @@ export default function LoginScreen() {
 
       {/* ---- background composition ---- */}
       <div className="sb-art" style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }}>
-        <div className="sb-art-stage">
-          <TerrainCanvas className="absolute inset-0 h-full w-full" />
-        </div>
-        <div className="sb-art-veil" />
+        <TerrainBackdrop />
       </div>
       <FilmGrain opacity={0.035} />
 
