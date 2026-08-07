@@ -10,6 +10,7 @@ import { FilmGrain } from "./primitives";
 import { TopNav, BottomBar } from "./Chrome";
 import HeroCopy from "./HeroCopy";
 import AuthCard from "./AuthCard";
+import Sections from "./Sections";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -31,26 +32,28 @@ export default function LoginScreen() {
         dangerouslySetInnerHTML={{
           __html: `
         .sb-login {
-          min-height: 100vh;
-          display: flex;
-          flex-direction: column;
           position: relative;
-          overflow: hidden;
           background: ${palette.bg};
           color: ${palette.text};
           font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
+          scroll-behavior: smooth;
         }
 
-        .sb-toggle {
-          width: 40px; height: 40px;
-          border-radius: 10px;
-          border: 1px solid ${palette.hairline};
-          background: rgba(255,255,255,0.02);
-          display: flex; align-items: center; justify-content: center;
-          color: ${palette.textMuted};
+        /* The hero owns the terrain, so it clips its own backdrop instead
+           of letting it stretch down behind the marketing sections. */
+        .sb-hero {
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          position: relative;
+          overflow: hidden;
         }
+
+        /* Anchored sections sit below a fixed-height hero, so offset the
+           jump target to keep headings clear of the viewport edge. */
+        .sb-sections [id] { scroll-margin-top: 24px; }
 
         .sb-tile {
           width: ${metrics.featureTile}px; height: ${metrics.featureTile}px; flex-shrink: 0;
@@ -67,6 +70,10 @@ export default function LoginScreen() {
           background: rgba(255,255,255,0.055);
         }
 
+
+        /* The footer now closes the whole page rather than the hero, so it
+           needs a rule above it to separate it from the last section. */
+        .sb-footer { border-top: 1px solid ${palette.hairline}; }
 
         @media (prefers-reduced-motion: reduce) {
           .sb-tile { transition: none; }
@@ -87,34 +94,39 @@ export default function LoginScreen() {
         }}
       />
 
-      {/* ---- background composition ---- */}
-      <div className="sb-art" style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }}>
-        <TerrainBackdrop />
-      </div>
       <FilmGrain opacity={0.035} />
 
-      <TopNav />
-
-      <div
-        className="sb-grid"
-        style={{
-          position: "relative",
-          zIndex: 2,
-          flex: 1,
-          width: "100%",
-          boxSizing: "border-box",
-          padding: `0 ${metrics.gutterRight} 30px ${metrics.gutterLeft}`,
-          display: "grid",
-          gridTemplateColumns: `1fr ${metrics.cardWidth}px`,
-          gap: 56,
-          alignItems: "center",
-        }}
-      >
-        <HeroCopy />
-        <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-          <AuthCard />
+      <section className="sb-hero">
+        {/* ---- background composition, scoped to the hero ---- */}
+        <div className="sb-art" style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }}>
+          <TerrainBackdrop />
         </div>
-      </div>
+
+        <TopNav />
+
+        <div
+          className="sb-grid"
+          style={{
+            position: "relative",
+            zIndex: 2,
+            flex: 1,
+            width: "100%",
+            boxSizing: "border-box",
+            padding: `0 ${metrics.gutterRight} 30px ${metrics.gutterLeft}`,
+            display: "grid",
+            gridTemplateColumns: `1fr ${metrics.cardWidth}px`,
+            gap: 56,
+            alignItems: "center",
+          }}
+        >
+          <HeroCopy />
+          <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+            <AuthCard />
+          </div>
+        </div>
+      </section>
+
+      <Sections />
 
       <BottomBar />
     </div>

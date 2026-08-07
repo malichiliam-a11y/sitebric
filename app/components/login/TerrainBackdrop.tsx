@@ -44,7 +44,9 @@ export default function TerrainBackdrop() {
           background-repeat: no-repeat;
           background-size: cover;
           background-position: 34% 40%;
-          opacity: 0.85;
+          /* Held well down: the render carries a lot of lifted grey, and at
+             full strength it turned the whole page charcoal rather than black. */
+          opacity: 0.5;
           /* Keep the sky and shafts, drop the render's own landform so it
              does not sit behind the live terrain as a ghost. */
           -webkit-mask-image: linear-gradient(180deg,

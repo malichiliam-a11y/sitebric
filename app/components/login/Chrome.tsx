@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { palette, metrics, easing } from "@/lib/design";
-import { Wordmark, IconSun, IconX, IconDiscord, IconGitHub } from "./primitives";
+import { Wordmark, IconX, IconDiscord, IconGitHub } from "./primitives";
 
 export function TopNav() {
   return (
@@ -21,14 +21,14 @@ export function TopNav() {
       }}
     >
       <Wordmark size={23} />
+      {/* Every item here goes somewhere. The theme toggle that used to sit
+          on the end was removed rather than left inert — the app is
+          dark-only, so it was a control that could never do anything. */}
       <div style={{ display: "flex", alignItems: "center", gap: 34, fontSize: 14.5 }}>
-        <a className="sb-link" href="/#how-it-works">Documentation</a>
+        <a className="sb-link" href="#how-it-works">How it works</a>
+        <a className="sb-link" href="#faq">FAQ</a>
+        <a className="sb-link" href="/pricing">Pricing</a>
         <a className="sb-link" href="mailto:supportsitebric@gmail.com">Contact</a>
-        {/* Decorative: the app is dark-only, so this renders without a
-            handler rather than pretending to switch themes. */}
-        <span className="sb-toggle" title="Light mode isn't available yet">
-          <IconSun size={17} />
-        </span>
       </div>
     </motion.nav>
   );

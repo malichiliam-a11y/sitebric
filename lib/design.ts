@@ -7,10 +7,12 @@
 
 export const palette = {
   bg: "#000000",
-  card: "rgba(5,5,6,0.88)",
-  cardTop: "rgba(11,11,12,0.9)",
-  input: "rgba(255,255,255,0.024)",
-  tile: "rgba(255,255,255,0.026)",
+  // Deliberately near-opaque and nearly pure black: the card used to read
+  // as dark grey once the backdrop showed through it.
+  card: "rgba(2,2,3,0.94)",
+  cardTop: "rgba(7,7,8,0.94)",
+  input: "rgba(255,255,255,0.02)",
+  tile: "rgba(255,255,255,0.022)",
 
   hairline: "rgba(255,255,255,0.08)",
   hairlineStrong: "rgba(255,255,255,0.12)",
