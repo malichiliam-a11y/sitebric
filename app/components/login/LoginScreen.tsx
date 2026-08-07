@@ -70,7 +70,7 @@ export default function LoginScreen() {
         /* The reference keeps the terrain to the left of centre. */
         .sb-art-stage {
           position: absolute;
-          left: 5%; right: 32%; top: 26%; bottom: 14%;
+          left: 13%; right: 38%; top: 24%; bottom: 15%;
         }
         /* Veils both edges: the copy column on the left and the card
            column on the right both sit on clean black in the reference. */
