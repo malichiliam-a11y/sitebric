@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { PLAN_LIMITS } from "@/lib/plans";
 import { readReferralCode, clearReferralCode } from "@/lib/referral";
+import { readUtmParams, clearUtmParams } from "@/lib/utm";
 import { t, cardBg } from "@/lib/theme";
 import { Wordmark } from "@/app/components/Brand";
 import DashAmbient from "@/app/components/dashboard/DashAmbient";
@@ -85,13 +86,15 @@ export default function DashboardClient({ initialProjects }) {
       if (!data) {
         // Brand new user with no profile row yet — create their free
         // trial row now so Billing shows it correctly right away, and
-        // pass along whatever referral code was captured on landing.
+        // pass along whatever referral code and UTM params were
+        // captured on landing.
         await fetch("/api/ensure-profile", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ref: readReferralCode() }),
+          body: JSON.stringify({ ref: readReferralCode(), ...readUtmParams() }),
         });
         clearReferralCode();
+        clearUtmParams();
         const retry = await supabase.from("profiles").select("*").eq("id", user.id).single();
         data = retry.data;
       }

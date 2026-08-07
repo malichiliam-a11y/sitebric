@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { captureReferralCode } from "@/lib/referral";
+import { captureUtmParams } from "@/lib/utm";
 import { palette, metrics } from "@/lib/design";
 import TerrainBackdrop from "./TerrainBackdrop";
 import { FilmGrain } from "./primitives";
@@ -17,6 +18,7 @@ export default function LoginScreen() {
 
   useEffect(() => {
     captureReferralCode();
+    captureUtmParams();
     (async () => {
       const supabase = createClient();
       const {
