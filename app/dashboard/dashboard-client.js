@@ -558,7 +558,10 @@ export default function DashboardClient({ initialProjects }) {
           /* With a project open, the list above adds nothing but eats
              most of the screen — hide it and rely on the back button
              instead so the preview actually gets room to breathe. */
-          .sb-dash-sidebar--project-open { display: none; }
+          /* !important is required here — the sidebar element also carries
+             an inline style={{ display: "flex" }}, which otherwise always
+             wins over this class and the sidebar never actually hides. */
+          .sb-dash-sidebar--project-open { display: none !important; }
           .sb-mobile-back { display: inline-flex !important; }
           .sb-overview-grid { grid-template-columns: 1fr !important; }
         }

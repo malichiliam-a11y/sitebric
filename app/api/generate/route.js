@@ -129,7 +129,7 @@ ${photoUrls.length > 0 ? `\nREAL PHOTOS PROVIDED — use these actual URLs for t
   - A subtle parallax effect on the hero (background moves slower than foreground on scroll)
   - An animated gradient mesh or drifting blurred color-orb background in the hero (like premium SaaS sites), built in pure CSS/JS
   - A horizontally scrolling marquee/ticker strip for things like service tags, certifications, or "as seen in" style trust badges
-  - Animated counting-up statistics (years in business, jobs completed, etc. counting up from 0 when scrolled into view)
+  - Animated counting-up statistics (years in business, jobs completed, etc. counting up from 0 when scrolled into view) — trigger each counter off its own element (or a small stats row) with a low IntersectionObserver threshold like 0.1-0.2, never 0.5+ on a large wrapping section, since a tall hero on a short/mobile viewport (or a scaled-down preview) can permanently fail to cross a high threshold and leave the numbers stuck at 0. Always add a ~1.5s setTimeout fallback that fires the count-up regardless of whether the observer ever fired — a stat frozen at 0 is worse than one that animates without a scroll trigger.
   - Magnetic or hover-tilt effects on buttons/cards (subtle transform following cursor position or a lift+glow on hover)
   - Glassmorphism cards (translucent, blurred backgrounds) for pricing/service cards where it fits the aesthetic
   - A sticky progress indicator or subtly animated nav bar that changes appearance on scroll
