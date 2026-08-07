@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { sanitizeReferralCode } from "@/lib/referral";
+import { sanitizeUtmValue } from "@/lib/utm";
 
 // Bypasses RLS to create the initial trial row — safe since it only
 // ever inserts a fixed starting state for the currently authenticated
@@ -28,9 +29,9 @@ export async function POST(req) {
     .maybeSingle();
 
   if (!existing) {
-    // Only read on first creation — referred_by is set once and never
-    // touched again, so a stale ref lingering in the caller's storage
-    // can't retroactively attribute a returning user.
+    // Only read on first creation — referred_by and utm_* are set once
+    // and never touched again, so stale values lingering in the caller's
+    // storage can't retroactively attribute a returning user.
     const body = await req.json().catch(() => ({}));
     const referredBy = sanitizeReferralCode(body?.ref);
 
@@ -40,6 +41,9 @@ export async function POST(req) {
       generations_used: 0,
       searches_used: 0,
       referred_by: referredBy,
+      utm_source: sanitizeUtmValue(body?.utm_source),
+      utm_medium: sanitizeUtmValue(body?.utm_medium),
+      utm_campaign: sanitizeUtmValue(body?.utm_campaign),
     });
   }
 
