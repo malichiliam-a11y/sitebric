@@ -146,7 +146,27 @@ export default function DashboardClient({ initialProjects }) {
       setPhotoUrls([]);
       loadProfile();
     } catch (err) {
-      setError(err.message);
+      // A dropped connection ("Load failed" / "Failed to fetch") is not the
+      // same as a failed generation: the project row was created before the
+      // model was ever called, and the server keeps working after the
+      // browser gives up. Refreshing the list surfaces that row so the
+      // poller can finish it — otherwise the user retries, creating a
+      // duplicate site and spending a second generation.
+      const droppedConnection =
+        err instanceof TypeError || /load failed|failed to fetch|network/i.test(err.message || "");
+
+      if (droppedConnection) {
+        const { data } = await supabase
+          .from("projects")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (data) setProjects(data);
+        setError(
+          "The connection dropped while your site was generating, but it is still building — watch for it in Sites. Do not resubmit or you will be charged for two."
+        );
+      } else {
+        setError(err.message);
+      }
     } finally {
       setBusy(false);
     }

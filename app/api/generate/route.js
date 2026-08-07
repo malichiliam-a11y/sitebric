@@ -1,7 +1,10 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { limitsFor } from "@/lib/plans";
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // Used only for the generations_used increment at the end — that write
 // needs to bypass RLS since users don't have update permission on their
@@ -100,20 +103,19 @@ export async function POST(req) {
   }
 
   try {
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 32000,
-        messages: [
-          {
-            role: "user",
-            content: `Generate a COMPLETE, SELF-CONTAINED, production-quality single HTML file for a small local business website. This needs to look like a modern, award-worthy site — the kind that would win an "site of the day" award — not a generic template.
+    // Streamed, not a single buffered request. A 32k-token generation runs
+    // well past the point where a non-streaming HTTP call times out — the
+    // connection dies mid-generation and the browser reports a bare "Load
+    // failed" with no server error to show. Streaming keeps bytes flowing
+    // so neither the SDK nor any intermediary treats it as a stalled
+    // request; .finalMessage() still hands back the whole response.
+    const stream = anthropic.messages.stream({
+      model: "claude-sonnet-4-6",
+      max_tokens: 32000,
+      messages: [
+        {
+          role: "user",
+          content: `Generate a COMPLETE, SELF-CONTAINED, production-quality single HTML file for a small local business website. This needs to look like a modern, award-worthy site — the kind that would win an "site of the day" award — not a generic template.
 
 Client/business: "${clientName}"
 Brief: "${prompt}"
@@ -163,18 +165,12 @@ ${photoUrls.length > 0
 - All CSS in a single <style> tag, all JS in a single <script> tag, everything in one file (Google Fonts <link> tags are fine).
 - Keep CSS/JS efficient so the full page finishes generating within the response — prioritize finishing a complete, working page over cramming in extra effects if space runs tight.`,
           },
-        ],
-      }),
+      ],
     });
 
-    const data = await anthropicRes.json();
-
-    if (!anthropicRes.ok) {
-      console.error("Anthropic API error:", anthropicRes.status, JSON.stringify(data));
-      throw new Error(
-        `Anthropic API error (${anthropicRes.status}): ${data?.error?.message || "unknown"}`
-      );
-    }
+    // The SDK raises typed errors for a non-2xx, so there is no status to
+    // branch on here — the catch below records the failure.
+    const data = await stream.finalMessage();
 
     let code = (data.content || [])
       .map((b) => (b.type === "text" ? b.text : ""))
@@ -182,6 +178,12 @@ ${photoUrls.length > 0
       .replace(/^```(html)?\s*/i, "")
       .replace(/```\s*$/i, "")
       .trim();
+
+    // A truncated generation is a broken site, not a site — better to fail
+    // loudly than to publish half a page.
+    if (data.stop_reason === "max_tokens") {
+      throw new Error("The site came out longer than the size limit. Try a shorter brief.");
+    }
 
     if (!code) throw new Error("empty response from model");
 
