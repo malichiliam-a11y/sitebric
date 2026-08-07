@@ -1,5 +1,18 @@
 import "./globals.css";
+import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
+
+// Self-hosted at build time rather than a runtime <link> to Google.
+// Removes a render-blocking third-party request, kills the flash of
+// fallback text, and means the page cannot render in the wrong face if
+// fonts.googleapis.com is slow or blocked.
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-inter",
+});
+
 export const metadata = {
   title: "sitebric",
   description: "Generate client websites with AI",
@@ -11,27 +24,18 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
-        {/* Inter only — Space Grotesk was dropped when the type system
-            consolidated onto one family, so it no longer has to load. */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="en" className={inter.variable}>
       <body
         style={{
           margin: 0,
-          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-          background: "#050505",
+          fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif",
+          background: "#000000",
           color: "#EDEDED",
           WebkitFontSmoothing: "antialiased",
+          MozOsxFontSmoothing: "grayscale",
         }}
       >
-       {children}
+        {children}
         <Analytics />
       </body>
     </html>

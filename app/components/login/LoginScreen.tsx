@@ -38,7 +38,7 @@ export default function LoginScreen() {
           overflow: hidden;
           background: ${palette.bg};
           color: ${palette.text};
-          font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+          font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }

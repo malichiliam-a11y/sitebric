@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import ParticleField from "./ParticleField";
 import { palette } from "@/lib/design";
 
 /**
@@ -65,6 +66,26 @@ export default function TerrainBackdrop() {
               rgba(5,5,5,0) 16%);
         }
 
+        .sb-backdrop-motes {
+          position: absolute; inset: 0; width: 100%; height: 100%;
+        }
+
+        /* A slow luminance pulse across the shafts, so the light in the
+           render reads as live rather than frozen. */
+        @keyframes sbShimmer {
+          0%, 100% { opacity: 0.0; }
+          50%      { opacity: 0.5; }
+        }
+        .sb-backdrop-shimmer {
+          position: absolute; inset: 0;
+          background: radial-gradient(46% 40% at 33% 26%,
+            rgba(255,255,255,0.07) 0%, transparent 70%);
+          animation: sbShimmer 11s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .sb-backdrop-shimmer { animation: none; opacity: 0.22; }
+        }
+
         @media (max-width: 1040px) {
           .sb-backdrop-img { background-position: 40% 70%; opacity: 0.55; }
         }
@@ -75,14 +96,16 @@ export default function TerrainBackdrop() {
           ever being noticeable as motion. Disabled under reduced-motion. */}
       <motion.div
         className="sb-backdrop-img"
-        initial={reduced ? undefined : { scale: 1.03, x: 0 }}
-        animate={reduced ? undefined : { scale: 1.06, x: -10 }}
+        initial={reduced ? undefined : { scale: 1.04, x: -14, y: 6 }}
+        animate={reduced ? undefined : { scale: 1.09, x: 16, y: -10 }}
         transition={
           reduced
             ? undefined
-            : { duration: 34, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }
+            : { duration: 42, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }
         }
       />
+      <div className="sb-backdrop-shimmer" />
+      <ParticleField className="sb-backdrop-motes" />
       <div className="sb-backdrop-veil" />
     </div>
   );
