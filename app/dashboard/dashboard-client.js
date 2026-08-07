@@ -6,6 +6,8 @@ import { PLAN_LIMITS } from "@/lib/plans";
 import { readReferralCode, clearReferralCode } from "@/lib/referral";
 import { t, cardBg } from "@/lib/theme";
 import { Wordmark } from "@/app/components/Brand";
+import DashAmbient from "@/app/components/dashboard/DashAmbient";
+import { FilmGrain } from "@/app/components/login/primitives";
 import {
   IconHome, IconSites, IconLeads, IconBilling, IconSettings, IconUser,
   IconSearch, IconBell, IconPlus, IconArrowRight, IconChevronRight, IconSparkle,
@@ -389,7 +391,7 @@ export default function DashboardClient({ initialProjects }) {
 
   return (
     <div className="sb-dash-shell" style={{ height: "100vh", display: "flex", color: t.text, background: t.bg, fontFamily: body, position: "relative" }}>
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @keyframes sbDashDrift1 {
           0%   { transform: translate(-50%, 0) scale(1); }
           50%  { transform: translate(-42%, 8%) scale(1.15); }
@@ -404,31 +406,81 @@ export default function DashboardClient({ initialProjects }) {
         .sb-dash-orb { position: absolute; border-radius: 50%; filter: blur(60px); }
         .sb-dash-orb-a {
           top: -30%; left: 50%; width: 1100px; height: 1100px;
-          background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 65%);
+          background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 62%);
           animation: sbDashDrift1 12s ease-in-out infinite;
         }
         .sb-dash-orb-b {
           bottom: -20%; right: -10%; width: 700px; height: 700px;
-          background: radial-gradient(circle, rgba(255,255,255,0.035) 0%, transparent 68%);
+          background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 66%);
           animation: sbDashDrift2 15s ease-in-out infinite;
         }
+
+        /* Drifting motes — the same field the login screen uses, so the
+           two halves of the product feel like one thing. */
+        .sb-dash-motes { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+        /* A specular sweep that crosses the workspace every 16s. This is
+           what stops a mostly-empty black panel reading as dead. */
+        @keyframes sbDashBeam {
+          0%        { transform: translateX(-40%) rotate(9deg); opacity: 0; }
+          25%, 60%  { opacity: 1; }
+          100%      { transform: translateX(150%) rotate(9deg); opacity: 0; }
+        }
+        .sb-dash-beam {
+          position: absolute; top: -25%; left: 0; width: 34%; height: 150%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+          filter: blur(30px);
+          animation: sbDashBeam 16s ease-in-out infinite;
+        }
+
         .sb-project-card {
-          transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+          position: relative;
+          transition: transform 0.24s ${t.ease}, box-shadow 0.24s ${t.ease}, border-color 0.24s ${t.ease};
           cursor: pointer;
         }
+        /* Light pools in from the top edge on hover rather than the card
+           simply changing colour. */
+        .sb-project-card::after {
+          content: ""; position: absolute; inset: 0; border-radius: inherit;
+          background: radial-gradient(130% 80% at 50% -25%, rgba(255,255,255,0.10), transparent 62%);
+          opacity: 0; transition: opacity 0.24s ${t.ease}; pointer-events: none;
+        }
+        .sb-project-card:hover::after { opacity: 1; }
         .sb-project-card:hover {
           transform: translateY(-4px);
-          box-shadow: 0 16px 36px rgba(0,0,0,0.5);
-          border-color: rgba(255,255,255,0.2);
+          border-color: rgba(255,255,255,0.22);
+          box-shadow: 0 18px 44px rgba(0,0,0,0.65),
+                      0 0 34px rgba(255,255,255,0.055);
         }
+
+        /* A lit top edge, brightest at the middle — reads as a panel
+           catching light rather than an outlined box. */
+        .sb-lit-edge { position: relative; }
+        .sb-lit-edge::before {
+          content: ""; position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.30), transparent);
+          pointer-events: none;
+        }
+
         .sb-sidebar-item {
-          transition: background 0.15s ease, border-color 0.15s ease;
+          position: relative;
+          transition: background 0.18s ${t.ease}, border-color 0.18s ${t.ease},
+                      box-shadow 0.18s ${t.ease};
         }
+        .sb-sidebar-item:hover {
+          box-shadow: 0 0 22px rgba(255,255,255,0.045);
+          border-color: rgba(255,255,255,0.16);
+        }
+
         .sb-nav-tab {
-          transition: background 0.15s ease, color 0.15s ease;
+          transition: background 0.18s ${t.ease}, color 0.18s ${t.ease},
+                      box-shadow 0.18s ${t.ease};
         }
+        .sb-nav-tab:hover { box-shadow: 0 0 18px rgba(255,255,255,0.05); }
+
         @media (prefers-reduced-motion: reduce) {
-          .sb-dash-orb-a, .sb-dash-orb-b { animation: none; }
+          .sb-dash-orb-a, .sb-dash-orb-b, .sb-dash-beam { animation: none; }
+          .sb-project-card, .sb-sidebar-item, .sb-nav-tab { transition: none; }
         }
         /* The desktop layout is a fixed 300px sidebar beside the workspace.
            On a phone that leaves almost nothing for the workspace, so stack
@@ -463,7 +515,11 @@ export default function DashboardClient({ initialProjects }) {
           .sb-overview-grid { grid-template-columns: 1fr !important; }
         }
         .sb-mobile-back { display: none; }
-      `}</style>
+      ` }} />
+
+      {/* Sits above everything at 3.5% — the same grain the login screen
+          uses, which is what keeps large black areas from banding. */}
+      <FilmGrain opacity={0.035} />
 
       <div
         className={`sb-dash-sidebar${tab === "sites" && active ? " sb-dash-sidebar--project-open" : ""}`}
@@ -703,10 +759,7 @@ export default function DashboardClient({ initialProjects }) {
         {/* ===== OVERVIEW TAB ===== */}
         {tab === "overview" && (
           <div style={{ flex: 1, overflowY: "auto", padding: "36px 40px 60px", position: "relative", zIndex: 1 }}>
-            <div className="sb-dash-ambient">
-              <div className="sb-dash-orb sb-dash-orb-a" />
-              <div className="sb-dash-orb sb-dash-orb-b" />
-            </div>
+            <DashAmbient />
             <div style={{ position: "relative", zIndex: 1 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16, marginBottom: 28 }}>
                 <div>
@@ -961,10 +1014,7 @@ export default function DashboardClient({ initialProjects }) {
         {/* ===== SITES TAB ===== */}
         {tab === "sites" && !active && (
           <>
-            <div className="sb-dash-ambient">
-              <div className="sb-dash-orb sb-dash-orb-a" />
-              <div className="sb-dash-orb sb-dash-orb-b" />
-            </div>
+            <DashAmbient />
             <div
               style={{
                 flex: 1,
