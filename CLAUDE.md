@@ -59,9 +59,8 @@ Email signup mails a **6-digit code**, not a link. `AuthCard` collects it via
 
 - Add `https://sitebric.com/**` to Supabase → Authentication → URL Configuration.
   Code works around its absence; this fixes the cause.
-- Password reset has not been walked end-to-end by a human since the fix landed.
-- Check for duplicate `projects` rows from generation retries during the
-  "Load failed" window — each retry created a new row and spent a generation.
+- Password reset has been walked end-to-end by a human (2026-08-07) — confirmed
+  working.
 - `/admin/referrals` estimates MRR from list price, so a discounted subscriber
   (APEX is on a $5-off coupon for 6 months) reads $5/mo high.
 
