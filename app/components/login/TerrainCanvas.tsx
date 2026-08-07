@@ -22,13 +22,16 @@ const ROWS = 74;
 // Height field. One dominant dune with harmonics so it does not read as
 // a regular wave; sampled per-frame with a slow phase drift.
 function heightAt(u: number, v: number, phase: number) {
-  const ridge =
-    Math.exp(-Math.pow((u - 0.5) / 0.26, 2)) * Math.exp(-Math.pow((v - 0.58) / 0.4, 2));
+  const humpA =
+    Math.exp(-Math.pow((u - 0.34) / 0.2, 2)) * Math.exp(-Math.pow((v - 0.5) / 0.44, 2));
+  const humpB =
+    Math.exp(-Math.pow((u - 0.56) / 0.16, 2)) * Math.exp(-Math.pow((v - 0.58) / 0.4, 2));
   return (
-    ridge * 1.45 +
-    Math.sin(u * 6.4 + 1.1 + phase * 0.6) * Math.cos(v * 2.8 + 0.4) * 0.3 +
-    Math.sin(u * 13.2 + v * 3.4 - phase) * 0.085 +
-    Math.sin(v * 5.6 - u * 2.7 + phase * 0.4) * 0.075
+    humpA * 1.15 +
+    humpB * 0.72 +
+    Math.sin(u * 7.6 + 1.1 + phase * 0.6) * Math.cos(v * 3.1 + 0.4) * 0.16 +
+    Math.sin(u * 14.5 + v * 3.4 - phase) * 0.05 +
+    Math.sin(v * 6.1 - u * 3.0 + phase * 0.4) * 0.045
   );
 }
 
@@ -122,7 +125,7 @@ export default function TerrainCanvas({ className }: { className?: string }) {
         const u = beams[i];
         const p = project(u, 0.42, phase);
         const centrality = 1 - Math.abs(u - 0.5) * 1.55;
-        const a = Math.max(0.05, 0.45 * centrality);
+        const a = Math.max(0.08, 0.5 * centrality);
         const top = p.y - H * 0.31;
         const g = gctx!.createLinearGradient(0, top, 0, p.y + 6);
         g.addColorStop(0, "rgba(255,255,255,0)");
