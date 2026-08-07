@@ -9,7 +9,9 @@ import { palette, metrics, easing } from "@/lib/design";
 import { IconMail, IconEye, IconEyeOff, IconGoogle } from "./primitives";
 import { Field, Affix, PrimaryButton, SecondaryButton, Checkbox, controlCss } from "./controls";
 
-type Mode = "login" | "signup" | "forgot";
+// "verify" is the step between signing up and having a session: Supabase
+// mails a 6-digit code and will not issue a session until it comes back.
+type Mode = "login" | "signup" | "forgot" | "verify";
 
 export default function AuthCard() {
   const router = useRouter();
@@ -18,6 +20,7 @@ export default function AuthCard() {
     () => (typeof window !== "undefined" && window.localStorage.getItem("sitebric_email")) || ""
   );
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -28,6 +31,29 @@ export default function AuthCard() {
     setError("");
     setNotice("");
     setMode(next);
+  }
+
+  // Sends (or re-sends) the signup confirmation code. Used both when a
+  // login turns out to be unconfirmed and from the "Resend it" link.
+  async function sendCode(target: string) {
+    const supabase = createClient();
+    const { error } = await supabase.auth.resend({ type: "signup", email: target });
+    if (error) {
+      setError(error.message);
+      return false;
+    }
+    return true;
+  }
+
+  async function resendCode() {
+    setError("");
+    setNotice("");
+    setLoading(true);
+    try {
+      if (await sendCode(email)) setNotice(`New code sent to ${email}.`);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function signInWithGoogle() {
@@ -51,6 +77,18 @@ export default function AuthCard() {
 
       const supabase = createClient();
 
+      if (mode === "verify") {
+        const { data, error } = await supabase.auth.verifyOtp({
+          email,
+          token: code.trim(),
+          type: "signup",
+        });
+        if (error) setError(error.message);
+        else if (data.session) router.push("/dashboard");
+        else setError("That code didn't work. Request a new one and try again.");
+        return;
+      }
+
       if (mode === "forgot") {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
@@ -72,13 +110,31 @@ export default function AuthCard() {
         });
         if (error) setError(error.message);
         else if (data.session) router.push("/dashboard");
-        else setNotice("Almost there — check your email to confirm your account.");
+        else {
+          // No session means confirmation is required. Supabase has just
+          // mailed a code, so go collect it rather than leaving the user
+          // on a dead-end "check your email" message.
+          setCode("");
+          setMode("verify");
+          setNotice(`We sent a 6-digit code to ${email}.`);
+        }
         return;
       }
 
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setError(error.message);
-      else router.push("/dashboard");
+      if (error) {
+        // Someone who signed up before confirming lands here forever
+        // otherwise — send a fresh code and take them to the code step.
+        if ((error as { code?: string }).code === "email_not_confirmed") {
+          setCode("");
+          if (await sendCode(email)) {
+            setMode("verify");
+            setNotice(`Confirm your email first — we sent a 6-digit code to ${email}.`);
+          }
+        } else {
+          setError(error.message);
+        }
+      } else router.push("/dashboard");
     } catch (err) {
       setError((err as Error)?.message || "Something went wrong. Please try again.");
     } finally {
@@ -87,16 +143,36 @@ export default function AuthCard() {
   }
 
   const heading =
-    mode === "signup" ? "Create your account" : mode === "forgot" ? "Reset your password" : "Welcome back 👋";
+    mode === "signup"
+      ? "Create your account"
+      : mode === "forgot"
+      ? "Reset your password"
+      : mode === "verify"
+      ? "Check your email"
+      : "Welcome back 👋";
   const subheading =
     mode === "signup"
       ? "Start building client sites in minutes"
       : mode === "forgot"
       ? "We'll email you a link to set a new one"
+      : mode === "verify"
+      ? "Enter the 6-digit code we sent you"
       : "Log in to your account to continue";
   const ctaLabel = loading
-    ? mode === "signup" ? "Creating account" : mode === "forgot" ? "Sending" : "Logging in"
-    : mode === "signup" ? "Create account" : mode === "forgot" ? "Send reset link" : "Log in";
+    ? mode === "signup"
+      ? "Creating account"
+      : mode === "forgot"
+      ? "Sending"
+      : mode === "verify"
+      ? "Verifying"
+      : "Logging in"
+    : mode === "signup"
+    ? "Create account"
+    : mode === "forgot"
+    ? "Send reset link"
+    : mode === "verify"
+    ? "Verify and continue"
+    : "Log in";
 
   return (
     <motion.form
@@ -112,8 +188,10 @@ export default function AuthCard() {
         borderRadius: metrics.cardRadius,
         border: `1px solid ${palette.hairline}`,
         background: `linear-gradient(180deg, ${palette.cardTop} 0%, ${palette.card} 46%, ${palette.card} 100%)`,
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
+        // No backdrop-filter here on purpose. The card is 88% opaque
+        // over near-black so the blur was contributing almost nothing
+        // visually, but with an animated backdrop underneath it forced a
+        // full re-blur every frame — measured at 33fps of the budget.
         boxShadow: "0 1px 1px rgba(0,0,0,0.55), 0 24px 70px rgba(0,0,0,0.5)",
       }}
     >
@@ -159,39 +237,61 @@ export default function AuthCard() {
       </AnimatePresence>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 36 }}>
-        <Field
-          id="sb-email"
-          label="Email"
-          type="email"
-          required
-          autoFocus
-          autoComplete="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          affix={<Affix><IconMail size={17} /></Affix>}
-        />
-
-        {mode !== "forgot" && (
+        {mode === "verify" ? (
           <Field
-            id="sb-password"
-            label="Password"
-            type={showPassword ? "text" : "password"}
+            id="sb-code"
+            label="Verification code"
+            type="text"
             required
-            minLength={6}
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            placeholder="Enter your password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            affix={
-              <Affix
-                onClick={() => setShowPassword((v) => !v)}
-                label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? <IconEyeOff size={17} /> : <IconEye size={17} />}
-              </Affix>
-            }
+            autoFocus
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={6}
+            autoComplete="one-time-code"
+            placeholder="000000"
+            value={code}
+            // Strip anything non-numeric so pasting "417 383" or a code
+            // copied with stray whitespace still works.
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            style={{ letterSpacing: "0.4em", fontSize: 19, textAlign: "center" }}
           />
+        ) : (
+          <>
+            <Field
+              id="sb-email"
+              label="Email"
+              type="email"
+              required
+              autoFocus
+              autoComplete="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              affix={<Affix><IconMail size={17} /></Affix>}
+            />
+
+            {mode !== "forgot" && (
+              <Field
+                id="sb-password"
+                label="Password"
+                type={showPassword ? "text" : "password"}
+                required
+                minLength={6}
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                affix={
+                  <Affix
+                    onClick={() => setShowPassword((v) => !v)}
+                    label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <IconEyeOff size={17} /> : <IconEye size={17} />}
+                  </Affix>
+                }
+              />
+            )}
+          </>
         )}
       </div>
 
@@ -235,7 +335,7 @@ export default function AuthCard() {
         )}
       </AnimatePresence>
 
-      {mode !== "forgot" && (
+      {mode !== "forgot" && mode !== "verify" && (
         <>
           <div style={{ display: "flex", alignItems: "center", gap: 16, margin: "32px 0 26px", color: palette.textGhost, fontSize: 13.5 }}>
             <div style={{ flex: 1, height: 1, background: palette.hairline }} />
@@ -265,6 +365,15 @@ export default function AuthCard() {
         )}
         {mode === "forgot" && (
           <span className="sb-link sb-link--strong" onClick={() => switchMode("login")}>Back to log in</span>
+        )}
+        {mode === "verify" && (
+          <>
+            Didn&apos;t get it?{" "}
+            <span className="sb-link sb-link--strong" onClick={resendCode}>Resend it</span>
+            <div style={{ marginTop: 12 }}>
+              <span className="sb-link" onClick={() => switchMode("login")}>Back to log in</span>
+            </div>
+          </>
         )}
       </div>
     </motion.form>

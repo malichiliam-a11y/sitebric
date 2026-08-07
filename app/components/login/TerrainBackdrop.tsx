@@ -1,19 +1,24 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import TerrainField from "./TerrainField";
 import ParticleField from "./ParticleField";
 import { palette } from "@/lib/design";
 
 /**
- * The login backdrop.
+ * The login backdrop, in layers back to front:
  *
- * This used to be a procedural Canvas approximation of the reference
- * art. It is now the real asset, which is both exact and far cheaper —
- * the canvas ran a full redraw every frame; this is a 114KB image.
+ *  1. the supplied render, faded out below its horizon so only its haze
+ *     and light shafts contribute — its own terrain would double up with
+ *     the live one drawn over it
+ *  2. a slow luminance pulse across those shafts
+ *  3. TerrainField, the actual moving landform
+ *  4. drifting motes
+ *  5. edge veils that keep the copy and the card legible
  *
- * The source render is terrain on the left with clear black on the
- * right, which is exactly the composition the layout wants: copy over
- * the terrain, card over the clear side.
+ * Splitting it this way is what lets the mountains move: the render
+ * supplies atmosphere it would be expensive to fake, and the canvas
+ * supplies motion a still cannot have.
  */
 export default function TerrainBackdrop() {
   const reduced = useReducedMotion();
@@ -27,7 +32,7 @@ export default function TerrainBackdrop() {
 
         .sb-backdrop-img {
           position: absolute;
-          inset: -2% -2% -2% -2%;
+          inset: -3%;
           background-image: image-set(
             url("/login-terrain.webp") 2x,
             url("/login-terrain-sm.webp") 1x
@@ -38,73 +43,78 @@ export default function TerrainBackdrop() {
           );
           background-repeat: no-repeat;
           background-size: cover;
-          background-position: 34% 58%;
+          background-position: 34% 40%;
+          opacity: 0.85;
+          /* Keep the sky and shafts, drop the render's own landform so it
+             does not sit behind the live terrain as a ghost. */
+          -webkit-mask-image: linear-gradient(180deg,
+            #000 0%, #000 34%, rgba(0,0,0,0.55) 48%, rgba(0,0,0,0) 62%);
+          mask-image: linear-gradient(180deg,
+            #000 0%, #000 34%, rgba(0,0,0,0.55) 48%, rgba(0,0,0,0) 62%);
         }
 
-        /* Keeps the headline and the card off the busiest part of the
-           render, the same way the reference composition does. */
+        .sb-backdrop-terrain,
+        .sb-backdrop-motes {
+          position: absolute; inset: 0; width: 100%; height: 100%;
+        }
+
+        @keyframes sbShimmer {
+          0%, 100% { opacity: 0.08; }
+          50%      { opacity: 0.42; }
+        }
+        .sb-backdrop-shimmer {
+          position: absolute; inset: 0;
+          background: radial-gradient(48% 42% at 36% 24%,
+            rgba(255,255,255,0.075) 0%, transparent 70%);
+          animation: sbShimmer 13s ease-in-out infinite;
+        }
+
         .sb-backdrop-veil {
           position: absolute; inset: 0;
           background:
             linear-gradient(90deg,
               ${palette.bg} 0%,
-              rgba(5,5,5,0.9) 10%,
-              rgba(5,5,5,0.62) 20%,
-              rgba(5,5,5,0.25) 31%,
-              rgba(5,5,5,0) 42%),
+              rgba(0,0,0,0.9) 10%,
+              rgba(0,0,0,0.62) 20%,
+              rgba(0,0,0,0.25) 31%,
+              rgba(0,0,0,0) 42%),
             linear-gradient(270deg,
               ${palette.bg} 0%,
-              rgba(5,5,5,0.88) 10%,
-              rgba(5,5,5,0.42) 21%,
-              rgba(5,5,5,0) 34%),
+              rgba(0,0,0,0.88) 10%,
+              rgba(0,0,0,0.42) 21%,
+              rgba(0,0,0,0) 34%),
             linear-gradient(0deg,
               ${palette.bg} 0%,
-              rgba(5,5,5,0.55) 7%,
-              rgba(5,5,5,0) 20%),
+              rgba(0,0,0,0.5) 7%,
+              rgba(0,0,0,0) 22%),
             linear-gradient(180deg,
-              rgba(5,5,5,0.6) 0%,
-              rgba(5,5,5,0) 16%);
+              rgba(0,0,0,0.55) 0%,
+              rgba(0,0,0,0) 16%);
         }
 
-        .sb-backdrop-motes {
-          position: absolute; inset: 0; width: 100%; height: 100%;
-        }
-
-        /* A slow luminance pulse across the shafts, so the light in the
-           render reads as live rather than frozen. */
-        @keyframes sbShimmer {
-          0%, 100% { opacity: 0.0; }
-          50%      { opacity: 0.5; }
-        }
-        .sb-backdrop-shimmer {
-          position: absolute; inset: 0;
-          background: radial-gradient(46% 40% at 33% 26%,
-            rgba(255,255,255,0.07) 0%, transparent 70%);
-          animation: sbShimmer 11s ease-in-out infinite;
-        }
         @media (prefers-reduced-motion: reduce) {
-          .sb-backdrop-shimmer { animation: none; opacity: 0.22; }
+          .sb-backdrop-shimmer { animation: none; opacity: 0.24; }
         }
-
         @media (max-width: 1040px) {
-          .sb-backdrop-img { background-position: 40% 70%; opacity: 0.55; }
+          .sb-backdrop-img { background-position: 40% 45%; opacity: 0.5; }
+          .sb-backdrop-terrain { opacity: 0.55; }
         }
       `,
         }}
       />
-      {/* A very slow drift keeps it from reading as a flat JPEG without
-          ever being noticeable as motion. Disabled under reduced-motion. */}
+
       <motion.div
         className="sb-backdrop-img"
-        initial={reduced ? undefined : { scale: 1.04, x: -14, y: 6 }}
-        animate={reduced ? undefined : { scale: 1.09, x: 16, y: -10 }}
+        initial={reduced ? undefined : { scale: 1.03, x: -10 }}
+        animate={reduced ? undefined : { scale: 1.08, x: 12 }}
         transition={
           reduced
             ? undefined
-            : { duration: 42, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }
+            : { duration: 48, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }
         }
       />
       <div className="sb-backdrop-shimmer" />
+      <TerrainField className="sb-backdrop-terrain" />
       <ParticleField className="sb-backdrop-motes" />
       <div className="sb-backdrop-veil" />
     </div>

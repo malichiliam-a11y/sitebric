@@ -119,8 +119,6 @@ export default function HeroCopy() {
           padding: "20px 24px",
           border: `1px solid ${palette.hairline}`,
           background: palette.card,
-          backdropFilter: "blur(18px)",
-          WebkitBackdropFilter: "blur(18px)",
         }}
       >
         {/* The placeholder avatars and star rating implied review data
