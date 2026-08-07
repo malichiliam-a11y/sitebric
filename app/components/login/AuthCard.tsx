@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase-browser";
@@ -26,6 +26,32 @@ export default function AuthCard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+
+  // A password-reset link is supposed to land on /reset-password, but
+  // Supabase silently replaces redirect_to with the bare Site URL whenever
+  // the requested URL is not in the project's allowed Redirect URLs — which
+  // dumps the user here, on the login form, holding a recovery session and
+  // no way to set a password. Preview deploys hit this too, since their
+  // vercel.app hostnames are never in that list. Catch it and forward to
+  // the real page with the token intact.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const recovery =
+      hash.get("type") === "recovery" || params.get("type") === "recovery" || params.has("code");
+
+    if (recovery) {
+      router.replace(`/reset-password${window.location.search}${window.location.hash}`);
+      return;
+    }
+
+    // Implicit-flow links surface as an event rather than a URL param.
+    const supabase = createClient();
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") router.replace("/reset-password");
+    });
+    return () => data.subscription.unsubscribe();
+  }, [router]);
 
   function switchMode(next: Mode) {
     setError("");
