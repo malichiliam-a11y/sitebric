@@ -34,15 +34,16 @@ function heightAt(u: number, v: number, t: number) {
     Math.exp(-Math.pow((u - 0.66) / 0.18, 2)) * Math.exp(-Math.pow((v - 0.62) / 0.42, 2));
   const dune = duneA * 1.0 + duneB * 0.52;
 
-  // Travelling ripples. Scaled by the landform so crests animate more
-  // than the flats, which is what makes it read as terrain moving rather
-  // than a flat sheet wobbling.
+  // Travelling swells. The dominant term runs along v — depth — so crests
+  // march from the horizon down toward the viewer rather than sliding
+  // sideways. Scaled by the landform so crests move more than the flats,
+  // which is what reads as terrain rolling instead of a sheet wobbling.
   const wave =
-    Math.sin(u * 8.5 - t * 0.62) * Math.cos(v * 4.6 + t * 0.34) * 0.14 +
-    Math.sin(u * 16.5 + v * 6.5 - t * 0.95) * 0.05 +
-    Math.sin(v * 10.5 - u * 3.8 + t * 0.48) * 0.042;
+    Math.sin(v * 7.0 - t * 1.15) * 0.2 +
+    Math.sin(v * 12.5 - t * 1.75 + u * 1.6) * 0.075 +
+    Math.sin(u * 5.5 + v * 3.0 - t * 0.5) * 0.05;
 
-  return dune + wave * (0.34 + dune * 0.9);
+  return dune + wave * (0.5 + dune * 1.0);
 }
 
 export default function TerrainField({ className }: { className?: string }) {
