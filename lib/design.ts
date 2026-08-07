@@ -6,11 +6,11 @@
 // layout reproduces rather than approximates.
 
 export const palette = {
-  bg: "#050505",
-  card: "rgba(14,14,16,0.82)",
-  cardTop: "rgba(22,22,25,0.86)",
-  input: "rgba(255,255,255,0.035)",
-  tile: "rgba(255,255,255,0.035)",
+  bg: "#000000",
+  card: "rgba(5,5,6,0.88)",
+  cardTop: "rgba(11,11,12,0.9)",
+  input: "rgba(255,255,255,0.024)",
+  tile: "rgba(255,255,255,0.026)",
 
   hairline: "rgba(255,255,255,0.08)",
   hairlineStrong: "rgba(255,255,255,0.12)",
