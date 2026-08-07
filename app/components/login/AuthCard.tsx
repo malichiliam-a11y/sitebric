@@ -110,18 +110,22 @@ export default function AuthCard() {
         });
         if (error) setError(error.message);
         else if (data.session) router.push("/dashboard");
-        else {
+        else if (data.user && data.user.identities?.length === 0) {
+          // Signing up with an address that already has an account comes
+          // back as a session-less user with an empty identities array —
+          // Supabase will neither confirm nor deny the account exists, and
+          // sends no mail at all. Without this branch the user sits on the
+          // code screen waiting for a code that is never coming.
+          setPassword("");
+          setMode("login");
+          setNotice(`${email} already has an account — log in below.`);
+        } else {
           // No session means confirmation is required. Supabase has just
           // mailed a code, so go collect it rather than leaving the user
           // on a dead-end "check your email" message.
-          // Supabase also returns a session-less user when the address is
-          // already registered (it will not confirm or deny that), and in
-          // that case no code is sent — so point at logging in too.
           setCode("");
           setMode("verify");
-          setNotice(
-            `We sent a 6-digit code to ${email}. Already have an account? Log in instead.`
-          );
+          setNotice(`We sent a 6-digit code to ${email}.`);
         }
         return;
       }
