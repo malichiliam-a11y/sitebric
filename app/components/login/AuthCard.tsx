@@ -114,9 +114,14 @@ export default function AuthCard() {
           // No session means confirmation is required. Supabase has just
           // mailed a code, so go collect it rather than leaving the user
           // on a dead-end "check your email" message.
+          // Supabase also returns a session-less user when the address is
+          // already registered (it will not confirm or deny that), and in
+          // that case no code is sent — so point at logging in too.
           setCode("");
           setMode("verify");
-          setNotice(`We sent a 6-digit code to ${email}.`);
+          setNotice(
+            `We sent a 6-digit code to ${email}. Already have an account? Log in instead.`
+          );
         }
         return;
       }
@@ -125,7 +130,13 @@ export default function AuthCard() {
       if (error) {
         // Someone who signed up before confirming lands here forever
         // otherwise — send a fresh code and take them to the code step.
-        if ((error as { code?: string }).code === "email_not_confirmed") {
+        // Match on the message too: the typed `code` field is not present
+        // on every supabase-js error shape, and being wrong here means
+        // the user is bounced back to a plain "invalid credentials".
+        const unconfirmed =
+          (error as { code?: string }).code === "email_not_confirmed" ||
+          /email\s+not\s+confirmed/i.test(error.message || "");
+        if (unconfirmed) {
           setCode("");
           if (await sendCode(email)) {
             setMode("verify");
