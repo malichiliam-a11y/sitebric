@@ -125,14 +125,29 @@ export default function TerrainCanvas({ className }: { className?: string }) {
         const u = beams[i];
         const p = project(u, 0.42, phase);
         const centrality = 1 - Math.abs(u - 0.5) * 1.55;
-        const a = Math.max(0.08, 0.5 * centrality);
-        const top = p.y - H * 0.31;
-        const g = gctx!.createLinearGradient(0, top, 0, p.y + 6);
-        g.addColorStop(0, "rgba(255,255,255,0)");
-        g.addColorStop(0.72, `rgba(255,255,255,${a * 0.5})`);
-        g.addColorStop(1, `rgba(255,255,255,${a})`);
-        gctx!.fillStyle = g;
-        gctx!.fillRect(p.x - 0.9, top, 1.8, p.y - top + 6);
+        const a = Math.max(0.1, 0.62 * centrality);
+        // Shafts fall from the top of the canvas to the ridge.
+        const top = 0;
+        const span = p.y - top;
+
+        // Wide soft body, into the bloom buffer.
+        const body = gctx!.createLinearGradient(0, top, 0, p.y + 4);
+        body.addColorStop(0, "rgba(255,255,255,0)");
+        body.addColorStop(0.45, `rgba(255,255,255,${a * 0.3})`);
+        body.addColorStop(0.9, `rgba(255,255,255,${a * 0.8})`);
+        body.addColorStop(1, `rgba(255,255,255,${a})`);
+        gctx!.fillStyle = body;
+        gctx!.fillRect(p.x - 1.6, top, 3.2, span + 4);
+
+        // Crisp core, drawn straight to the main canvas so it survives as
+        // a bright hairline instead of dissolving into the blur.
+        const core = ctx!.createLinearGradient(0, top, 0, p.y + 2);
+        core.addColorStop(0, "rgba(255,255,255,0)");
+        core.addColorStop(0.4, `rgba(255,255,255,${a * 0.22})`);
+        core.addColorStop(0.85, `rgba(255,255,255,${a * 0.8})`);
+        core.addColorStop(1, `rgba(255,255,255,${Math.min(1, a * 1.5)})`);
+        ctx!.fillStyle = core;
+        ctx!.fillRect(p.x - 0.4, top, 0.8, span + 2);
       }
 
       // ---- ridge bloom -------------------------------------------------------
