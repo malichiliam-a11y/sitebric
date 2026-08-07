@@ -16,6 +16,9 @@ const inter = Inter({
 export const metadata = {
   title: "sitebric",
   description: "Generate client websites with AI",
+  verification: {
+    google: "MVETH97B41E6pVIEJhrAe35ZevjcaFX5R5UcJIwHZnk",
+  },
 };
 export const viewport = {
   width: "device-width",
