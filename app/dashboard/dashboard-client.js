@@ -36,6 +36,34 @@ export default function DashboardClient({ initialProjects }) {
   const [billingStatus, setBillingStatus] = useState(null);
   const [cancelBusy, setCancelBusy] = useState(false);
 
+  // Account deletion is irreversible and cancels billing, so it is gated
+  // behind typing the word rather than a single click.
+  const [deleteArmed, setDeleteArmed] = useState(false);
+  const [deleteText, setDeleteText] = useState("");
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  async function handleDeleteAccount() {
+    setDeleteError("");
+    setDeleteBusy(true);
+    try {
+      const res = await fetch("/api/delete-account", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.error) {
+        setDeleteError(data.error || "Couldn't delete your account. Email support and we'll do it for you.");
+        setDeleteBusy(false);
+        return;
+      }
+      // The auth user is gone server-side; clear the local session too so
+      // the app does not try to reuse a token for a deleted account.
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    } catch (err) {
+      setDeleteError(err.message || "Something went wrong. Please try again.");
+      setDeleteBusy(false);
+    }
+  }
+
   async function loadBillingStatus() {
     const res = await fetch("/api/billing-status");
     const data = await res.json();
@@ -2058,22 +2086,93 @@ export default function DashboardClient({ initialProjects }) {
               <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 16 }}>
                 Deleting your account removes all client sites permanently. This can't be undone.
               </div>
-              <button
-                onClick={() => alert("Account deletion isn't wired up yet — for now, email support to request this.")}
-                style={{
-                  background: "rgba(239,68,68,0.1)",
-                  color: "#F87171",
-                  border: "1px solid rgba(239,68,68,0.3)",
-                  borderRadius: 10,
-                  padding: "10px 18px",
-                  fontFamily: display,
-                  fontWeight: 700,
-                  fontSize: 13,
-                  cursor: "pointer",
-                }}
-              >
-                Delete account
-              </button>
+              {!deleteArmed ? (
+                <button
+                  onClick={() => { setDeleteArmed(true); setDeleteError(""); }}
+                  style={{
+                    background: "rgba(239,68,68,0.1)",
+                    color: "#F87171",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                    borderRadius: 10,
+                    padding: "10px 18px",
+                    fontFamily: display,
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  Delete account
+                </button>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 10 }}>
+                    Type <span style={{ color: "#F87171", fontWeight: 600 }}>DELETE</span> to confirm. This
+                    cancels your subscription and erases every site.
+                  </div>
+                  <input
+                    value={deleteText}
+                    onChange={(e) => setDeleteText(e.target.value)}
+                    placeholder="DELETE"
+                    aria-label="Type DELETE to confirm account deletion"
+                    style={{
+                      width: "100%",
+                      maxWidth: 260,
+                      boxSizing: "border-box",
+                      height: 42,
+                      padding: "0 14px",
+                      marginBottom: 12,
+                      borderRadius: 10,
+                      border: "1px solid rgba(239,68,68,0.3)",
+                      background: "rgba(0,0,0,0.4)",
+                      color: t.text,
+                      fontFamily: body,
+                      fontSize: 14,
+                      outline: "none",
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button
+                      onClick={handleDeleteAccount}
+                      disabled={deleteText.trim().toUpperCase() !== "DELETE" || deleteBusy}
+                      style={{
+                        background: "rgba(239,68,68,0.16)",
+                        color: "#F87171",
+                        border: "1px solid rgba(239,68,68,0.4)",
+                        borderRadius: 10,
+                        padding: "10px 18px",
+                        fontFamily: display,
+                        fontWeight: 700,
+                        fontSize: 13,
+                        cursor:
+                          deleteText.trim().toUpperCase() === "DELETE" && !deleteBusy ? "pointer" : "not-allowed",
+                        opacity: deleteText.trim().toUpperCase() === "DELETE" && !deleteBusy ? 1 : 0.5,
+                      }}
+                    >
+                      {deleteBusy ? "Deleting…" : "Permanently delete"}
+                    </button>
+                    <button
+                      onClick={() => { setDeleteArmed(false); setDeleteText(""); setDeleteError(""); }}
+                      disabled={deleteBusy}
+                      style={{
+                        background: "transparent",
+                        color: "rgba(255,255,255,0.6)",
+                        border: "1px solid rgba(255,255,255,0.14)",
+                        borderRadius: 10,
+                        padding: "10px 18px",
+                        fontFamily: display,
+                        fontWeight: 600,
+                        fontSize: 13,
+                        cursor: deleteBusy ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {deleteError && (
+                    <div style={{ marginTop: 12, fontSize: 13, color: "#F87171" }}>{deleteError}</div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

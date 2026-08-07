@@ -86,7 +86,7 @@ export default function Pricing() {
 
   return (
     <div style={{ background: "#0A0A10", color: "#F2F0FA", fontFamily: body }}>
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @keyframes glowPulse {
           0%, 100% { opacity: 0.55; transform: scale(1); }
           50% { opacity: 1; transform: scale(1.04); }
@@ -109,14 +109,72 @@ export default function Pricing() {
         @media (prefers-reduced-motion: reduce) {
           .sb-featured-ring, .sb-glow { animation: none; }
         }
-      `}</style>
+      ` }} />
+
+      {/* The page had no links at all, so anyone arriving from the nav was
+          stranded here with only the browser back button. */}
+      <nav
+        style={{
+          position: "relative",
+          zIndex: 3,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "26px 6%",
+          fontSize: 14.5,
+        }}
+      >
+        <a
+          href="/"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            color: "#F2F0FA",
+            textDecoration: "none",
+            fontWeight: 500,
+            fontSize: 20,
+            letterSpacing: "-0.025em",
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <path d="M15.5 3H29L17.5 14H4L15.5 3Z" fill="currentColor" />
+            <path d="M14.5 18H28L16.5 29H3L14.5 18Z" fill="currentColor" />
+          </svg>
+          sitebric
+        </a>
+        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+          <a href="/#faq" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>
+            FAQ
+          </a>
+          <a
+            href="mailto:supportsitebric@gmail.com"
+            style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}
+          >
+            Contact
+          </a>
+          <a
+            href="/"
+            style={{
+              color: "#0A0A10",
+              background: "#FFFFFF",
+              textDecoration: "none",
+              fontWeight: 600,
+              borderRadius: 9,
+              padding: "9px 17px",
+            }}
+          >
+            Log in
+          </a>
+        </div>
+      </nav>
 
       {/* ===== HEADER ===== */}
       <div
         style={{
           position: "relative",
           overflow: "hidden",
-          padding: "100px 6% 70px",
+          padding: "60px 6% 70px",
           textAlign: "center",
         }}
       >
