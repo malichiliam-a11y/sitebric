@@ -31,6 +31,11 @@ export async function POST(req) {
       client_reference_id: user.id,
       customer_email: user.email,
       metadata: { plan, user_id: user.id },
+      // Shows the "Add promotion code" box at checkout. Who a code applies
+      // to is controlled in Stripe (redemption limits, customer or price
+      // restrictions), deliberately not here — special-casing an email in
+      // this file would publish it, since this repository is public.
+      allow_promotion_codes: true,
       success_url: `${origin}/dashboard?checkout=success`,
       cancel_url: `${origin}/pricing?checkout=cancelled`,
     });
