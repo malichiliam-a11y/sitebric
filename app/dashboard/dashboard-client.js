@@ -41,6 +41,24 @@ export default function DashboardClient({ initialProjects }) {
   const body = "'Inter', sans-serif";
   const [billingStatus, setBillingStatus] = useState(null);
   const [cancelBusy, setCancelBusy] = useState(false);
+  const [inquiries, setInquiries] = useState([]);
+  const [inquiriesLoading, setInquiriesLoading] = useState(false);
+
+  // Loaded on demand rather than alongside every project — most sites
+  // never get opened to this tab in a given session.
+  useEffect(() => {
+    if (view !== "inquiries" || !activeId) return;
+    setInquiriesLoading(true);
+    supabase
+      .from("site_inquiries")
+      .select("*")
+      .eq("project_id", activeId)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        setInquiries(data || []);
+        setInquiriesLoading(false);
+      });
+  }, [view, activeId, supabase]);
 
   // Account deletion is irreversible and cancels billing, so it is gated
   // behind typing the word rather than a single click.
@@ -1462,6 +1480,21 @@ export default function DashboardClient({ initialProjects }) {
                 >
                   Code
                 </button>
+                <button
+                  onClick={() => setView("inquiries")}
+                  style={{
+                    background: view === "inquiries" ? "rgba(255,255,255,0.1)" : "none",
+                    border: "none",
+                    color: "#F2F0FA",
+                    fontSize: 12,
+                    padding: "6px 14px",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    fontWeight: 500,
+                  }}
+                >
+                  Inquiries
+                </button>
               </div>
             </div>
             {publishError && (
@@ -1615,6 +1648,48 @@ export default function DashboardClient({ initialProjects }) {
                 <pre style={{ height: "100%", overflow: "auto", padding: 20, fontSize: 12, color: "rgba(255,255,255,0.7)", whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
                   {active.code}
                 </pre>
+              )}
+              {active.status === "done" && view === "inquiries" && (
+                <div style={{ height: "100%", overflow: "auto", padding: 20 }}>
+                  {inquiriesLoading && (
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Loading…</div>
+                  )}
+                  {!inquiriesLoading && inquiries.length === 0 && (
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>
+                      No inquiries yet. When a visitor submits {active.client_name}'s booking/contact form, it
+                      shows up here — and gets emailed to the business owner, if an owner email was set when
+                      this site was generated.
+                    </div>
+                  )}
+                  {!inquiriesLoading &&
+                    inquiries.map((inq) => (
+                      <div
+                        key={inq.id}
+                        style={{
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: 12,
+                          padding: "14px 16px",
+                          marginBottom: 10,
+                          background: "rgba(255,255,255,0.02)",
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
+                          <span style={{ fontFamily: display, fontWeight: 600, fontSize: 13.5 }}>{inq.name}</span>
+                          <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.35)", whiteSpace: "nowrap" }}>
+                            {new Date(inq.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.55)", marginBottom: inq.message ? 8 : 0 }}>
+                          {inq.contact}
+                        </div>
+                        {inq.message && (
+                          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.5 }}>
+                            {inq.message}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
               )}
             </div>
             {active.status === "done" && (
