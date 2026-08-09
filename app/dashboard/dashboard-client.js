@@ -24,6 +24,11 @@ export default function DashboardClient({ initialProjects }) {
   const [clientName, setClientName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [photoUrls, setPhotoUrls] = useState([]);
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [calendlyUrl, setCalendlyUrl] = useState("");
+  const [showContactFields, setShowContactFields] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -123,7 +128,7 @@ export default function DashboardClient({ initialProjects }) {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName, prompt, photoUrls }),
+        body: JSON.stringify({ clientName, prompt, photoUrls, phone, address, ownerEmail, calendlyUrl }),
       });
       const result = await res.json();
 
@@ -147,6 +152,11 @@ export default function DashboardClient({ initialProjects }) {
       setClientName("");
       setPrompt("");
       setPhotoUrls([]);
+      setPhone("");
+      setAddress("");
+      setOwnerEmail("");
+      setCalendlyUrl("");
+      setShowContactFields(false);
       loadProfile();
     } catch (err) {
       // A dropped connection ("Load failed" / "Failed to fetch") is not the
@@ -1207,6 +1217,59 @@ export default function DashboardClient({ initialProjects }) {
                           ✕
                         </button>
                       </div>
+                    ))}
+                  </div>
+                )}
+
+                {!showContactFields ? (
+                  <button
+                    onClick={() => setShowContactFields(true)}
+                    style={{
+                      width: "100%",
+                      background: "none",
+                      border: "1px dashed rgba(255,255,255,0.2)",
+                      borderRadius: 12,
+                      padding: "12px 14px",
+                      marginBottom: 14,
+                      fontSize: 13,
+                      color: "rgba(255,255,255,0.5)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    + Add contact details (recommended — makes Call Now, Maps and booking actually work)
+                  </button>
+                ) : (
+                  <div style={{ marginBottom: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.4)", letterSpacing: "0.04em" }}>
+                      All optional, but without them Call Now, the map and the booking form fall back to generic
+                      placeholders instead of working for real.
+                    </div>
+                    {[
+                      { value: phone, set: setPhone, placeholder: "Business phone — e.g. (555) 123-4567" },
+                      { value: address, set: setAddress, placeholder: "Business address — for the Google Maps section" },
+                      { value: ownerEmail, set: setOwnerEmail, placeholder: "Owner's email — where booking inquiries get sent" },
+                      { value: calendlyUrl, set: setCalendlyUrl, placeholder: "Calendly (or other scheduling) link — optional" },
+                    ].map((f) => (
+                      <input
+                        key={f.placeholder}
+                        value={f.value}
+                        onChange={(e) => f.set(e.target.value)}
+                        placeholder={f.placeholder}
+                        style={{
+                          width: "100%",
+                          boxSizing: "border-box",
+                          background: "rgba(255,255,255,0.05)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: 12,
+                          padding: "13px 16px",
+                          color: "#fff",
+                          fontFamily: body,
+                          fontSize: 14,
+                          outline: "none",
+                        }}
+                        onFocus={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.4)")}
+                        onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
+                      />
                     ))}
                   </div>
                 )}

@@ -80,13 +80,27 @@ export async function POST(req) {
     );
   }
 
-  const { clientName, prompt, photoUrls: rawPhotoUrls } = await req.json();
+  const {
+    clientName,
+    prompt,
+    photoUrls: rawPhotoUrls,
+    phone: rawPhone,
+    address: rawAddress,
+    ownerEmail: rawOwnerEmail,
+    calendlyUrl: rawCalendlyUrl,
+  } = await req.json();
   const photoUrls = Array.isArray(rawPhotoUrls) ? rawPhotoUrls.filter(Boolean) : [];
+  const phone = typeof rawPhone === "string" ? rawPhone.trim().slice(0, 40) : "";
+  const address = typeof rawAddress === "string" ? rawAddress.trim().slice(0, 300) : "";
+  const ownerEmail = typeof rawOwnerEmail === "string" ? rawOwnerEmail.trim().slice(0, 200) : "";
+  const calendlyUrl = typeof rawCalendlyUrl === "string" ? rawCalendlyUrl.trim().slice(0, 300) : "";
   if (!clientName || !prompt) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });
   }
 
-  // Create the row first so the dashboard can show a "generating" state
+  // Create the row first so the dashboard can show a "generating" state,
+  // and so the generated page's lead form has a real project id to POST
+  // to (see the CONTACT & LOCATION prompt section below).
   const { data: project, error: insertError } = await supabase
     .from("projects")
     .insert({
@@ -94,6 +108,10 @@ export async function POST(req) {
       client_name: clientName,
       prompt,
       status: "generating",
+      phone: phone || null,
+      address: address || null,
+      owner_email: ownerEmail || null,
+      calendly_url: calendlyUrl || null,
     })
     .select()
     .single();
@@ -115,7 +133,7 @@ export async function POST(req) {
       messages: [
         {
           role: "user",
-          content: `Generate a COMPLETE, SELF-CONTAINED, production-quality single HTML file for a small local business website. This needs to look like a modern, award-worthy site — the kind that would win an "site of the day" award — not a generic template.
+          content: `Generate a COMPLETE, SELF-CONTAINED, production-quality single HTML file for a small local business website. This needs to look like a modern, award-worthy site — the kind that would win an "site of the day" award — not a generic template. Hold it to the bar of a hand-crafted Lovable or v0 output: considered type hierarchy, generous and intentional whitespace, layout choices that feel designed for this specific brand rather than a Bootstrap-y stack of identical boxes. Every section should look like a decision was made about it.
 
 Client/business: "${clientName}"
 Brief: "${prompt}"
@@ -140,18 +158,31 @@ ${photoUrls.length > 0 ? `\nREAL PHOTOS PROVIDED — use these actual URLs for t
 - REQUIRED, first thing in <head>: <meta name="viewport" content="width=device-width, initial-scale=1">. Without this exact tag, mobile Safari and Chrome ignore all responsive CSS and render the page at a fake ~980px desktop width, shrunk to fit — that's what makes a page "not fit" on a phone even when the CSS itself is correct.
 
 === STRUCTURE (all required, in an order that makes sense for this business) ===
-1. Sticky nav — business name/logo text, a few anchor links, and a phone number or "Call Now" / "Get a Quote" button
+1. Sticky nav — business name/logo text, a few anchor links, and a "Call Now" / "Get a Quote" button (see CONTACT & LOCATION below for what this actually links to)
 2. Hero — a strong, specific headline (not generic filler), a supporting subheadline, a clear call-to-action button, and a hero image or animated background
 3. About/services — real, specific service descriptions for what THIS business actually does, based on the brief
 4. "Why choose us" — 3-4 concrete differentiators specific to the business type
 5. A process/"how it works" section OR a gallery/portfolio section — whichever fits better
 6. Social proof — 2-3 short, realistic-sounding testimonials with names
-7. A clear final call-to-action section before the footer
-8. Footer — business name, plausible service area, contact info, copyright line
+7. Contact/booking section — the real lead form and, if we have an address, the Google Maps embed (both specified in CONTACT & LOCATION below)
+8. A clear final call-to-action section before the footer
+9. Footer — business name, plausible service area, contact info, copyright line
 
 === COPYWRITING ===
 - Write real, specific, persuasive copy — headlines and body text should sound professionally written for this exact business, referencing details from the brief.
 - Avoid generic filler like "we are dedicated to providing quality service." Be specific about what they do, for whom, and why choose them over a competitor.
+
+=== CONTACT & LOCATION — real data only, never invent fake info ===
+${phone
+  ? `- Real phone number: "${phone}". Use this EXACT number for every "Call Now" link (an <a href="tel:${phone.replace(/[^\d+]/g, "")}"> tag) and everywhere the phone number is displayed in text. Never invent a placeholder number like (555) 123-4567.`
+  : `- No phone number was provided — do NOT invent a fake one. Every "Call Now" style button must instead be a real anchor link (href="#contact") that scrolls down to the contact section, never a fake tel: link to a made-up number.`}
+${address
+  ? `- Real business address: "${address}". Include a "Find us" section with a real, working embedded Google Map — an <iframe> with src="https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed" (no API key needed, this works standalone), width="100%", height around 350-450px, and loading="lazy". Next to it, a "Get Directions" link to href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}" with target="_blank" rel="noopener".`
+  : `- No address was provided — do not invent one. Skip the Google Maps section entirely rather than showing a fake or placeholder location.`}
+- Build one real, working lead-capture form (name, phone or email, and a short "what do you need" message field) using plain HTML and vanilla JS fetch — no decorative "Submit" button that does nothing when clicked. On submit (with e.preventDefault()), POST JSON to "https://sitebric.com/api/site-lead" with header "Content-Type: application/json" and body {"projectId": "${project.id}", "name": <the name field value>, "contact": <the phone/email field value>, "message": <the message field value>}. While the request is in flight, disable the submit button and show a "Sending..." state. On a successful response, replace the form with a real confirmation message ("Thanks — we'll be in touch soon."). On a failed request, show an inline error message and leave what the visitor typed intact so they don't have to retype it.
+${calendlyUrl
+  ? `- A real scheduling link was provided: "${calendlyUrl}". Make the primary "Book a meeting" / "Schedule a call" call-to-action a genuine link to this exact URL with target="_blank" rel="noopener" — place it prominently near the lead form, not instead of it. Both the scheduling link and the lead form should be present and both should work.`
+  : `- No scheduling link was provided, so "Book a meeting" style copy should point at the lead form above (e.g. an anchor link to #contact) rather than a fake calendar widget.`}
 
 === IMAGES ===
 ${photoUrls.length > 0
