@@ -256,6 +256,15 @@ export default function DashboardClient({ initialProjects }) {
         lead.phone ? `, phone ${lead.phone}` : ""
       }. Build them a professional website that fits their industry.`
     );
+    // Google Places already gave us real phone/address — put them in the
+    // actual contact fields, not just prose in the prompt, so Call Now
+    // and the Maps section use this real data instead of falling back to
+    // "no contact info was given."
+    setPhone(lead.phone || "");
+    setAddress(lead.address || "");
+    setOwnerEmail("");
+    setCalendlyUrl("");
+    setShowContactFields(Boolean(lead.phone || lead.address));
   }
 
   async function handlePhotoUpload(e) {
