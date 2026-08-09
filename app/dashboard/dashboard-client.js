@@ -421,6 +421,10 @@ export default function DashboardClient({ initialProjects }) {
 
   const currentPlan = profile?.plan || "none";
   const limits = PLAN_LIMITS[currentPlan] || PLAN_LIMITS.none;
+  // What the sidebar upsell card should point at next — one tier up
+  // from wherever the user actually is, not always "Pro".
+  const nextPlan =
+    currentPlan === "starter" ? "Growth" : currentPlan === "growth" ? "Pro" : "Starter";
   const sitesUsed = projects.length;
   const gensUsed = profile?.generations_used || 0;
   const searchesUsedBilling = profile?.searches_used || 0;
@@ -765,7 +769,7 @@ export default function DashboardClient({ initialProjects }) {
             <div style={{ borderRadius: 14, padding: 18, background: cardBg, border: `1px solid ${t.border}` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600, fontSize: 13.5, marginBottom: 8 }}>
                 <IconSparkle size={15} />
-                Upgrade to Pro
+                Upgrade to {nextPlan}
               </div>
               <div style={{ fontSize: 12, color: t.textMuted, lineHeight: 1.55, marginBottom: 16 }}>
                 Unlock advanced features and grow your business.
