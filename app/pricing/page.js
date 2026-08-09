@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { t } from "@/lib/theme";
 
 export default function Pricing() {
   const [hovered, setHovered] = useState(null);
   const [loadingPlan, setLoadingPlan] = useState(null);
-  const accent = "linear-gradient(90deg, #8B5CF6, #22D3EE)";
   const display = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
   const body = "'Inter', sans-serif";
 
@@ -85,7 +85,7 @@ export default function Pricing() {
   ];
 
   return (
-    <div style={{ background: "#0A0A10", color: "#F2F0FA", fontFamily: body }}>
+    <div style={{ background: t.bg, color: t.text, fontFamily: body }}>
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes glowPulse {
           0%, 100% { opacity: 0.55; transform: scale(1); }
@@ -130,7 +130,7 @@ export default function Pricing() {
             display: "inline-flex",
             alignItems: "center",
             gap: 10,
-            color: "#F2F0FA",
+            color: t.text,
             textDecoration: "none",
             fontWeight: 500,
             fontSize: 20,
@@ -156,7 +156,7 @@ export default function Pricing() {
           <a
             href="/"
             style={{
-              color: "#0A0A10",
+              color: "#0A0A0A",
               background: "#FFFFFF",
               textDecoration: "none",
               fontWeight: 600,
@@ -189,7 +189,7 @@ export default function Pricing() {
             height: 900,
             borderRadius: "50%",
             background:
-              "radial-gradient(circle, rgba(139,92,246,0.28) 0%, rgba(34,211,238,0.14) 45%, transparent 70%)",
+              "radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 45%, transparent 70%)",
             filter: "blur(50px)",
             pointerEvents: "none",
           }}
@@ -220,15 +220,7 @@ export default function Pricing() {
             Every plan pays for itself
             <br />
             with{" "}
-            <span
-              style={{
-                background: accent,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
-              one client.
-            </span>
+            <span style={{ color: "#FFFFFF" }}>one client.</span>
           </h1>
           <p
             style={{
@@ -270,7 +262,7 @@ export default function Pricing() {
                   borderRadius: 20,
                   padding: 2,
                   background: tier.featured
-                    ? `conic-gradient(from var(--angle, 0deg), #8B5CF6, #22D3EE, #8B5CF6)`
+                    ? `conic-gradient(from var(--angle, 0deg), rgba(255,255,255,0.9), rgba(255,255,255,0.15), rgba(255,255,255,0.9))`
                     : "transparent",
                   transition: "transform 0.25s ease",
                   transform: isHovered ? "translateY(-8px)" : "translateY(0)",
@@ -283,14 +275,14 @@ export default function Pricing() {
                     height: "100%",
                     borderRadius: 18,
                     padding: "36px 30px",
-                    background: tier.featured ? "#12101C" : "rgba(255,255,255,0.03)",
+                    background: tier.featured ? "#0A0A0A" : "rgba(255,255,255,0.03)",
                     border: tier.featured ? "none" : "1px solid rgba(255,255,255,0.08)",
                     boxShadow: isHovered
                       ? tier.featured
-                        ? "0 24px 70px rgba(139,92,246,0.35)"
+                        ? "0 24px 70px rgba(255,255,255,0.12)"
                         : "0 16px 40px rgba(0,0,0,0.4)"
                       : tier.featured
-                      ? "0 20px 60px rgba(139,92,246,0.2)"
+                      ? "0 20px 60px rgba(255,255,255,0.06)"
                       : "none",
                     transition: "box-shadow 0.25s ease",
                   }}
@@ -301,8 +293,8 @@ export default function Pricing() {
                         position: "absolute",
                         top: -13,
                         left: 28,
-                        background: accent,
-                        color: "#0A0A10",
+                        background: "#FFFFFF",
+                        color: "#0A0A0A",
                         fontFamily: display,
                         fontWeight: 700,
                         fontSize: 11,
@@ -366,9 +358,9 @@ export default function Pricing() {
                       gap: 6,
                       fontSize: 12,
                       fontWeight: 600,
-                      color: "#6EE7B7",
-                      background: "rgba(16,185,129,0.1)",
-                      border: "1px solid rgba(16,185,129,0.25)",
+                      color: t.positive,
+                      background: "rgba(74,222,128,0.1)",
+                      border: "1px solid rgba(74,222,128,0.25)",
                       borderRadius: 999,
                       padding: "5px 12px",
                       marginBottom: 20,
@@ -381,9 +373,9 @@ export default function Pricing() {
                     style={{
                       fontSize: 13,
                       lineHeight: 1.6,
-                      color: "#C4B5FD",
-                      background: "rgba(139,92,246,0.08)",
-                      border: "1px solid rgba(139,92,246,0.15)",
+                      color: "rgba(255,255,255,0.65)",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
                       borderRadius: 10,
                       padding: "10px 14px",
                       marginBottom: 26,
@@ -424,9 +416,7 @@ export default function Pricing() {
                       >
                         <span
                           style={{
-                            background: accent,
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
+                            color: t.positive,
                             fontWeight: 700,
                             flexShrink: 0,
                           }}
@@ -443,8 +433,8 @@ export default function Pricing() {
                     disabled={loadingPlan !== null}
                     style={{
                       width: "100%",
-                      background: tier.featured ? accent : "rgba(255,255,255,0.06)",
-                      color: tier.featured ? "#0A0A10" : "#F2F0FA",
+                      background: tier.featured ? "#FFFFFF" : "rgba(255,255,255,0.06)",
+                      color: tier.featured ? "#0A0A0A" : t.text,
                       border: tier.featured ? "none" : "1px solid rgba(255,255,255,0.12)",
                       borderRadius: 12,
                       padding: "14px 10px",
@@ -456,8 +446,8 @@ export default function Pricing() {
                       transform: isHovered ? "scale(1.02)" : "scale(1)",
                       boxShadow: tier.featured
                         ? isHovered
-                          ? "0 12px 32px rgba(139,92,246,0.5)"
-                          : "0 8px 24px rgba(139,92,246,0.35)"
+                          ? "0 12px 32px rgba(255,255,255,0.2)"
+                          : "0 8px 24px rgba(255,255,255,0.12)"
                         : "none",
                       transition: "transform 0.2s ease, box-shadow 0.2s ease",
                     }}
@@ -498,7 +488,7 @@ export default function Pricing() {
             }}
           >
             Cheaper than{" "}
-            <span style={{ color: "#F2F0FA", fontWeight: 600 }}>Lovable</span>{" "}
+            <span style={{ color: t.text, fontWeight: 600 }}>Lovable</span>{" "}
             at every comparable tier — and built specifically for people
             reselling sites, not just building them.
           </p>
