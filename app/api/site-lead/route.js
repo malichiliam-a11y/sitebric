@@ -93,7 +93,11 @@ export async function POST(req) {
         body: JSON.stringify({
           from: "Sitebric Leads <leads@sitebric.com>",
           to: [project.owner_email],
-          reply_to: contact.includes("@") ? contact : undefined,
+          // Reply directly to the customer when they gave an email; when
+          // they gave a phone number instead, there's no reply address to
+          // use, so fall back to a real, monitored inbox rather than
+          // leads@sitebric.com, which nobody reads.
+          reply_to: contact.includes("@") ? contact : "supportsitebric@gmail.com",
           subject: `New inquiry from your website — ${name}`,
           text: `${name} sent an inquiry through your ${project.client_name} website.\n\nContact: ${contact}\n\nMessage:\n${message || "(no message included)"}`,
         }),

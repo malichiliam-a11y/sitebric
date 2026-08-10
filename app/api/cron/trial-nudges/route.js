@@ -84,6 +84,7 @@ It takes under a minute: describe a local business, get back a full site you cou
         body: JSON.stringify({
           from: "Sitebric <hello@sitebric.com>",
           to: [email],
+          reply_to: "supportsitebric@gmail.com",
           subject,
           text,
         }),
