@@ -129,7 +129,7 @@ export async function POST(req) {
     // request; .finalMessage() still hands back the whole response.
     const stream = anthropic.messages.stream({
       model: "claude-sonnet-4-6",
-      max_tokens: 32000,
+      max_tokens: 64000,
       messages: [
         {
           role: "user",
@@ -190,7 +190,7 @@ ${calendlyUrl
 ${photoUrls.length > 0
   ? `- Use the real uploaded photo URLs listed above for the hero and key sections. Only fall back to stock images below for any additional supporting images beyond what was uploaded.`
   : ""}
-- For any stock photos needed, pull from https://loremflickr.com/900/600/<single-keyword>. Use exactly ONE simple, common, popular keyword per image (e.g. /900/600/restaurant, /900/600/car, /900/600/lawyer) — never combine multiple keywords with commas, since combinations often fail to match and silently fall back to a random unrelated image. Vary the size per placement (e.g. /600/400 for smaller cards).
+- For any stock photos needed, pull from https://picsum.photos/seed/<unique-seed>/900/600 — real, reliable stock photography with no lookup step to fail. Give every image slot on the page its own distinct seed (e.g. a short slug built from the business type and section — "restaurant-hero", "restaurant-gallery-1", "restaurant-gallery-2") so images don't repeat across the page. Vary the size per placement (e.g. /600/400 for smaller cards) but keep each seed's own dimensions consistent everywhere that exact image is reused. Never use loremflickr.com — its Flickr backend silently falls back to an unrelated placeholder photo (often a stock cat picture) whenever a keyword search fails or errors, which has shipped broken images to real client sites.
 - If the business has a natural before/after angle (detailing, renovation, fitness, cleaning, landscaping, etc.), build a REAL functional before/after image comparison slider with a draggable handle controlling a clip-path. Make it actually work.
 
 === TECHNICAL RULES ===
