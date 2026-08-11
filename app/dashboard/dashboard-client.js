@@ -362,52 +362,63 @@ export default function DashboardClient({ initialProjects }) {
 
   async function togglePublish(project) {
     setPublishError("");
-    const updates = { published: !project.published };
-
-    // Generate a sitebric.com subdomain the first time a site is published.
-    if (!project.published && !project.slug) {
-      const base = project.client_name
+    const willPublish = !project.published;
+    const base =
+      project.client_name
         .toLowerCase()
         .trim()
         .replace(/[^a-z0-9\s]/g, "")
         .replace(/\s+/g, "-")
         .slice(0, 40) || "site";
 
-      let slug = base;
-      let attempt = 0;
-      while (attempt < 5) {
-        const { data: existing } = await supabase
-          .from("projects")
-          .select("id")
-          .eq("slug", slug)
-          .maybeSingle();
-        if (!existing) break;
-        attempt++;
-        slug = `${base}${Math.floor(100 + Math.random() * 900)}`;
+    // Slugs are unique across every reseller's account, but RLS only lets
+    // this query see this user's own rows plus anyone's *published* ones —
+    // another account's unpublished site with the same slug is invisible
+    // here by design (we don't want a client-side directory of every
+    // slug on the platform). So this pre-check can miss a real collision;
+    // the retry loop below is what actually catches it, via the database's
+    // own unique constraint on projects.slug.
+    let slug = project.slug;
+    if (willPublish && !slug) {
+      slug = base;
+    }
+
+    let attempt = 0;
+    while (attempt < 5) {
+      const updates = { published: willPublish };
+      if (willPublish && !project.slug) updates.slug = slug;
+
+      const { data, error } = await supabase
+        .from("projects")
+        .update(updates)
+        .eq("id", project.id)
+        .select()
+        .single();
+
+      if (!error) {
+        if (data) setProjects((prev) => prev.map((p) => (p.id === data.id ? data : p)));
+        return;
       }
-      updates.slug = slug;
+
+      // Postgres unique_violation on projects_slug_key — someone else
+      // already has this exact slug. Try a new random suffix rather than
+      // surfacing the raw database error.
+      const isSlugCollision =
+        error.code === "23505" || /projects_slug_key/i.test(error.message || "");
+      if (!isSlugCollision || !willPublish) {
+        setPublishError(
+          `Couldn't ${project.published ? "unpublish" : "publish"} this site: ${error.message}`
+        );
+        return;
+      }
+
+      attempt++;
+      slug = `${base}${Math.floor(100 + Math.random() * 900)}`;
     }
 
-    const { data, error } = await supabase
-      .from("projects")
-      .update(updates)
-      .eq("id", project.id)
-      .select()
-      .single();
-
-    // Without this the button just does nothing on failure. The usual
-    // cause is supabase/schema.sql not having been re-run, so the
-    // published/slug columns this writes don't exist yet.
-    if (error) {
-      setPublishError(
-        `Couldn't ${project.published ? "unpublish" : "publish"} this site: ${error.message}`
-      );
-      return;
-    }
-
-    if (data) {
-      setProjects((prev) => prev.map((p) => (p.id === data.id ? data : p)));
-    }
+    setPublishError(
+      "Couldn't find an available web address for this site after several tries — try renaming it slightly and publishing again."
+    );
   }
 
   async function removeProject(id) {
