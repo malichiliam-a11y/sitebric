@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { PLAN_LIMITS } from "@/lib/plans";
 import { readReferralCode, clearReferralCode } from "@/lib/referral";
@@ -43,6 +43,30 @@ export default function DashboardClient({ initialProjects }) {
   const [cancelBusy, setCancelBusy] = useState(false);
   const [inquiries, setInquiries] = useState([]);
   const [inquiriesLoading, setInquiriesLoading] = useState(false);
+  const previewFrameRef = useRef(null);
+
+  // tel:/mailto: links inside the sandboxed preview iframe can't reliably
+  // navigate on their own — the sandbox tokens that should allow it
+  // (allow-top-navigation-to-custom-protocols) work in Chromium but are
+  // inconsistently honored in Safari, so "Call Now" silently did nothing
+  // there. The generated page's Call Now link now also posts a message up
+  // to this un-sandboxed parent, which performs the actual tel:/mailto:
+  // navigation itself — that's never subject to the iframe's sandbox at
+  // all, in any browser. Verify the message really came from our own
+  // preview iframe (sandboxed srcDoc iframes report event.origin as the
+  // literal string "null") before acting on it.
+  useEffect(() => {
+    function onMessage(event) {
+      if (event.origin !== "null") return;
+      if (event.source !== previewFrameRef.current?.contentWindow) return;
+      const href = event.data?.type === "sitebric-tel" ? event.data.href : null;
+      if (typeof href === "string" && /^(tel|mailto):/i.test(href)) {
+        window.location.href = href;
+      }
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
 
   // Loaded on demand rather than alongside every project — most sites
   // never get opened to this tab in a given session.
@@ -1684,6 +1708,7 @@ export default function DashboardClient({ initialProjects }) {
                 // Absolute-positioning it against this relatively
                 // positioned parent sidesteps that entirely.
                 <iframe
+                  ref={previewFrameRef}
                   title="preview"
                   srcDoc={active.code}
                   sandbox="allow-scripts allow-modals allow-forms allow-popups allow-top-navigation-to-custom-protocols"
