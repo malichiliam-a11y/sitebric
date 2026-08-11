@@ -15,6 +15,7 @@ export default async function Dashboard() {
   const { data: projects } = await supabase
     .from("projects")
     .select("*")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   return <DashboardClient initialProjects={projects || []} />;

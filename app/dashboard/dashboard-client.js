@@ -127,16 +127,17 @@ export default function DashboardClient({ initialProjects }) {
 
   useEffect(() => {
     const hasGenerating = projects.some((p) => p.status === "generating");
-    if (!hasGenerating) return;
+    if (!hasGenerating || !user) return;
     const interval = setInterval(async () => {
       const { data } = await supabase
         .from("projects")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (data) setProjects(data);
     }, 2000);
     return () => clearInterval(interval);
-  }, [projects, supabase]);
+  }, [projects, supabase, user]);
 
   async function generate() {
     if (!clientName.trim() || !prompt.trim()) return;
@@ -164,6 +165,7 @@ export default function DashboardClient({ initialProjects }) {
       const { data } = await supabase
         .from("projects")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (data) setProjects(data);
       setActiveId(result.id);
@@ -190,6 +192,7 @@ export default function DashboardClient({ initialProjects }) {
         const { data } = await supabase
           .from("projects")
           .select("*")
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false });
         if (data) setProjects(data);
         setError(
@@ -317,6 +320,7 @@ export default function DashboardClient({ initialProjects }) {
       const { data } = await supabase
         .from("projects")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (data) setProjects(data);
       setEditInstruction("");
@@ -345,6 +349,7 @@ export default function DashboardClient({ initialProjects }) {
       const { data } = await supabase
         .from("projects")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (data) setProjects(data);
       setDomainInput("");
