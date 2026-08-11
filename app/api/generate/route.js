@@ -143,7 +143,7 @@ ${photoUrls.length > 0 ? `\nREAL PHOTOS PROVIDED — use these actual URLs for t
 - Vary the design every time: pick a color palette, font pairing, and layout style that genuinely fit THIS specific business and vibe. Do not default to the same theme or section order every time — a bakery, a law firm, and an auto shop should look nothing alike.
 - Use at least two font families (a bold display/heading font + a clean body font) via Google Fonts, picked to match the brand's personality.
 - Push hard on modern, high-end visual techniques — pick whichever of these genuinely fit the business, and implement them for real, not just describe them:
-  - Scroll-triggered reveal animations (elements fade/slide into view using IntersectionObserver as the user scrolls — not everything visible at once on load)
+  - Scroll-triggered reveal animations (elements fade/slide into view using IntersectionObserver as the user scrolls — not everything visible at once on load). This has shipped broken before: later elements (a 4th step in a process list, testimonials further down the page) stay stuck at opacity 0 forever because the observer never fires for them on some viewports. Use a low threshold (0.1-0.15), and — critically — after attaching the observer, also add a single safety net: a scroll or load-triggered check (or a several-second timeout) that force-reveals ANY element still unrevealed, so nothing can end up permanently invisible. A visitor should never see a blank gap where content should be.
   - A subtle parallax effect on the hero (background moves slower than foreground on scroll)
   - An animated gradient mesh or drifting blurred color-orb background in the hero (like premium SaaS sites), built in pure CSS/JS
   - A horizontally scrolling marquee/ticker strip for things like service tags, certifications, or "as seen in" style trust badges
@@ -171,6 +171,7 @@ ${photoUrls.length > 0 ? `\nREAL PHOTOS PROVIDED — use these actual URLs for t
 === COPYWRITING ===
 - Write real, specific, persuasive copy — headlines and body text should sound professionally written for this exact business, referencing details from the brief.
 - Avoid generic filler like "we are dedicated to providing quality service." Be specific about what they do, for whom, and why choose them over a competitor.
+- Any invented stat must be plausible for its own scale — this has shipped wrong before (a "9★ Google Rating" badge, which is impossible since Google ratings max out at 5.0). Star ratings: 0-5 only, one decimal (e.g. 4.8 or 4.9, never a round 5.0 — reads as fake). Percentages: 0-100. Sanity-check every number against what it claims to measure before writing it.
 
 === CONTACT & LOCATION — real data only, never invent fake info ===
 ${phone
