@@ -384,6 +384,7 @@ export default function DashboardClient({ initialProjects }) {
     }
 
     let attempt = 0;
+    let securityErrorRetried = false;
     while (attempt < 5) {
       const updates = { published: willPublish };
       if (willPublish && !project.slug) updates.slug = slug;
@@ -405,15 +406,31 @@ export default function DashboardClient({ initialProjects }) {
       // surfacing the raw database error.
       const isSlugCollision =
         error.code === "23505" || /projects_slug_key/i.test(error.message || "");
-      if (!isSlugCollision || !willPublish) {
-        setPublishError(
-          `Couldn't ${project.published ? "unpublish" : "publish"} this site: ${error.message}`
-        );
-        return;
+      if (isSlugCollision && willPublish) {
+        attempt++;
+        slug = `${base}${Math.floor(100 + Math.random() * 900)}`;
+        continue;
       }
 
-      attempt++;
-      slug = `${base}${Math.floor(100 + Math.random() * 900)}`;
+      // "SecurityError: The operation is insecure" is the browser (not
+      // Postgres) blocking a storage/lock check the auth client makes
+      // before sending the request — seen on Safari Private Browsing and
+      // in-app browsers (Instagram/TikTok/etc.) that restrict storage.
+      // It's usually transient, so retry once before giving up.
+      const isBrowserSecurityError = /SecurityError/i.test(error.message || "");
+      if (isBrowserSecurityError && !securityErrorRetried) {
+        securityErrorRetried = true;
+        await new Promise((r) => setTimeout(r, 400));
+        continue;
+      }
+
+      const message = isBrowserSecurityError
+        ? "Your browser blocked a security check needed to publish. If you're in Private Browsing or opened this from another app (Instagram, TikTok, etc.), try opening sitebric.com directly in Safari or Chrome and try again."
+        : error.message;
+      setPublishError(
+        `Couldn't ${project.published ? "unpublish" : "publish"} this site: ${message}`
+      );
+      return;
     }
 
     setPublishError(
