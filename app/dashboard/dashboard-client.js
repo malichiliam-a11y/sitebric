@@ -1669,7 +1669,7 @@ export default function DashboardClient({ initialProjects }) {
                 <iframe
                   title="preview"
                   srcDoc={active.code}
-                  sandbox="allow-scripts allow-modals allow-forms"
+                  sandbox="allow-scripts allow-modals allow-forms allow-popups allow-top-navigation-to-custom-protocols"
                   style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none", background: "white" }}
                 />
               )}
