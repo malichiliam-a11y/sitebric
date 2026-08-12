@@ -173,6 +173,7 @@ ${photoUrls.length > 0 ? `\nREAL PHOTOS PROVIDED — use these actual URLs for t
 - Write real, specific, persuasive copy — headlines and body text should sound professionally written for this exact business, referencing details from the brief.
 - Avoid generic filler like "we are dedicated to providing quality service." Be specific about what they do, for whom, and why choose them over a competitor.
 - Any invented stat must be plausible for its own scale — this has shipped wrong before (a "9★ Google Rating" badge, which is impossible since Google ratings max out at 5.0). Star ratings: 0-5 only, one decimal (e.g. 4.8 or 4.9, never a round 5.0 — reads as fake). Percentages: 0-100. Sanity-check every number against what it claims to measure before writing it.
+- If a stat uses the animated counter pattern (a <span class="counter" data-target="..."> that JS counts up on scroll) for a decimal value like a rating, data-target must be the FULL decimal number (e.g. data-target="4.8") with data-decimal="1", and nothing else may be concatenated after the span. This has shipped wrong before: data-target="4" with a literal ".8★" typed after the span, which rendered as the broken "4.0.8★" once the counter animated to "4.0". Never split a decimal value between the counter's data-target and hand-typed text outside it.
 
 === CONTACT & LOCATION — real data only, never invent fake info ===
 ${phone
