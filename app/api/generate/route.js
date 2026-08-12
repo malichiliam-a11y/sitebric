@@ -19,6 +19,31 @@ const supabaseAdmin = createAdminClient(
 // stuck on "generating" with no error ever being recorded.
 export const maxDuration = 300;
 
+// Real, topically-relevant stock photos for whatever this business actually
+// is — a "sushi restaurant" gets sushi photos, not a random Picsum image
+// that happens to be reliable but has nothing to do with the business.
+// Picsum (used in the generated HTML as the fallback below) trades away
+// relevance for reliability; this trades nothing away when it works, and
+// silently falls back to Picsum when it can't (no key configured, rate
+// limited, network error) so a broken/slow Pexels call never blocks a
+// generation.
+async function searchStockPhotos(query) {
+  if (!process.env.PEXELS_API_KEY || !query) return [];
+  try {
+    const res = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=15&orientation=landscape`,
+      { headers: { Authorization: process.env.PEXELS_API_KEY } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.photos || [])
+      .map((p) => ({ url: p.src?.large2x || p.src?.large, alt: p.alt || "" }))
+      .filter((p) => p.url);
+  } catch {
+    return [];
+  }
+}
+
 export async function POST(req) {
   const supabase = createClient();
   const {
@@ -98,6 +123,11 @@ export async function POST(req) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });
   }
 
+  // Only bother searching when there's no real photo of the business
+  // itself — an uploaded real photo always beats a stock one.
+  const stockPhotos =
+    photoUrls.length === 0 ? await searchStockPhotos(`${clientName} ${prompt}`.slice(0, 150)) : [];
+
   // Create the row first so the dashboard can show a "generating" state,
   // and so the generated page's lead form has a real project id to POST
   // to (see the CONTACT & LOCATION prompt section below).
@@ -138,6 +168,7 @@ export async function POST(req) {
 Client/business: "${clientName}"
 Brief: "${prompt}"
 ${photoUrls.length > 0 ? `\nREAL PHOTOS PROVIDED — use these actual URLs for the business's real photos (hero, gallery, about section) instead of stock images: ${photoUrls.join(", ")}. These are real photos of this specific business, so feature them prominently — they matter far more than any stock photo.` : ""}
+${stockPhotos.length > 0 ? `\nCURATED STOCK PHOTOS MATCHING THIS BUSINESS — real photos selected for this exact niche, not generic stock. Use ONLY these exact URLs for every photo on the page (hero, gallery, about, service cards) instead of any placeholder image service; do not invent or use any other image URL. Pick whichever ones best fit each section and crop with object-fit: cover as needed:\n${stockPhotos.map((p) => `- ${p.url}${p.alt ? ` (${p.alt})` : ""}`).join("\n")}` : ""}
 
 === DESIGN — make this genuinely impressive, and lean futuristic ===
 - The house visual language is futuristic/high-tech — dark, sleek, glowing, a step ahead of a typical small-business site. Every site should read as modern and cutting-edge first. Within that, still vary the palette, specific accent colors, and layout per business so a bakery, a law firm, and an auto shop don't look identical — a bakery's futuristic take might lean warm neon (amber/rose glow on near-black), a locksmith's might lean cold cyber (electric blue/cyan on near-black) — but the underlying tech-forward feel should be consistent. Do not default to the same layout or section order every time.
@@ -193,7 +224,9 @@ ${calendlyUrl
 ${photoUrls.length > 0
   ? `- Use the real uploaded photo URLs listed above for the hero and key sections. Only fall back to stock images below for any additional supporting images beyond what was uploaded.`
   : ""}
-- For any stock photos needed, pull from https://picsum.photos/seed/<unique-seed>/900/600 — real, reliable stock photography with no lookup step to fail. Give every image slot on the page its own distinct seed (e.g. a short slug built from the business type and section — "restaurant-hero", "restaurant-gallery-1", "restaurant-gallery-2") so images don't repeat across the page. Vary the size per placement (e.g. /600/400 for smaller cards) but keep each seed's own dimensions consistent everywhere that exact image is reused. Never use loremflickr.com — its Flickr backend silently falls back to an unrelated placeholder photo (often a stock cat picture) whenever a keyword search fails or errors, which has shipped broken images to real client sites.
+${stockPhotos.length > 0
+  ? `- Use ONLY the curated stock photo URLs listed above — they were picked to actually match this business's niche. Do not use picsum.photos, loremflickr.com, or any other placeholder image service.`
+  : `- For any stock photos needed, pull from https://picsum.photos/seed/<unique-seed>/900/600 — real, reliable stock photography with no lookup step to fail. Give every image slot on the page its own distinct seed (e.g. a short slug built from the business type and section — "restaurant-hero", "restaurant-gallery-1", "restaurant-gallery-2") so images don't repeat across the page. Vary the size per placement (e.g. /600/400 for smaller cards) but keep each seed's own dimensions consistent everywhere that exact image is reused. Never use loremflickr.com — its Flickr backend silently falls back to an unrelated placeholder photo (often a stock cat picture) whenever a keyword search fails or errors, which has shipped broken images to real client sites.`}
 - If the business has a natural before/after angle (detailing, renovation, fitness, cleaning, landscaping, etc.), build a REAL functional before/after image comparison slider with a draggable handle controlling a clip-path. Make it actually work.
 
 === TECHNICAL RULES ===
