@@ -1,7 +1,10 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { limitsFor } from "@/lib/plans";
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // Used only for the generations_used increment — bypasses RLS since
 // users don't have update permission on their own profile row.
@@ -69,20 +72,17 @@ export async function POST(req) {
   await supabase.from("projects").update({ status: "generating" }).eq("id", projectId);
 
   try {
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 32000,
-        messages: [
-          {
-            role: "user",
-            content: `Here is the current HTML for a client website:
+    // Streamed, not a single buffered request — same reason as
+    // app/api/generate/route.js: a 32k-token response runs long enough to
+    // hit HTTP timeouts when buffered, and the connection dies mid-edit
+    // with a bare "Load failed" and no server error to show.
+    const stream = anthropic.messages.stream({
+      model: "claude-sonnet-4-6",
+      max_tokens: 32000,
+      messages: [
+        {
+          role: "user",
+          content: `Here is the current HTML for a client website:
 
 ${project.code}
 
@@ -94,16 +94,11 @@ Rules:
 - Make the smallest change that fully satisfies the request; don't rewrite unrelated parts of the page.
 - The result must still be a complete, valid, self-contained single HTML file (CSS in <style>, JS in <script>).
 - If <head> is missing <meta name="viewport" content="width=device-width, initial-scale=1">, add it — without that exact tag, mobile browsers ignore responsive CSS and render at a shrunk-down fake desktop width.`,
-          },
-        ],
-      }),
+        },
+      ],
     });
 
-    const data = await anthropicRes.json();
-
-    if (!anthropicRes.ok) {
-      throw new Error(`Anthropic API error (${anthropicRes.status}): ${data?.error?.message || "unknown"}`);
-    }
+    const data = await stream.finalMessage();
 
     let code = (data.content || [])
       .map((b) => (b.type === "text" ? b.text : ""))

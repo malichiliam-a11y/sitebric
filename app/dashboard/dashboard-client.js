@@ -257,6 +257,106 @@ export default function DashboardClient({ initialProjects }) {
   const [leadBusy, setLeadBusy] = useState(false);
   const [leadError, setLeadError] = useState("");
   const [siteSearch, setSiteSearch] = useState("");
+  const [settingsPhone, setSettingsPhone] = useState("");
+  const [settingsAddress, setSettingsAddress] = useState("");
+  const [settingsOwnerEmail, setSettingsOwnerEmail] = useState("");
+  const [settingsCalendlyUrl, setSettingsCalendlyUrl] = useState("");
+  const [settingsBusy, setSettingsBusy] = useState(false);
+  const [settingsError, setSettingsError] = useState("");
+  const [settingsSaved, setSettingsSaved] = useState(false);
+
+  // Populate the settings form from whichever project is open — a plain
+  // assignment here (not inside saveSettings) so switching between sites
+  // never leaves one site's edited-but-unsaved values showing on another.
+  useEffect(() => {
+    if (!active) return;
+    setSettingsPhone(active.phone || "");
+    setSettingsAddress(active.address || "");
+    setSettingsOwnerEmail(active.owner_email || "");
+    setSettingsCalendlyUrl(active.calendly_url || "");
+    setSettingsError("");
+    setSettingsSaved(false);
+  }, [activeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function saveSettings() {
+    if (!active) return;
+    setSettingsBusy(true);
+    setSettingsError("");
+    setSettingsSaved(false);
+    try {
+      const { data, error } = await supabase
+        .from("projects")
+        .update({
+          phone: settingsPhone.trim() || null,
+          address: settingsAddress.trim() || null,
+          owner_email: settingsOwnerEmail.trim() || null,
+          calendly_url: settingsCalendlyUrl.trim() || null,
+        })
+        .eq("id", active.id)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      if (data) setProjects((prev) => prev.map((p) => (p.id === data.id ? data : p)));
+
+      // Phone/address/booking link are baked into the generated HTML at
+      // generation time — saving the database row alone wouldn't change
+      // what the live site actually shows, so also push those specific
+      // changes into the page itself. The owner email only controls where
+      // lead notifications are sent, so it never needs a page edit.
+      const contactChanged =
+        settingsPhone.trim() !== (active.phone || "") ||
+        settingsAddress.trim() !== (active.address || "") ||
+        settingsCalendlyUrl.trim() !== (active.calendly_url || "");
+      if (contactChanged) {
+        const parts = [];
+        parts.push(
+          settingsPhone.trim()
+            ? `the phone number / Call Now links to "${settingsPhone.trim()}"`
+            : "remove the phone number and make Call Now links scroll to the contact section instead"
+        );
+        if (settingsAddress.trim() !== (active.address || "")) {
+          parts.push(
+            settingsAddress.trim()
+              ? `the business address and map to "${settingsAddress.trim()}"`
+              : "remove the address and map section"
+          );
+        }
+        if (settingsCalendlyUrl.trim() !== (active.calendly_url || "")) {
+          parts.push(
+            settingsCalendlyUrl.trim()
+              ? `the booking link to "${settingsCalendlyUrl.trim()}"`
+              : "remove the booking link and point that CTA at the contact form instead"
+          );
+        }
+        const res = await fetch("/api/edit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId: active.id,
+            instruction: `Update ${parts.join(", and ")}. Keep everything else on the page exactly the same.`,
+          }),
+        });
+        const result = await res.json();
+        if (res.status === 402) {
+          window.location.href = "/pricing";
+          return;
+        }
+        if (!res.ok) throw new Error(result.message || result.error || "Saved the details, but couldn't update the live page to match");
+        const { data: refreshed } = await supabase
+          .from("projects")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        if (refreshed) setProjects(refreshed);
+        loadProfile();
+      }
+      setSettingsSaved(true);
+    } catch (err) {
+      setSettingsError(err.message);
+    } finally {
+      setSettingsBusy(false);
+    }
+  }
 
   async function findLeads() {
     if (!leadLocation.trim() || !leadCategory.trim()) return;
@@ -1583,9 +1683,9 @@ export default function DashboardClient({ initialProjects }) {
                   Preview
                 </button>
                 <button
-                  onClick={() => setView("code")}
+                  onClick={() => setView("settings")}
                   style={{
-                    background: view === "code" ? "rgba(255,255,255,0.1)" : "none",
+                    background: view === "settings" ? "rgba(255,255,255,0.1)" : "none",
                     border: "none",
                     color: "#F2F0FA",
                     fontSize: 12,
@@ -1595,7 +1695,7 @@ export default function DashboardClient({ initialProjects }) {
                     fontWeight: 500,
                   }}
                 >
-                  Code
+                  Settings
                 </button>
                 <button
                   onClick={() => setView("inquiries")}
@@ -1762,10 +1862,111 @@ export default function DashboardClient({ initialProjects }) {
                   style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none", background: "white" }}
                 />
               )}
-              {active.status === "done" && view === "code" && (
-                <pre style={{ height: "100%", overflow: "auto", padding: 20, fontSize: 12, color: "rgba(255,255,255,0.7)", whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
-                  {active.code}
-                </pre>
+              {active.status === "done" && view === "settings" && (
+                <div style={{ height: "100%", overflow: "auto", padding: 20, maxWidth: 480 }}>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 20, lineHeight: 1.6 }}>
+                    Contact info for {active.client_name}. Saving updates the live page too — Call Now, the map,
+                    and the booking link all change to match.
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>PHONE</span>
+                      <input
+                        value={settingsPhone}
+                        onChange={(e) => setSettingsPhone(e.target.value)}
+                        placeholder="(555) 123-4567"
+                        style={{
+                          background: "rgba(255,255,255,0.05)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: 10,
+                          padding: "11px 14px",
+                          color: "#fff",
+                          fontFamily: body,
+                          fontSize: 14,
+                          outline: "none",
+                        }}
+                      />
+                    </label>
+                    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>ADDRESS</span>
+                      <input
+                        value={settingsAddress}
+                        onChange={(e) => setSettingsAddress(e.target.value)}
+                        placeholder="123 Main St, City, ST"
+                        style={{
+                          background: "rgba(255,255,255,0.05)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: 10,
+                          padding: "11px 14px",
+                          color: "#fff",
+                          fontFamily: body,
+                          fontSize: 14,
+                          outline: "none",
+                        }}
+                      />
+                    </label>
+                    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>OWNER EMAIL</span>
+                      <input
+                        value={settingsOwnerEmail}
+                        onChange={(e) => setSettingsOwnerEmail(e.target.value)}
+                        placeholder="owner@business.com — where inquiries get emailed"
+                        style={{
+                          background: "rgba(255,255,255,0.05)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: 10,
+                          padding: "11px 14px",
+                          color: "#fff",
+                          fontFamily: body,
+                          fontSize: 14,
+                          outline: "none",
+                        }}
+                      />
+                    </label>
+                    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>BOOKING LINK</span>
+                      <input
+                        value={settingsCalendlyUrl}
+                        onChange={(e) => setSettingsCalendlyUrl(e.target.value)}
+                        placeholder="Calendly or other scheduling link"
+                        style={{
+                          background: "rgba(255,255,255,0.05)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: 10,
+                          padding: "11px 14px",
+                          color: "#fff",
+                          fontFamily: body,
+                          fontSize: 14,
+                          outline: "none",
+                        }}
+                      />
+                    </label>
+                    <button
+                      onClick={saveSettings}
+                      disabled={settingsBusy}
+                      style={{
+                        background: settingsBusy ? "rgba(255,255,255,0.08)" : accent,
+                        color: settingsBusy ? "rgba(255,255,255,0.4)" : "#0A0A10",
+                        border: "none",
+                        borderRadius: 10,
+                        padding: "12px 20px",
+                        fontFamily: display,
+                        fontWeight: 700,
+                        fontSize: 13,
+                        cursor: settingsBusy ? "default" : "pointer",
+                        marginTop: 4,
+                      }}
+                    >
+                      {settingsBusy ? "Saving…" : "Save"}
+                    </button>
+                    {settingsSaved && !settingsBusy && (
+                      <div style={{ fontSize: 12, color: "#4ADE80" }}>Saved.</div>
+                    )}
+                    {settingsError && (
+                      <div style={{ fontSize: 12, color: "#FCA5A5" }}>{settingsError}</div>
+                    )}
+                  </div>
+                </div>
               )}
               {active.status === "done" && view === "inquiries" && (
                 <div style={{ height: "100%", overflow: "auto", padding: 20 }}>
