@@ -1265,12 +1265,14 @@ export default function DashboardClient({ initialProjects }) {
                     gap: 8,
                     width: "100%",
                     boxSizing: "border-box",
-                    border: "1px dashed rgba(255,255,255,0.2)",
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    background: "rgba(255,255,255,0.04)",
                     borderRadius: 12,
                     padding: "12px 14px",
                     marginBottom: 14,
                     fontSize: 13,
-                    color: "rgba(255,255,255,0.5)",
+                    fontWeight: 600,
+                    color: "rgba(255,255,255,0.85)",
                     cursor: photoUploading ? "default" : "pointer",
                   }}
                 >
@@ -1329,13 +1331,14 @@ export default function DashboardClient({ initialProjects }) {
                     onClick={() => setShowContactFields(true)}
                     style={{
                       width: "100%",
-                      background: "none",
-                      border: "1px dashed rgba(255,255,255,0.2)",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.18)",
                       borderRadius: 12,
                       padding: "12px 14px",
                       marginBottom: 14,
                       fontSize: 13,
-                      color: "rgba(255,255,255,0.5)",
+                      fontWeight: 600,
+                      color: "rgba(255,255,255,0.85)",
                       cursor: "pointer",
                     }}
                   >
@@ -1438,20 +1441,49 @@ export default function DashboardClient({ initialProjects }) {
                           <div
                             style={{
                               height: 100,
+                              position: "relative",
+                              overflow: "hidden",
                               background:
                                 p.status === "done"
                                   ? "linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04))"
                                   : "rgba(255,255,255,0.03)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontFamily: display,
-                              fontWeight: 700,
-                              fontSize: 22,
-                              color: "rgba(255,255,255,0.15)",
                             }}
                           >
-                            {p.client_name.slice(0, 1).toUpperCase()}
+                            {p.status === "done" && p.code ? (
+                              <div
+                                style={{
+                                  width: 1400,
+                                  height: 900,
+                                  transform: "scale(0.19)",
+                                  transformOrigin: "top left",
+                                  pointerEvents: "none",
+                                }}
+                              >
+                                <iframe
+                                  title={`${p.client_name} thumbnail`}
+                                  srcDoc={p.code}
+                                  sandbox="allow-scripts"
+                                  scrolling="no"
+                                  style={{ width: 1400, height: 900, border: "none" }}
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  inset: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontFamily: display,
+                                  fontWeight: 700,
+                                  fontSize: 22,
+                                  color: "rgba(255,255,255,0.15)",
+                                }}
+                              >
+                                {p.client_name.slice(0, 1).toUpperCase()}
+                              </div>
+                            )}
                           </div>
                           <div style={{ padding: "12px 14px" }}>
                             <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>{p.client_name}</div>
