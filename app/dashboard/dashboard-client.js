@@ -44,6 +44,20 @@ export default function DashboardClient({ initialProjects }) {
   const [inquiries, setInquiries] = useState([]);
   const [inquiriesLoading, setInquiriesLoading] = useState(false);
   const previewFrameRef = useRef(null);
+  const newSiteFormRef = useRef(null);
+
+  // "New client site" switches to the sites tab and deselects the active
+  // project, which mounts the generation form — but on mobile the sidebar
+  // (with the button that was just clicked) stacks above it, so the form
+  // renders off-screen below the fold with no visual cue it appeared at
+  // all. The timeout lets that mount happen before scrolling to it.
+  function goToNewSiteForm() {
+    setTab("sites");
+    setActiveId(null);
+    setTimeout(() => {
+      newSiteFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  }
 
   // tel:/mailto: links inside the sandboxed preview iframe can't reliably
   // navigate on their own — the sandbox tokens that should allow it
@@ -735,7 +749,7 @@ export default function DashboardClient({ initialProjects }) {
           <>
             <div style={{ padding: 16 }}>
               <button
-                onClick={() => setActiveId(null)}
+                onClick={goToNewSiteForm}
                 style={{
                   width: "100%",
                   background: accent,
@@ -1130,7 +1144,7 @@ export default function DashboardClient({ initialProjects }) {
                 <div style={{ borderRadius: 16, padding: 24, background: cardBg, border: `1px solid ${t.border}` }}>
                   <div style={{ fontFamily: display, fontWeight: 600, fontSize: 16, marginBottom: 18 }}>Quick Actions</div>
                   {[
-                    [IconPlus, "Create New Site", "Start building a new website", () => { setTab("sites"); setActiveId(null); }],
+                    [IconPlus, "Create New Site", "Start building a new website", goToNewSiteForm],
                     [IconLeads, "Find Leads", "Search for local businesses to pitch", () => setTab("leads")],
                     [IconBilling, "Manage Billing", "View plan, usage and invoices", () => setTab("billing")],
                   ].map(([Icon, title, desc, onClick]) => (
@@ -1168,6 +1182,7 @@ export default function DashboardClient({ initialProjects }) {
           <>
             <DashAmbient />
             <div
+              ref={newSiteFormRef}
               style={{
                 flex: 1,
                 display: "flex",
