@@ -10,7 +10,7 @@ import TerrainBackdrop from "./TerrainBackdrop";
 import { FilmGrain } from "./primitives";
 import { TopNav, BottomBar } from "./Chrome";
 import HeroCopy from "./HeroCopy";
-import AuthCard from "./AuthCard";
+import HeroPanel from "./HeroPanel";
 import Sections from "./Sections";
 
 export default function LoginScreen() {
@@ -123,7 +123,7 @@ export default function LoginScreen() {
         >
           <HeroCopy />
           <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-            <AuthCard />
+            <HeroPanel />
           </div>
         </div>
       </section>
