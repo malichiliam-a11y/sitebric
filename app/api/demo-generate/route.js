@@ -15,7 +15,13 @@ const supabaseAdmin = createAdminClient(
 
 const MAX_PER_DAY = 3;
 
-export const maxDuration = 60;
+// 60s wasn't enough — a 16k-token generation can genuinely run past a
+// minute, and the function got killed mid-generation with the connection
+// just dropping (a bare "Load failed" in the browser, no real error to
+// show). The authenticated /api/generate route already proves 300s works
+// fine on this Vercel plan for a 64k-token generation; 120s is generous
+// headroom for a quarter of that budget.
+export const maxDuration = 120;
 
 async function searchStockPhotos(query) {
   if (!process.env.PEXELS_API_KEY || !query) return [];
