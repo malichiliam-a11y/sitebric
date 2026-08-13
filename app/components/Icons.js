@@ -54,15 +54,6 @@ export const IconSettings = (p) => (
   </Svg>
 );
 
-export const IconGift = (p) => (
-  <Svg {...p}>
-    <rect x="3" y="9" width="18" height="4" rx="1" />
-    <path d="M5 13h14v7a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7Z" />
-    <path d="M12 9v12" />
-    <path d="M12 9C9.5 9 8 7.5 8 6a2 2 0 0 1 4-.5A2 2 0 0 1 16 6c0 1.5-1.5 3-4 3Z" />
-  </Svg>
-);
-
 export const IconShare = (p) => (
   <Svg {...p}>
     <circle cx="18" cy="5" r="2.4" />
