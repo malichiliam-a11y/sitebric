@@ -72,13 +72,18 @@ export async function POST(req) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });
   }
 
-  // Recorded before generation even runs, so a string of failed attempts
-  // still counts against the cap rather than being a free retry loop.
-  await supabaseAdmin.from("demo_generations").insert({ ip });
-
   const stockPhotos = await searchStockPhotos(`${clientName} ${prompt}`.slice(0, 150));
 
   try {
+    // Recorded right before the real (costly) Anthropic call, not at the
+    // top of the request — a validation error or a route bug (like the
+    // timeout that was too short before this) never touches Anthropic at
+    // all, so it shouldn't burn someone's daily quota for a failure that
+    // was never their fault. Once this line runs, real tokens are about
+    // to be spent, so it counts against the cap regardless of how the
+    // call below turns out.
+    await supabaseAdmin.from("demo_generations").insert({ ip });
+
     const stream = anthropic.messages.stream({
       model: "claude-sonnet-4-6",
       max_tokens: 24000,
