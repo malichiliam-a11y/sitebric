@@ -29,6 +29,24 @@ export function TopNav() {
         <a className="sb-link" href="#faq">FAQ</a>
         <a className="sb-link" href="/pricing">Pricing</a>
         <a className="sb-link" href="mailto:supportsitebric@gmail.com">Contact</a>
+        <a
+          href="/demo"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "9px 16px",
+            borderRadius: 999,
+            border: `1px solid ${palette.hairlineStrong}`,
+            color: palette.text,
+            fontSize: 13.5,
+            fontWeight: 500,
+            textDecoration: "none",
+          }}
+        >
+          <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#4ADE80" }} />
+          Try it live
+        </a>
       </div>
     </motion.nav>
   );
