@@ -73,6 +73,15 @@ export default function DashboardClient({ initialProjects }) {
   }, [tab, supabase]);
 
   const [shareCopied, setShareCopied] = useState(false);
+  // sms: links silently do nothing on a desktop browser with no Messages
+  // app to hand off to, so the second share button switches to a Gmail
+  // compose link there instead. Checked after mount (not during render)
+  // so server and first client render match and there's no hydration
+  // mismatch warning.
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  useEffect(() => {
+    setIsMobileDevice(/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+  }, []);
 
   async function sendInvoice() {
     setInvoiceError("");
@@ -1747,28 +1756,57 @@ export default function DashboardClient({ initialProjects }) {
                       <IconShare size={12} />
                       {shareCopied ? "Copied" : "Copy link"}
                     </button>
-                    <a
-                      href={`sms:?&body=${encodeURIComponent(
-                        `Hey — built a quick website preview for ${active.client_name}, take a look: ${
-                          active.slug ? `https://${active.slug}.sitebric.com` : `https://sitebric.com/s/${active.id}`
-                        }`
-                      )}`}
-                      style={{
-                        background: "rgba(255,255,255,0.06)",
-                        color: "#F2F0FA",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        borderRadius: 8,
-                        padding: "6px 12px",
-                        fontFamily: display,
-                        fontWeight: 700,
-                        fontSize: 12,
-                        textDecoration: "none",
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                    >
-                      Text to prospect
-                    </a>
+                    {isMobileDevice ? (
+                      <a
+                        href={`sms:?&body=${encodeURIComponent(
+                          `Hey — built a quick website preview for ${active.client_name}, take a look: ${
+                            active.slug ? `https://${active.slug}.sitebric.com` : `https://sitebric.com/s/${active.id}`
+                          }`
+                        )}`}
+                        style={{
+                          background: "rgba(255,255,255,0.06)",
+                          color: "#F2F0FA",
+                          border: "1px solid rgba(255,255,255,0.15)",
+                          borderRadius: 8,
+                          padding: "6px 12px",
+                          fontFamily: display,
+                          fontWeight: 700,
+                          fontSize: 12,
+                          textDecoration: "none",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        Text to prospect
+                      </a>
+                    ) : (
+                      <a
+                        href={`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(
+                          `A quick website preview for ${active.client_name}`
+                        )}&body=${encodeURIComponent(
+                          `Hey — built a quick website preview for ${active.client_name}, take a look: ${
+                            active.slug ? `https://${active.slug}.sitebric.com` : `https://sitebric.com/s/${active.id}`
+                          }`
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          background: "rgba(255,255,255,0.06)",
+                          color: "#F2F0FA",
+                          border: "1px solid rgba(255,255,255,0.15)",
+                          borderRadius: 8,
+                          padding: "6px 12px",
+                          fontFamily: display,
+                          fontWeight: 700,
+                          fontSize: 12,
+                          textDecoration: "none",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        Email to prospect
+                      </a>
+                    )}
                   </>
                 )}
                 <button
