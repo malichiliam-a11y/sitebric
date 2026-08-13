@@ -172,16 +172,33 @@ export default function DemoPage() {
             disabled={status === "loading"}
             required
           />
-          <Field
-            id="demo-prompt"
-            label="What do they do?"
-            placeholder="e.g. Mobile car detailing in Austin, TX — premium, eco-friendly products"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            maxLength={300}
-            disabled={status === "loading"}
-            required
-          />
+          <div>
+            <label
+              htmlFor="demo-prompt"
+              style={{
+                display: "block",
+                fontSize: 14,
+                fontWeight: 500,
+                letterSpacing: "-0.005em",
+                color: palette.text,
+                marginBottom: 10,
+              }}
+            >
+              What do they do?
+            </label>
+            <textarea
+              id="demo-prompt"
+              className="sb-field"
+              placeholder="e.g. Mobile car detailing in Austin, TX — or paste a full brief, as detailed as you want"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              maxLength={2000}
+              disabled={status === "loading"}
+              required
+              rows={4}
+              style={{ height: "auto", minHeight: 110, padding: "13px 16px", lineHeight: 1.5, resize: "vertical" }}
+            />
+          </div>
           <PrimaryButton loading={status === "loading"}>
             {status === "loading" ? "Building your site…" : "Generate my site"}
           </PrimaryButton>
