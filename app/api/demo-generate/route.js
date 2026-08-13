@@ -15,13 +15,14 @@ const supabaseAdmin = createAdminClient(
 
 const MAX_PER_DAY = 3;
 
-// 60s wasn't enough — a 16k-token generation can genuinely run past a
-// minute, and the function got killed mid-generation with the connection
-// just dropping (a bare "Load failed" in the browser, no real error to
-// show). The authenticated /api/generate route already proves 300s works
-// fine on this Vercel plan for a 64k-token generation; 120s is generous
-// headroom for a quarter of that budget.
-export const maxDuration = 120;
+// A real visitor's brief can be as detailed as anything typed into the
+// authenticated generator — this isn't reliably a quick one-liner just
+// because it's public. 120s still wasn't enough for a genuinely detailed
+// prompt (multiple sections, a full storefront layout); the function got
+// killed mid-generation and the connection dropping shows up in the
+// browser as a bare "Load failed". The authenticated /api/generate route
+// already proves 300s works fine on this Vercel plan.
+export const maxDuration = 200;
 
 async function searchStockPhotos(query) {
   if (!process.env.PEXELS_API_KEY || !query) return [];
@@ -63,7 +64,9 @@ export async function POST(req) {
 
   const { clientName: rawClientName, prompt: rawPrompt } = await req.json().catch(() => ({}));
   const clientName = typeof rawClientName === "string" ? rawClientName.trim().slice(0, 100) : "";
-  const prompt = typeof rawPrompt === "string" ? rawPrompt.trim().slice(0, 300) : "";
+  // 300 was chopping real briefs off mid-sentence — visitors paste
+  // genuinely detailed specs here, not just a one-line description.
+  const prompt = typeof rawPrompt === "string" ? rawPrompt.trim().slice(0, 2000) : "";
 
   if (!clientName || !prompt) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });
@@ -78,7 +81,7 @@ export async function POST(req) {
   try {
     const stream = anthropic.messages.stream({
       model: "claude-sonnet-4-6",
-      max_tokens: 16000,
+      max_tokens: 24000,
       messages: [
         {
           role: "user",
