@@ -12,7 +12,7 @@ import { FilmGrain } from "@/app/components/login/primitives";
 import {
   IconHome, IconSites, IconLeads, IconBilling, IconSettings, IconUser,
   IconSearch, IconBell, IconPlus, IconArrowRight, IconChevronRight, IconSparkle,
-  IconRocket as IconRocketish, IconInvoice,
+  IconRocket as IconRocketish, IconInvoice, IconGift, IconShare,
 } from "@/app/components/Icons";
 
 export default function DashboardClient({ initialProjects }) {
@@ -71,6 +71,20 @@ export default function DashboardClient({ initialProjects }) {
     if (tab !== "invoices") return;
     loadInvoices();
   }, [tab, supabase]);
+
+  const [referralData, setReferralData] = useState(null);
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [referralCopied, setReferralCopied] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  useEffect(() => {
+    if (tab !== "referrals") return;
+    setReferralLoading(true);
+    fetch("/api/referrals")
+      .then((res) => res.json())
+      .then((data) => setReferralData(data))
+      .finally(() => setReferralLoading(false));
+  }, [tab]);
 
   async function sendInvoice() {
     setInvoiceError("");
@@ -716,6 +730,7 @@ export default function DashboardClient({ initialProjects }) {
     { id: "sites", label: "Sites", Icon: IconSites },
     { id: "leads", label: "Find Leads", Icon: IconLeads },
     { id: "invoices", label: "Invoices", Icon: IconInvoice },
+    { id: "referrals", label: "Referrals", Icon: IconGift },
     { id: "billing", label: "Billing", Icon: IconBilling },
     { id: "profile", label: "Profile", Icon: IconUser },
     { id: "settings", label: "Settings", Icon: IconSettings },
@@ -1716,6 +1731,59 @@ export default function DashboardClient({ initialProjects }) {
                     {active.slug ? `${active.slug}.sitebric.com` : "View live link"} →
                   </a>
                 )}
+                {active.published && (
+                  <>
+                    <button
+                      onClick={() => {
+                        const liveUrl = active.slug
+                          ? `https://${active.slug}.sitebric.com`
+                          : `https://sitebric.com/s/${active.id}`;
+                        navigator.clipboard.writeText(liveUrl);
+                        setShareCopied(true);
+                        setTimeout(() => setShareCopied(false), 2000);
+                      }}
+                      style={{
+                        background: "rgba(255,255,255,0.06)",
+                        color: "#F2F0FA",
+                        border: "1px solid rgba(255,255,255,0.15)",
+                        borderRadius: 8,
+                        padding: "6px 12px",
+                        fontFamily: display,
+                        fontWeight: 700,
+                        fontSize: 12,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      <IconShare size={12} />
+                      {shareCopied ? "Copied" : "Copy link"}
+                    </button>
+                    <a
+                      href={`sms:?&body=${encodeURIComponent(
+                        `Hey — built a quick website preview for ${active.client_name}, take a look: ${
+                          active.slug ? `https://${active.slug}.sitebric.com` : `https://sitebric.com/s/${active.id}`
+                        }`
+                      )}`}
+                      style={{
+                        background: "rgba(255,255,255,0.06)",
+                        color: "#F2F0FA",
+                        border: "1px solid rgba(255,255,255,0.15)",
+                        borderRadius: 8,
+                        padding: "6px 12px",
+                        fontFamily: display,
+                        fontWeight: 700,
+                        fontSize: 12,
+                        textDecoration: "none",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      Text to prospect
+                    </a>
+                  </>
+                )}
                 <button
                   onClick={() => togglePublish(active)}
                   disabled={active.status !== "done"}
@@ -2493,6 +2561,193 @@ export default function DashboardClient({ initialProjects }) {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        )}
+
+        {tab === "referrals" && (
+          <div style={{ padding: "48px 40px", maxWidth: 640, overflowY: "auto" }}>
+            <div style={{ fontFamily: display, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>Referrals</div>
+            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 32 }}>
+              Your own link. Send it to anyone who'd want to sell sites too — every signup through it shows up
+              here.
+            </div>
+
+            {referralLoading && !referralData && (
+              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13 }}>Loading…</div>
+            )}
+
+            {referralData?.code && (
+              <>
+                <div
+                  style={{
+                    borderRadius: 16,
+                    padding: 24,
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    marginBottom: 20,
+                  }}
+                >
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 8 }}>Your link</div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: 10,
+                      padding: "11px 14px",
+                      marginBottom: 14,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span style={{ fontFamily: "monospace", fontSize: 13, color: "#fff", wordBreak: "break-all" }}>
+                      sitebric.com?ref={referralData.code}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`https://sitebric.com?ref=${referralData.code}`);
+                        setReferralCopied(true);
+                        setTimeout(() => setReferralCopied(false), 2000);
+                      }}
+                      style={{
+                        background: accent,
+                        color: "#0A0A10",
+                        border: "none",
+                        borderRadius: 10,
+                        padding: "10px 16px",
+                        fontFamily: display,
+                        fontWeight: 700,
+                        fontSize: 13,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <IconShare size={14} />
+                      {referralCopied ? "Copied" : "Copy link"}
+                    </button>
+                    <a
+                      href={`sms:?&body=${encodeURIComponent(
+                        `Been using Sitebric to build client sites in minutes — thought you'd want in. https://sitebric.com?ref=${referralData.code}`
+                      )}`}
+                      style={{
+                        background: "rgba(255,255,255,0.06)",
+                        color: "#F2F0FA",
+                        border: "1px solid rgba(255,255,255,0.15)",
+                        borderRadius: 10,
+                        padding: "10px 16px",
+                        fontFamily: display,
+                        fontWeight: 700,
+                        fontSize: 13,
+                        textDecoration: "none",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      Text it
+                    </a>
+                    <a
+                      href={`mailto:?subject=${encodeURIComponent("Thought you'd want in on this")}&body=${encodeURIComponent(
+                        `Been using Sitebric to build client sites in minutes — thought you'd want in. https://sitebric.com?ref=${referralData.code}`
+                      )}`}
+                      style={{
+                        background: "rgba(255,255,255,0.06)",
+                        color: "#F2F0FA",
+                        border: "1px solid rgba(255,255,255,0.15)",
+                        borderRadius: 10,
+                        padding: "10px 16px",
+                        fontFamily: display,
+                        fontWeight: 700,
+                        fontSize: 13,
+                        textDecoration: "none",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      Email it
+                    </a>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 14, marginBottom: 28, flexWrap: "wrap" }}>
+                  <div
+                    style={{
+                      flex: "1 1 160px",
+                      borderRadius: 14,
+                      padding: 18,
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 6 }}>Signups</div>
+                    <div style={{ fontFamily: display, fontWeight: 700, fontSize: 22 }}>
+                      {referralData.signups.length}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      flex: "1 1 160px",
+                      borderRadius: 14,
+                      padding: 18,
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 6 }}>Paying now</div>
+                    <div style={{ fontFamily: display, fontWeight: 700, fontSize: 22 }}>
+                      {referralData.signups.filter((s) => s.paid).length}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ fontFamily: display, fontWeight: 700, fontSize: 15, marginBottom: 14 }}>
+                  Who's joined
+                </div>
+                {referralData.signups.length === 0 && (
+                  <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13 }}>
+                    Nobody yet — send your link out and they'll show up here.
+                  </div>
+                )}
+                {referralData.signups.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {referralData.signups.map((s, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          borderRadius: 12,
+                          padding: "12px 16px",
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>
+                          Joined {new Date(s.createdAt).toLocaleDateString()}
+                        </div>
+                        <span
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            padding: "3px 10px",
+                            borderRadius: 999,
+                            background: s.paid ? "rgba(74,222,128,0.12)" : "rgba(255,255,255,0.08)",
+                            color: s.paid ? "#4ADE80" : "rgba(255,255,255,0.5)",
+                          }}
+                        >
+                          {s.planLabel}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
