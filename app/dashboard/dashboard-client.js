@@ -12,7 +12,7 @@ import { FilmGrain } from "@/app/components/login/primitives";
 import {
   IconHome, IconSites, IconLeads, IconBilling, IconSettings, IconUser,
   IconSearch, IconBell, IconPlus, IconArrowRight, IconChevronRight, IconSparkle,
-  IconRocket as IconRocketish,
+  IconRocket as IconRocketish, IconInvoice,
 } from "@/app/components/Icons";
 
 export default function DashboardClient({ initialProjects }) {
@@ -45,6 +45,74 @@ export default function DashboardClient({ initialProjects }) {
   const [inquiriesLoading, setInquiriesLoading] = useState(false);
   const previewFrameRef = useRef(null);
   const newSiteFormRef = useRef(null);
+
+  const [invoices, setInvoices] = useState([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [invoiceClientName, setInvoiceClientName] = useState("");
+  const [invoiceClientEmail, setInvoiceClientEmail] = useState("");
+  const [invoiceAmount, setInvoiceAmount] = useState("");
+  const [invoiceDescription, setInvoiceDescription] = useState("");
+  const [invoiceProjectId, setInvoiceProjectId] = useState("");
+  const [invoiceBusy, setInvoiceBusy] = useState(false);
+  const [invoiceError, setInvoiceError] = useState("");
+  const [invoiceSuccess, setInvoiceSuccess] = useState("");
+
+  async function loadInvoices() {
+    setInvoicesLoading(true);
+    const { data } = await supabase
+      .from("invoices")
+      .select("*")
+      .order("created_at", { ascending: false });
+    setInvoices(data || []);
+    setInvoicesLoading(false);
+  }
+
+  useEffect(() => {
+    if (tab !== "invoices") return;
+    loadInvoices();
+  }, [tab, supabase]);
+
+  async function sendInvoice() {
+    setInvoiceError("");
+    setInvoiceSuccess("");
+    if (!invoiceClientName.trim() || !invoiceClientEmail.trim() || !invoiceAmount) {
+      setInvoiceError("Client name, email, and amount are required.");
+      return;
+    }
+    setInvoiceBusy(true);
+    try {
+      const res = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName: invoiceClientName.trim(),
+          clientEmail: invoiceClientEmail.trim(),
+          amount: Number(invoiceAmount),
+          description: invoiceDescription.trim(),
+          projectId: invoiceProjectId || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Couldn't send the invoice.");
+      }
+      setInvoices((prev) => [data.invoice, ...prev]);
+      setInvoiceClientName("");
+      setInvoiceClientEmail("");
+      setInvoiceAmount("");
+      setInvoiceDescription("");
+      setInvoiceProjectId("");
+      setInvoiceSuccess(
+        data.emailError
+          ? `Invoice saved, but the email didn't send (${data.emailError}). You can still share it manually.`
+          : "Invoice sent."
+      );
+    } catch (err) {
+      setInvoiceError(err.message);
+    } finally {
+      setInvoiceBusy(false);
+    }
+  }
 
   // "New client site" switches to the sites tab and deselects the active
   // project, which mounts the generation form — but on mobile the sidebar
@@ -647,6 +715,7 @@ export default function DashboardClient({ initialProjects }) {
     { id: "overview", label: "Overview", Icon: IconHome },
     { id: "sites", label: "Sites", Icon: IconSites },
     { id: "leads", label: "Find Leads", Icon: IconLeads },
+    { id: "invoices", label: "Invoices", Icon: IconInvoice },
     { id: "billing", label: "Billing", Icon: IconBilling },
     { id: "profile", label: "Profile", Icon: IconUser },
     { id: "settings", label: "Settings", Icon: IconSettings },
@@ -2240,6 +2309,194 @@ export default function DashboardClient({ initialProjects }) {
         )}
 
         {/* ===== BILLING TAB ===== */}
+        {tab === "invoices" && (
+          <div style={{ padding: "48px 40px", maxWidth: 640, overflowY: "auto" }}>
+            <div style={{ fontFamily: display, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>Invoices</div>
+            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 32 }}>
+              Bill a client directly — they get an emailed summary of charges. This doesn't collect payment; you
+              still arrange that with them yourself.
+            </div>
+
+            <div
+              style={{
+                borderRadius: 16,
+                padding: 24,
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                marginBottom: 32,
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>CLIENT NAME</span>
+                  <input
+                    value={invoiceClientName}
+                    onChange={(e) => setInvoiceClientName(e.target.value)}
+                    placeholder="Business or contact name"
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: 10,
+                      padding: "11px 14px",
+                      color: "#fff",
+                      fontFamily: body,
+                      fontSize: 14,
+                      outline: "none",
+                    }}
+                  />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>CLIENT EMAIL</span>
+                  <input
+                    value={invoiceClientEmail}
+                    onChange={(e) => setInvoiceClientEmail(e.target.value)}
+                    placeholder="client@business.com"
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: 10,
+                      padding: "11px 14px",
+                      color: "#fff",
+                      fontFamily: body,
+                      fontSize: 14,
+                      outline: "none",
+                    }}
+                  />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>AMOUNT ($)</span>
+                  <input
+                    value={invoiceAmount}
+                    onChange={(e) => setInvoiceAmount(e.target.value)}
+                    placeholder="500"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: 10,
+                      padding: "11px 14px",
+                      color: "#fff",
+                      fontFamily: body,
+                      fontSize: 14,
+                      outline: "none",
+                    }}
+                  />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>DESCRIPTION (OPTIONAL)</span>
+                  <input
+                    value={invoiceDescription}
+                    onChange={(e) => setInvoiceDescription(e.target.value)}
+                    placeholder="Website build — August"
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: 10,
+                      padding: "11px 14px",
+                      color: "#fff",
+                      fontFamily: body,
+                      fontSize: 14,
+                      outline: "none",
+                    }}
+                  />
+                </label>
+                {projects.length > 0 && (
+                  <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>LINKED SITE (OPTIONAL)</span>
+                    <select
+                      value={invoiceProjectId}
+                      onChange={(e) => setInvoiceProjectId(e.target.value)}
+                      style={{
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        borderRadius: 10,
+                        padding: "11px 14px",
+                        color: "#fff",
+                        fontFamily: body,
+                        fontSize: 14,
+                        outline: "none",
+                      }}
+                    >
+                      <option value="">None</option>
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.id}>{p.client_name}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                {invoiceError && (
+                  <div style={{ fontSize: 13, color: "#F87171" }}>{invoiceError}</div>
+                )}
+                {invoiceSuccess && (
+                  <div style={{ fontSize: 13, color: "#4ADE80" }}>{invoiceSuccess}</div>
+                )}
+                <button
+                  onClick={sendInvoice}
+                  disabled={invoiceBusy}
+                  style={{
+                    background: invoiceBusy ? "rgba(255,255,255,0.08)" : accent,
+                    color: invoiceBusy ? "rgba(255,255,255,0.4)" : "#0A0A10",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "11px 18px",
+                    fontFamily: display,
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: invoiceBusy ? "default" : "pointer",
+                  }}
+                >
+                  {invoiceBusy ? "Sending…" : "Send invoice"}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ fontFamily: display, fontWeight: 700, fontSize: 15, marginBottom: 14 }}>Sent invoices</div>
+            {invoicesLoading && (
+              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13 }}>Loading…</div>
+            )}
+            {!invoicesLoading && invoices.length === 0 && (
+              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13 }}>No invoices sent yet.</div>
+            )}
+            {!invoicesLoading && invoices.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {invoices.map((inv) => (
+                  <div
+                    key={inv.id}
+                    style={{
+                      borderRadius: 12,
+                      padding: "14px 16px",
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>{inv.client_name}</div>
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>
+                        {inv.invoice_number} · {inv.client_email} ·{" "}
+                        {new Date(inv.created_at).toLocaleDateString()}
+                      </div>
+                      {inv.description && (
+                        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>
+                          {inv.description}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ fontFamily: display, fontWeight: 700, fontSize: 16, whiteSpace: "nowrap" }}>
+                      ${(inv.amount_cents / 100).toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {tab === "billing" && (
           <div style={{ padding: "48px 40px", maxWidth: 640, overflowY: "auto" }}>
             <div style={{ fontFamily: display, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>Billing</div>
