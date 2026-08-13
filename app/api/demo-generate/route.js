@@ -17,12 +17,12 @@ const MAX_PER_DAY = 3;
 
 // A real visitor's brief can be as detailed as anything typed into the
 // authenticated generator — this isn't reliably a quick one-liner just
-// because it's public. 120s still wasn't enough for a genuinely detailed
-// prompt (multiple sections, a full storefront layout); the function got
-// killed mid-generation and the connection dropping shows up in the
-// browser as a bare "Load failed". The authenticated /api/generate route
-// already proves 300s works fine on this Vercel plan.
-export const maxDuration = 200;
+// because it's public. Vercel's own runtime logs confirmed 200s still
+// wasn't enough for a genuinely large prompt (a full multi-section
+// storefront) — the function got killed mid-generation. Matching the
+// authenticated /api/generate route's proven 300s exactly rather than
+// guessing at another number in between.
+export const maxDuration = 300;
 
 async function searchStockPhotos(query) {
   if (!process.env.PEXELS_API_KEY || !query) return [];

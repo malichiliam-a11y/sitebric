@@ -30,7 +30,15 @@ export default function DemoPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ clientName: clientName.trim(), prompt: prompt.trim() }),
       });
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        // A killed function returns a platform error page, not JSON — the
+        // browser's own JSON-parse error ("The string did not match the
+        // expected pattern" in Safari) is meaningless to a visitor.
+        throw new Error("That took too long and timed out. Try a shorter or simpler description.");
+      }
       if (!res.ok || data.error) {
         throw new Error(data.message || data.error || "Something went wrong.");
       }
