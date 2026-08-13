@@ -138,6 +138,24 @@ export default function DashboardClient({ initialProjects }) {
     }, 50);
   }
 
+  // A visitor who tries the public /demo generator before signing up has
+  // it stash what they typed in localStorage; picking it up here on first
+  // load means they land straight on a pre-filled real generation instead
+  // of retyping the business they already described.
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("sb_demo_seed");
+      if (!raw) return;
+      window.localStorage.removeItem("sb_demo_seed");
+      const seed = JSON.parse(raw);
+      if (seed?.clientName) setClientName(seed.clientName);
+      if (seed?.prompt) setPrompt(seed.prompt);
+      if (seed?.clientName || seed?.prompt) goToNewSiteForm();
+    } catch {
+      // Malformed or inaccessible storage — just skip the prefill.
+    }
+  }, []);
+
   // tel:/mailto: links inside the sandboxed preview iframe can't reliably
   // navigate on their own — the sandbox tokens that should allow it
   // (allow-top-navigation-to-custom-protocols) work in Chromium but are
