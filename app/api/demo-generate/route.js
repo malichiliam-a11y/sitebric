@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { waitUntil } from "@vercel/functions";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -15,13 +16,12 @@ const supabaseAdmin = createAdminClient(
 
 const MAX_PER_DAY = 3;
 
-// A real visitor's brief can be as detailed as anything typed into the
-// authenticated generator — this isn't reliably a quick one-liner just
-// because it's public. Vercel's own runtime logs confirmed 200s still
-// wasn't enough for a genuinely large prompt (a full multi-section
-// storefront) — the function got killed mid-generation. Matching the
-// authenticated /api/generate route's proven 300s exactly rather than
-// guessing at another number in between.
+// Vercel's own runtime logs confirmed a genuinely detailed brief (a full
+// multi-section storefront) can take longer than 200s to generate at this
+// token budget — matching the authenticated /api/generate route's proven
+// 300s ceiling rather than guessing at another number. This now bounds
+// the background job (see waitUntil below), not the client's request,
+// which returns almost immediately.
 export const maxDuration = 300;
 
 async function searchStockPhotos(query) {
@@ -41,49 +41,15 @@ async function searchStockPhotos(query) {
   }
 }
 
-export async function POST(req) {
-  const forwardedFor = req.headers.get("x-forwarded-for") || "";
-  const ip = forwardedFor.split(",")[0].trim() || "unknown";
-
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count } = await supabaseAdmin
-    .from("demo_generations")
-    .select("id", { count: "exact", head: true })
-    .eq("ip", ip)
-    .gte("created_at", since);
-
-  if ((count || 0) >= MAX_PER_DAY) {
-    return NextResponse.json(
-      {
-        error: "rate_limited",
-        message: "You've used your free demo generations for today. Sign up free for unlimited ones.",
-      },
-      { status: 429 }
-    );
-  }
-
-  const { clientName: rawClientName, prompt: rawPrompt } = await req.json().catch(() => ({}));
-  const clientName = typeof rawClientName === "string" ? rawClientName.trim().slice(0, 100) : "";
-  // 300 was chopping real briefs off mid-sentence — visitors paste
-  // genuinely detailed specs here, not just a one-line description.
-  const prompt = typeof rawPrompt === "string" ? rawPrompt.trim().slice(0, 2000) : "";
-
-  if (!clientName || !prompt) {
-    return NextResponse.json({ error: "missing fields" }, { status: 400 });
-  }
-
+// Runs after the client already has its jobId back — this is the actual
+// (slow, costly) generation, kept alive past the response via waitUntil
+// so closing the tab that started it doesn't kill the work. Every path
+// out of this function must write a final status to the job row, since
+// nothing else is watching it complete.
+async function runGeneration(jobId, clientName, prompt) {
   const stockPhotos = await searchStockPhotos(`${clientName} ${prompt}`.slice(0, 150));
 
   try {
-    // Recorded right before the real (costly) Anthropic call, not at the
-    // top of the request — a validation error or a route bug (like the
-    // timeout that was too short before this) never touches Anthropic at
-    // all, so it shouldn't burn someone's daily quota for a failure that
-    // was never their fault. Once this line runs, real tokens are about
-    // to be spent, so it counts against the cap regardless of how the
-    // call below turns out.
-    await supabaseAdmin.from("demo_generations").insert({ ip });
-
     const stream = anthropic.messages.stream({
       model: "claude-sonnet-4-6",
       max_tokens: 24000,
@@ -146,9 +112,72 @@ ${stockPhotos.length > 0 ? `\nCURATED STOCK PHOTOS MATCHING THIS BUSINESS — re
     }
     if (!code) throw new Error("empty response from model");
 
-    return NextResponse.json({ code });
+    await supabaseAdmin
+      .from("demo_jobs")
+      .update({ status: "done", code, completed_at: new Date().toISOString() })
+      .eq("id", jobId);
   } catch (err) {
     console.error("Demo generation failed:", err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    await supabaseAdmin
+      .from("demo_jobs")
+      .update({ status: "error", error: err.message, completed_at: new Date().toISOString() })
+      .eq("id", jobId);
   }
+}
+
+export async function POST(req) {
+  const forwardedFor = req.headers.get("x-forwarded-for") || "";
+  const ip = forwardedFor.split(",")[0].trim() || "unknown";
+
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count } = await supabaseAdmin
+    .from("demo_generations")
+    .select("id", { count: "exact", head: true })
+    .eq("ip", ip)
+    .gte("created_at", since);
+
+  if ((count || 0) >= MAX_PER_DAY) {
+    return NextResponse.json(
+      {
+        error: "rate_limited",
+        message: "You've used your free demo generations for today. Sign up free for unlimited ones.",
+      },
+      { status: 429 }
+    );
+  }
+
+  const { clientName: rawClientName, prompt: rawPrompt } = await req.json().catch(() => ({}));
+  const clientName = typeof rawClientName === "string" ? rawClientName.trim().slice(0, 100) : "";
+  // 300 was chopping real briefs off mid-sentence — visitors paste
+  // genuinely detailed specs here, not just a one-line description.
+  const prompt = typeof rawPrompt === "string" ? rawPrompt.trim().slice(0, 2000) : "";
+
+  if (!clientName || !prompt) {
+    return NextResponse.json({ error: "missing fields" }, { status: 400 });
+  }
+
+  const { data: job, error: insertError } = await supabaseAdmin
+    .from("demo_jobs")
+    .insert({ ip, client_name: clientName, status: "pending" })
+    .select("id")
+    .single();
+
+  if (insertError) {
+    return NextResponse.json({ error: insertError.message }, { status: 500 });
+  }
+
+  // Recorded now, not earlier — a validation error above never reaches
+  // this line, so it never burns someone's daily quota for a failure
+  // that was never their fault. From here on real tokens are about to
+  // be spent, so it counts regardless of how generation turns out.
+  await supabaseAdmin.from("demo_generations").insert({ ip });
+
+  // The response below returns almost immediately; waitUntil keeps this
+  // function alive in the background to actually finish the generation,
+  // so closing the tab that started it doesn't cut the work off — the
+  // result lands in demo_jobs either way, and /api/demo-status?jobId=
+  // is how the client (or a later visit) finds out.
+  waitUntil(runGeneration(job.id, clientName, prompt));
+
+  return NextResponse.json({ jobId: job.id });
 }
