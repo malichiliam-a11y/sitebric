@@ -54,6 +54,13 @@ export const IconSettings = (p) => (
   </Svg>
 );
 
+export const IconInvoice = (p) => (
+  <Svg {...p}>
+    <path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z" />
+    <path d="M8.5 8h7M8.5 11.5h7M8.5 15h4" />
+  </Svg>
+);
+
 export const IconUser = (p) => (
   <Svg {...p}>
     <circle cx="12" cy="8" r="3.4" />
