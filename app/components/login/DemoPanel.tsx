@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { palette, metrics, easing } from "@/lib/design";
 import { IconArrowRight } from "./primitives";
 import { Field, PrimaryButton, controlCss } from "./controls";
+import { useDemoJob } from "./useDemoJob";
+import DemoPending from "./DemoPending";
 
 // Handed off to the dashboard so a visitor who signs up right after
 // trying this doesn't have to retype what they just described here —
@@ -20,38 +22,33 @@ const SEED_KEY = "sb_demo_seed";
 export default function DemoPanel({ onWantAccount }: { onWantAccount: () => void }) {
   const [clientName, setClientName] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
-  const [error, setError] = useState("");
-  const [code, setCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [jobId, setJobId] = useState<string | null>(null);
+
+  const job = useDemoJob(jobId);
+  const jobUrl = jobId && typeof window !== "undefined" ? `${window.location.origin}/demo/result/${jobId}` : "";
 
   async function handleGenerate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!clientName.trim() || !prompt.trim()) return;
-    setStatus("loading");
-    setError("");
+    setSubmitting(true);
+    setSubmitError("");
     try {
       const res = await fetch("/api/demo-generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ clientName: clientName.trim(), prompt: prompt.trim() }),
       });
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        // A killed function returns a platform error page, not JSON — the
-        // browser's own JSON-parse error ("The string did not match the
-        // expected pattern" in Safari) is meaningless to a visitor.
-        throw new Error("That took too long and timed out. Try a shorter or simpler description.");
-      }
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || data.error) {
         throw new Error(data.message || data.error || "Something went wrong.");
       }
-      setCode(data.code);
-      setStatus("done");
+      setJobId(data.jobId);
     } catch (err) {
-      setError((err as Error)?.message || "Something went wrong. Please try again.");
-      setStatus("error");
+      setSubmitError((err as Error)?.message || "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -64,6 +61,8 @@ export default function DemoPanel({ onWantAccount }: { onWantAccount: () => void
     }
     onWantAccount();
   }
+
+  const showForm = !jobId || job.status === "error";
 
   return (
     <motion.div
@@ -118,7 +117,7 @@ export default function DemoPanel({ onWantAccount }: { onWantAccount: () => void
       </div>
 
       <AnimatePresence mode="wait" initial={false}>
-        {status !== "done" ? (
+        {showForm ? (
           <motion.form
             key="form"
             onSubmit={handleGenerate}
@@ -135,7 +134,7 @@ export default function DemoPanel({ onWantAccount }: { onWantAccount: () => void
               value={clientName}
               onChange={(e) => setClientName(e.target.value)}
               maxLength={100}
-              disabled={status === "loading"}
+              disabled={submitting}
               required
             />
             <div>
@@ -159,16 +158,14 @@ export default function DemoPanel({ onWantAccount }: { onWantAccount: () => void
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 maxLength={2000}
-                disabled={status === "loading"}
+                disabled={submitting}
                 required
                 rows={4}
                 style={{ height: "auto", minHeight: 110, padding: "13px 16px", lineHeight: 1.5, resize: "vertical" }}
               />
             </div>
-            <PrimaryButton loading={status === "loading"}>
-              {status === "loading" ? "Building your site…" : "Generate my site"}
-            </PrimaryButton>
-            {status === "error" && (
+            <PrimaryButton loading={submitting}>{submitting ? "Starting…" : "Generate my site"}</PrimaryButton>
+            {submitError && (
               <div
                 style={{
                   fontSize: 13.5,
@@ -179,11 +176,25 @@ export default function DemoPanel({ onWantAccount }: { onWantAccount: () => void
                   padding: "12px 14px",
                 }}
               >
-                {error}
+                {submitError}
+              </div>
+            )}
+            {job.status === "error" && (
+              <div
+                style={{
+                  fontSize: 13.5,
+                  color: palette.negative,
+                  background: "rgba(248,113,113,0.07)",
+                  border: "1px solid rgba(248,113,113,0.18)",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                }}
+              >
+                {job.error || "Something went wrong."}
               </div>
             )}
           </motion.form>
-        ) : (
+        ) : job.status === "done" ? (
           <motion.div
             key="result"
             initial={{ opacity: 0 }}
@@ -205,7 +216,7 @@ export default function DemoPanel({ onWantAccount }: { onWantAccount: () => void
             >
               <iframe
                 title={`${clientName} — live demo`}
-                srcDoc={code}
+                srcDoc={job.code}
                 sandbox="allow-scripts"
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
               />
@@ -216,8 +227,7 @@ export default function DemoPanel({ onWantAccount }: { onWantAccount: () => void
                 className="sb-oauth"
                 style={{ flex: "1 1 auto" }}
                 onClick={() => {
-                  setStatus("idle");
-                  setCode("");
+                  setJobId(null);
                 }}
               >
                 Try another
@@ -235,10 +245,20 @@ export default function DemoPanel({ onWantAccount }: { onWantAccount: () => void
               </button>
             </div>
           </motion.div>
+        ) : (
+          <motion.div
+            key="pending"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: easing }}
+          >
+            <DemoPending elapsed={job.elapsed} jobUrl={jobUrl} />
+          </motion.div>
         )}
       </AnimatePresence>
 
-      {status !== "done" && (
+      {showForm && (
         <div style={{ textAlign: "center", marginTop: 28, fontSize: 13.5, color: palette.textMuted }}>
           Already have an account?{" "}
           <span className="sb-link sb-link--strong" onClick={onWantAccount}>

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { palette, easing } from "@/lib/design";
 import { Wordmark, FilmGrain, IconArrowRight } from "@/app/components/login/primitives";
 import { Field, PrimaryButton, controlCss } from "@/app/components/login/controls";
+import { useDemoJob } from "@/app/components/login/useDemoJob";
+import DemoPending from "@/app/components/login/DemoPending";
 import { motion } from "framer-motion";
 
 // Handed off to the dashboard so a visitor who signs up right after
@@ -14,44 +16,37 @@ const SEED_KEY = "sb_demo_seed";
 export default function DemoPage() {
   const [clientName, setClientName] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [status, setStatus] = useState("idle"); // idle | loading | done | error
-  const [error, setError] = useState("");
-  const [code, setCode] = useState("");
-  const resultRef = useRef(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [jobId, setJobId] = useState(null);
+
+  const job = useDemoJob(jobId);
+  const jobUrl = jobId && typeof window !== "undefined" ? `${window.location.origin}/demo/result/${jobId}` : "";
 
   async function handleGenerate(e) {
     e.preventDefault();
     if (!clientName.trim() || !prompt.trim()) return;
-    setStatus("loading");
-    setError("");
+    setSubmitting(true);
+    setSubmitError("");
     try {
       const res = await fetch("/api/demo-generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ clientName: clientName.trim(), prompt: prompt.trim() }),
       });
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        // A killed function returns a platform error page, not JSON — the
-        // browser's own JSON-parse error ("The string did not match the
-        // expected pattern" in Safari) is meaningless to a visitor.
-        throw new Error("That took too long and timed out. Try a shorter or simpler description.");
-      }
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || data.error) {
         throw new Error(data.message || data.error || "Something went wrong.");
       }
-      setCode(data.code);
-      setStatus("done");
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+      setJobId(data.jobId);
     } catch (err) {
-      setError(err.message);
-      setStatus("error");
+      setSubmitError(err.message);
+    } finally {
+      setSubmitting(false);
     }
   }
 
-  function handleSignupClick() {
+  function handleWantAccount() {
     try {
       window.localStorage.setItem(SEED_KEY, JSON.stringify({ clientName, prompt }));
     } catch {
@@ -59,6 +54,8 @@ export default function DemoPage() {
       // still works, they just retype the brief instead of it prefilling.
     }
   }
+
+  const showForm = !jobId || job.status === "error";
 
   return (
     <div className="sb-demo">
@@ -112,6 +109,9 @@ export default function DemoPage() {
           border: none; border-radius: 10px;
           padding: 13px 22px; font-size: 14.5px; font-weight: 600;
           text-decoration: none; white-space: nowrap; cursor: pointer;
+        }
+        .sb-demo-pending-shell {
+          max-width: 480px; margin: 40px auto 0; padding: 0 6%;
         }
         @media (max-width: 640px) {
           .sb-demo-frame-wrap { height: 56vh; }
@@ -169,70 +169,89 @@ export default function DemoPage() {
           </p>
         </motion.div>
 
-        <form onSubmit={handleGenerate} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <Field
-            id="demo-client-name"
-            label="Business name"
-            placeholder="e.g. Riverside Auto Detailing"
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            maxLength={100}
-            disabled={status === "loading"}
-            required
-          />
-          <div>
-            <label
-              htmlFor="demo-prompt"
-              style={{
-                display: "block",
-                fontSize: 14,
-                fontWeight: 500,
-                letterSpacing: "-0.005em",
-                color: palette.text,
-                marginBottom: 10,
-              }}
-            >
-              What do they do?
-            </label>
-            <textarea
-              id="demo-prompt"
-              className="sb-field"
-              placeholder="e.g. Mobile car detailing in Austin, TX — or paste a full brief, as detailed as you want"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              maxLength={2000}
-              disabled={status === "loading"}
+        {showForm && (
+          <form onSubmit={handleGenerate} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            <Field
+              id="demo-client-name"
+              label="Business name"
+              placeholder="e.g. Riverside Auto Detailing"
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              maxLength={100}
+              disabled={submitting}
               required
-              rows={4}
-              style={{ height: "auto", minHeight: 110, padding: "13px 16px", lineHeight: 1.5, resize: "vertical" }}
             />
-          </div>
-          <PrimaryButton loading={status === "loading"}>
-            {status === "loading" ? "Building your site…" : "Generate my site"}
-          </PrimaryButton>
-          {status === "error" && (
-            <div
-              style={{
-                fontSize: 13.5,
-                color: "#F87171",
-                background: "rgba(248,113,113,0.07)",
-                borderRadius: 10,
-                padding: "12px 14px",
-              }}
-            >
-              {error}
+            <div>
+              <label
+                htmlFor="demo-prompt"
+                style={{
+                  display: "block",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  letterSpacing: "-0.005em",
+                  color: palette.text,
+                  marginBottom: 10,
+                }}
+              >
+                What do they do?
+              </label>
+              <textarea
+                id="demo-prompt"
+                className="sb-field"
+                placeholder="e.g. Mobile car detailing in Austin, TX — or paste a full brief, as detailed as you want"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                maxLength={2000}
+                disabled={submitting}
+                required
+                rows={4}
+                style={{ height: "auto", minHeight: 110, padding: "13px 16px", lineHeight: 1.5, resize: "vertical" }}
+              />
             </div>
-          )}
-          <div style={{ fontSize: 12.5, color: palette.textGhost, textAlign: "center" }}>
-            Free demos are limited per visitor — sign up for unlimited generations.
-          </div>
-        </form>
+            <PrimaryButton loading={submitting}>{submitting ? "Starting…" : "Generate my site"}</PrimaryButton>
+            {submitError && (
+              <div
+                style={{
+                  fontSize: 13.5,
+                  color: "#F87171",
+                  background: "rgba(248,113,113,0.07)",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                }}
+              >
+                {submitError}
+              </div>
+            )}
+            {job.status === "error" && (
+              <div
+                style={{
+                  fontSize: 13.5,
+                  color: "#F87171",
+                  background: "rgba(248,113,113,0.07)",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                }}
+              >
+                {job.error}
+              </div>
+            )}
+            <div style={{ fontSize: 12.5, color: palette.textGhost, textAlign: "center" }}>
+              Free demos are limited per visitor — sign up for unlimited generations.
+            </div>
+          </form>
+        )}
       </div>
 
-      {status === "done" && (
-        <div className="sb-demo-result-shell" ref={resultRef} style={{ position: "relative", zIndex: 2 }}>
+      {jobId && job.status === "pending" && (
+        <div className="sb-demo-pending-shell" style={{ position: "relative", zIndex: 2 }}>
+          <DemoPending elapsed={job.elapsed} jobUrl={jobUrl} />
+        </div>
+      )}
+
+      {job.status === "done" && (
+        <div className="sb-demo-result-shell" style={{ position: "relative", zIndex: 2 }}>
           <div className="sb-demo-frame-wrap">
-            <iframe title={`${clientName} — live demo`} srcDoc={code} sandbox="allow-scripts" />
+            <iframe title={`${clientName} — live demo`} srcDoc={job.code} sandbox="allow-scripts" />
           </div>
           <div className="sb-demo-cta-bar">
             <div>
@@ -247,13 +266,12 @@ export default function DemoPage() {
                 className="sb-oauth"
                 style={{ width: "auto", padding: "0 18px" }}
                 onClick={() => {
-                  setStatus("idle");
-                  setCode("");
+                  setJobId(null);
                 }}
               >
                 Try another
               </button>
-              <a className="sb-demo-signup-btn" href="/login" onClick={handleSignupClick}>
+              <a className="sb-demo-signup-btn" href="/login" onClick={handleWantAccount}>
                 Create free account
                 <IconArrowRight size={16} />
               </a>
