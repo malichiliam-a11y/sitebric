@@ -79,6 +79,15 @@ alter table profiles add column if not exists stripe_subscription_id text;
 -- Set once at profile creation and never overwritten afterwards.
 alter table profiles add column if not exists referred_by text;
 
+-- Trial nudge sequence state, driven by /api/cron/trial-nudges.
+-- sent_at is when the last message went out, step is how many have gone
+-- (0 to 3). Both stop mattering once plan leaves 'trial'. When step was
+-- introduced, everyone already nudged under the old one-shot system was
+-- backfilled to 1 so they resumed at message 2 rather than repeating 1.
+alter table profiles add column if not exists trial_nudge_sent_at timestamptz;
+alter table profiles add column if not exists trial_nudge_type text;
+alter table profiles add column if not exists trial_nudge_step integer not null default 0;
+
 -- This user's own shareable code (their link is /?ref=<code>), generated
 -- once at profile creation. referral_reward_granted stops the $5 reward
 -- from firing more than once for a given referred user.
