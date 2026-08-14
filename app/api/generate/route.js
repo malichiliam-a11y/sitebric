@@ -44,6 +44,46 @@ async function searchStockPhotos(query) {
   }
 }
 
+// Pexels' search is a keyword match, not a semantic one — feeding it a raw
+// slice of the brief ("Create a modern, premium website for Mill Basin
+// Shuk, a neighborhood grocery/food market serving...") returns nothing
+// useful, because "create", "modern", "premium", "website", "serving" are
+// noise words no real photo is tagged with. This shipped a real generation
+// where every single image fell through to the random picsum fallback —
+// the opposite of the one thing a photo search exists to do. Stripping
+// instruction/mood words down to the actual content nouns turns that same
+// brief into "mill basin shuk neighborhood grocery food market brooklyn
+// community", which Pexels can actually match against.
+const SEARCH_STOPWORDS = new Set([
+  "a", "an", "the", "for", "and", "or", "but", "with", "without", "that", "this", "these",
+  "those", "is", "are", "was", "were", "be", "been", "being", "to", "of", "on", "at", "by",
+  "from", "as", "it", "its", "your", "their", "our", "we", "you", "they", "not", "no",
+  "never", "use", "using", "create", "creates", "creating", "build", "building", "make",
+  "making", "website", "site", "page", "pages", "modern", "premium", "clean", "sophisticated",
+  "elegant", "upscale", "warm", "welcoming", "strong", "generic", "ai", "ai-generated",
+  "design", "designed", "style", "overall", "every", "section", "sections", "background",
+  "backgrounds", "text", "accent", "accents", "typography", "font", "fonts", "smooth",
+  "animation", "animations", "fast", "understated", "mobile-first", "mobile", "fully",
+  "responsive", "do", "should", "must", "will", "serving", "brings", "right", "heart", "in",
+]);
+
+function extractSearchTerms(clientName, prompt) {
+  const words = `${clientName} ${prompt}`
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !SEARCH_STOPWORDS.has(w));
+  const seen = new Set();
+  const ordered = [];
+  for (const w of words) {
+    if (seen.has(w)) continue;
+    seen.add(w);
+    ordered.push(w);
+    if (ordered.length >= 12) break;
+  }
+  return ordered.join(" ");
+}
+
 export async function POST(req) {
   const supabase = createClient();
   const {
@@ -126,7 +166,7 @@ export async function POST(req) {
   // Only bother searching when there's no real photo of the business
   // itself — an uploaded real photo always beats a stock one.
   const stockPhotos =
-    photoUrls.length === 0 ? await searchStockPhotos(`${clientName} ${prompt}`.slice(0, 150)) : [];
+    photoUrls.length === 0 ? await searchStockPhotos(extractSearchTerms(clientName, prompt)) : [];
 
   // Create the row first so the dashboard can show a "generating" state,
   // and so the generated page's lead form has a real project id to POST
@@ -227,7 +267,7 @@ ${photoUrls.length > 0
   : ""}
 ${stockPhotos.length > 0
   ? `- Use ONLY the curated stock photo URLs listed above — they were picked to actually match this business's niche. Do not use picsum.photos, loremflickr.com, or any other placeholder image service. Before placing any of these photos in a specific section (a named service card, a before/after slot, etc.), check its alt-text description actually matches what that section is about — the search that found these photos is not perfect, and it has shipped photos completely unrelated to their slot before (e.g. a coffee-meeting stock photo dropped onto a "Fence & Exterior Cleaning" card). If a photo's subject doesn't clearly fit a specific slot, reuse a photo that does fit elsewhere on the page instead of forcing a mismatched one in — a repeated photo is far less broken-looking than a wrong one.`
-  : `- For any stock photos needed, pull from https://picsum.photos/seed/<unique-seed>/900/600 — real, reliable stock photography with no lookup step to fail. Give every image slot on the page its own distinct seed (e.g. a short slug built from the business type and section — "restaurant-hero", "restaurant-gallery-1", "restaurant-gallery-2") so images don't repeat across the page. Vary the size per placement (e.g. /600/400 for smaller cards) but keep each seed's own dimensions consistent everywhere that exact image is reused. Never use loremflickr.com — its Flickr backend silently falls back to an unrelated placeholder photo (often a stock cat picture) whenever a keyword search fails or errors, which has shipped broken images to real client sites.`}
+  : `- No curated photos matched this business — do NOT use picsum.photos, loremflickr.com, or any other random stock-photo service. A random photo next to a specific label (a highway shot on a "Bakery" card) looks broken, which has shipped to a real client site before and is worse than no photo at all. Instead, build every image slot as a deliberate flat placeholder: a solid or gradient panel using the site's own palette, with a large centered icon (a simple inline SVG line icon, or one relevant emoji at large size) and the slot's own label styled boldly. This should read as an intentional design choice, not a missing photo.`}
 - If the business has a natural before/after angle (detailing, renovation, fitness, cleaning, landscaping, etc.) AND real uploaded before/after photos of an actual job were provided above, build a REAL functional before/after image comparison slider with a draggable handle controlling a clip-path, using those real photos. This has shipped badly broken when built with stock/placeholder photos instead — two unrelated stock photos (e.g. an American flag "before" turning into a turf field "after") can never depict the same job before and after, so it looks like a mistake rather than a feature. Without real before/after photos of an actual job, skip the before/after slider entirely — do not fake one with stock or placeholder images.
 
 === TECHNICAL RULES ===

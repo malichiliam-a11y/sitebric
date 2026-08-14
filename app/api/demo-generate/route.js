@@ -41,13 +41,53 @@ async function searchStockPhotos(query) {
   }
 }
 
+// Pexels' search is a keyword match, not a semantic one — feeding it a raw
+// slice of the brief ("Create a modern, premium website for Mill Basin
+// Shuk, a neighborhood grocery/food market serving...") returns nothing
+// useful, because "create", "modern", "premium", "website", "serving" are
+// noise words no real photo is tagged with. This shipped a site where
+// every single image fell through to the random picsum fallback — the
+// opposite of the one thing a photo search exists to do. Stripping
+// instruction/mood words down to the actual content nouns turns that same
+// brief into "mill basin shuk neighborhood grocery food market brooklyn
+// community", which Pexels can actually match against.
+const SEARCH_STOPWORDS = new Set([
+  "a", "an", "the", "for", "and", "or", "but", "with", "without", "that", "this", "these",
+  "those", "is", "are", "was", "were", "be", "been", "being", "to", "of", "on", "at", "by",
+  "from", "as", "it", "its", "your", "their", "our", "we", "you", "they", "not", "no",
+  "never", "use", "using", "create", "creates", "creating", "build", "building", "make",
+  "making", "website", "site", "page", "pages", "modern", "premium", "clean", "sophisticated",
+  "elegant", "upscale", "warm", "welcoming", "strong", "generic", "ai", "ai-generated",
+  "design", "designed", "style", "overall", "every", "section", "sections", "background",
+  "backgrounds", "text", "accent", "accents", "typography", "font", "fonts", "smooth",
+  "animation", "animations", "fast", "understated", "mobile-first", "mobile", "fully",
+  "responsive", "do", "should", "must", "will", "serving", "brings", "right", "heart", "in",
+]);
+
+function extractSearchTerms(clientName, prompt) {
+  const words = `${clientName} ${prompt}`
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !SEARCH_STOPWORDS.has(w));
+  const seen = new Set();
+  const ordered = [];
+  for (const w of words) {
+    if (seen.has(w)) continue;
+    seen.add(w);
+    ordered.push(w);
+    if (ordered.length >= 12) break;
+  }
+  return ordered.join(" ");
+}
+
 // Runs after the client already has its jobId back — this is the actual
 // (slow, costly) generation, kept alive past the response via waitUntil
 // so closing the tab that started it doesn't kill the work. Every path
 // out of this function must write a final status to the job row, since
 // nothing else is watching it complete.
 async function runGeneration(jobId, clientName, prompt) {
-  const stockPhotos = await searchStockPhotos(`${clientName} ${prompt}`.slice(0, 150));
+  const stockPhotos = await searchStockPhotos(extractSearchTerms(clientName, prompt));
 
   try {
     const stream = anthropic.messages.stream({
@@ -60,7 +100,7 @@ async function runGeneration(jobId, clientName, prompt) {
 
 Client/business: "${clientName}"
 Brief: "${prompt}"
-${stockPhotos.length > 0 ? `\nCURATED STOCK PHOTOS MATCHING THIS BUSINESS — real photos selected for this exact niche. Use ONLY these exact URLs for every photo on the page instead of any placeholder image service; do not invent or use any other image URL. Before placing any photo in a specific section (a category card, a service slot, etc.), check its alt-text description actually matches what that section is about — the search is not perfect and has shipped a photo completely unrelated to its slot before (e.g. a mountain highway photo labeled "Bakery"). If a photo's subject doesn't clearly fit a specific slot, reuse a photo that does fit elsewhere on the page instead of forcing a mismatched one in — a repeated photo is far less broken-looking than a wrong one:\n${stockPhotos.map((p) => `- ${p.url}${p.alt ? ` (${p.alt})` : ""}`).join("\n")}` : `\nNo curated photos are available — pull stock images from https://picsum.photos/seed/<unique-seed>/900/600, a distinct seed per image slot.`}
+${stockPhotos.length > 0 ? `\nCURATED STOCK PHOTOS MATCHING THIS BUSINESS — real photos selected for this exact niche. Use ONLY these exact URLs for every photo on the page instead of any placeholder image service; do not invent or use any other image URL. Before placing any photo in a specific section (a category card, a service slot, etc.), check its alt-text description actually matches what that section is about — the search is not perfect and has shipped a photo completely unrelated to its slot before (e.g. a mountain highway photo labeled "Bakery"). If a photo's subject doesn't clearly fit a specific slot, reuse a photo that does fit elsewhere on the page instead of forcing a mismatched one in — a repeated photo is far less broken-looking than a wrong one:\n${stockPhotos.map((p) => `- ${p.url}${p.alt ? ` (${p.alt})` : ""}`).join("\n")}` : `\nNo curated photos matched this business — do NOT use picsum.photos, loremflickr.com, or any other random stock-photo service. A random photo next to a specific label (a highway shot labeled "Bakery") looks broken, which has shipped before and is worse than no photo at all. Instead, build every image slot as a deliberate flat placeholder: a solid or gradient panel using the site's own palette, with a large centered icon (a simple inline SVG line icon, or one relevant emoji at large size) and the slot's own label styled boldly. This should read as an intentional design choice, not a missing photo.`}
 
 === DESIGN — make this genuinely impressive ===
 - Read the brief for its own design direction first. If it specifies colors, a palette, a mood or vibe (elegant, warm, minimal, upscale, rustic, corporate), specific fonts, or says anything like "don't make it look AI-generated" or "not futuristic" — that direction wins completely. Follow it as literally as a real client brief would demand: "elegant and warm, mostly white/cream, charcoal text, green or burgundy accents" means exactly that palette, not a dark reinterpretation of it with neon accents.
