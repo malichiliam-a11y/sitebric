@@ -79,6 +79,18 @@ alter table profiles add column if not exists stripe_subscription_id text;
 -- Set once at profile creation and never overwritten afterwards.
 alter table profiles add column if not exists referred_by text;
 
+-- This user's own shareable code (their link is /?ref=<code>), generated
+-- once at profile creation. referral_reward_granted stops the $5 reward
+-- from firing more than once for a given referred user.
+alter table profiles add column if not exists referral_code text;
+alter table profiles add column if not exists referral_reward_granted boolean default false;
+
+create unique index if not exists profiles_referral_code_key
+  on profiles (referral_code) where referral_code is not null;
+
+create index if not exists profiles_referred_by_idx
+  on profiles (referred_by);
+
 -- The Stripe webhook finds users by customer id, which is a lookup on
 -- every billing event.
 create index if not exists profiles_stripe_customer_id_idx
