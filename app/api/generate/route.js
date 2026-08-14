@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { limitsFor } from "@/lib/plans";
+import { stripFakePhoneNumbers } from "@/lib/sanitize-site";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -296,6 +297,18 @@ ${stockPhotos.length > 0
     }
 
     if (!code) throw new Error("empty response from model");
+
+    // The prompt forbids invented phone numbers and the model usually obeys,
+    // but four sites still shipped with a Call Now button dialling
+    // 555-123-4567 — one of them published for a real business. Enforced
+    // here rather than trusted upstream.
+    const sanitized = stripFakePhoneNumbers(code, phone);
+    if (sanitized.changed > 0) {
+      console.warn(
+        `Rewrote ${sanitized.changed} fabricated phone reference(s) in project ${project.id}`
+      );
+      code = sanitized.code;
+    }
 
     const { error: updateError } = await supabase
       .from("projects")

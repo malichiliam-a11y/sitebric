@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { waitUntil } from "@vercel/functions";
+import { stripFakePhoneNumbers } from "@/lib/sanitize-site";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -151,6 +152,14 @@ ${stockPhotos.length > 0 ? `\nCURATED STOCK PHOTOS MATCHING THIS BUSINESS — re
       throw new Error("The site came out longer than the demo's size limit. Try a shorter description.");
     }
     if (!code) throw new Error("empty response from model");
+
+    // A demo never has a real number, so any tel: link here is invented by
+    // definition — and this is the page a prospect judges the product on.
+    const sanitized = stripFakePhoneNumbers(code, null);
+    if (sanitized.changed > 0) {
+      console.warn(`Rewrote ${sanitized.changed} fabricated phone reference(s) in demo job ${jobId}`);
+      code = sanitized.code;
+    }
 
     await supabaseAdmin
       .from("demo_jobs")

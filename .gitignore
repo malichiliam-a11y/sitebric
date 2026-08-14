@@ -1,3 +1,5 @@
 node_modules
 .next
 .env.local
+# Written by `tsc --noEmit`, which is how types get checked outside a build.
+tsconfig.tsbuildinfo
