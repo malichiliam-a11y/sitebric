@@ -21,6 +21,9 @@ export type Audience = {
   /** Faint tail — carries the turn in the sentence. */
   headlineTail: string;
   subhead: string;
+  /** First person, for the "Which one are you?" chooser on the homepage. */
+  chooserLabel: string;
+  chooserBlurb: string;
   features: { icon: IconName; title: string; desc: string }[];
   /** The pricing hook, in this audience's terms. */
   moneyLine: string;
@@ -57,6 +60,8 @@ export const AUDIENCES: Audience[] = [
     headlineTail: "you keep turning down.",
     subhead:
       "A $900 brochure site isn't worth a week of a designer's time, so it gets declined or padded into something the client won't buy. Describe the business, get a finished site, and put those jobs back on the board.",
+    chooserLabel: "I run an agency",
+    chooserBlurb: "Add websites to what you already sell, without adding headcount.",
     features: [
       {
         icon: "bolt",
@@ -98,6 +103,8 @@ export const AUDIENCES: Audience[] = [
     headlineTail: "for every website.",
     subhead:
       "There are only so many weeks in a year, and right now that number is your income ceiling. Let the build take minutes instead, and spend your hours on the work clients are actually paying you for.",
+    chooserLabel: "I freelance",
+    chooserBlurb: "Take on more clients without giving up more weeks.",
     features: [
       {
         icon: "bolt",
@@ -139,6 +146,8 @@ export const AUDIENCES: Audience[] = [
     headlineTail: "you can build one.",
     subhead:
       "The businesses down your street need a website and genuinely don't care how it got made. Describe one, hand over something real, and keep the difference.",
+    chooserLabel: "I'm just starting out",
+    chooserBlurb: "No code, no portfolio, no experience needed.",
     features: [
       {
         icon: "bolt",

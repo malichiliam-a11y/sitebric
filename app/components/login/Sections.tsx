@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { palette, easing } from "@/lib/design";
+import { AUDIENCES } from "@/lib/audiences";
 
 /**
  * The marketing page that lives below the login hero.
@@ -142,6 +143,37 @@ export default function Sections() {
                       opacity 220ms ease, padding-bottom 300ms cubic-bezier(0.22,1,0.36,1);
         }
 
+        /* Self-selection, offered rather than imposed: this sits partway
+           down the page, so nobody has to answer a question before they can
+           see the product. Scrolling straight past it costs them nothing. */
+        .sb-pick {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
+          gap: 20px;
+          margin-top: 54px;
+        }
+        .sb-pick-card {
+          display: block;
+          padding: 28px 26px;
+          border-radius: 16px;
+          border: 1px solid ${palette.hairline};
+          background: ${palette.card};
+          text-decoration: none;
+          transition: border-color 240ms cubic-bezier(0.22,1,0.36,1),
+                      transform 240ms cubic-bezier(0.22,1,0.36,1);
+        }
+        .sb-pick-card:hover { border-color: rgba(255,255,255,0.16); transform: translateY(-3px); }
+        .sb-pick-label {
+          font-size: 16px; font-weight: 500; letter-spacing: -0.015em;
+          color: ${palette.text}; margin-bottom: 9px;
+        }
+        .sb-pick-blurb { font-size: 13.5px; line-height: 1.6; color: ${palette.textMuted}; }
+        .sb-pick-go {
+          margin-top: 16px; font-size: 13px; font-weight: 500;
+          color: ${palette.textFaint};
+        }
+        .sb-pick-card:hover .sb-pick-go { color: ${palette.text}; }
+
         .sb-cta-band { text-align: center; }
         .sb-cta-btn {
           display: inline-flex; align-items: center; gap: 10px;
@@ -155,7 +187,7 @@ export default function Sections() {
         .sb-cta-btn:hover { transform: translateY(-2px); }
 
         @media (prefers-reduced-motion: reduce) {
-          .sb-step, .sb-cta-btn, .sb-faq-sign { transition: none; }
+          .sb-step, .sb-cta-btn, .sb-faq-sign, .sb-pick-card { transition: none; }
         }
         @media (max-width: 720px) {
           .sb-section { padding: 76px 6% 76px; }
@@ -194,6 +226,30 @@ export default function Sections() {
                 </div>
                 <div style={{ fontSize: 13.5, lineHeight: 1.6, color: palette.textMuted }}>{desc}</div>
               </div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ------------------------------------------------ which are you */}
+      <section className="sb-section" id="which-one">
+        <motion.div
+          className="sb-section-inner"
+          variants={reveal}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.25 }}
+        >
+          <Eyebrow>WHICH ONE ARE YOU?</Eyebrow>
+          <Heading>The pitch changes depending on who&apos;s asking.</Heading>
+
+          <div className="sb-pick">
+            {AUDIENCES.map((a) => (
+              <a key={a.slug} className="sb-pick-card" href={`/for/${a.slug}`}>
+                <div className="sb-pick-label">{a.chooserLabel}</div>
+                <div className="sb-pick-blurb">{a.chooserBlurb}</div>
+                <div className="sb-pick-go">See how →</div>
+              </a>
             ))}
           </div>
         </motion.div>
