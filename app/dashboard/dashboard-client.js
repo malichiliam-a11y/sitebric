@@ -40,6 +40,8 @@ export default function DashboardClient({ initialProjects }) {
   const display = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
   const body = "'Inter', sans-serif";
   const [billingStatus, setBillingStatus] = useState(null);
+  const [referralStats, setReferralStats] = useState(null);
+  const [referralCopied, setReferralCopied] = useState(false);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [inquiries, setInquiries] = useState([]);
   const [inquiriesLoading, setInquiriesLoading] = useState(false);
@@ -229,9 +231,16 @@ export default function DashboardClient({ initialProjects }) {
     setBillingStatus(data);
   }
 
+  async function loadReferralStats() {
+    const res = await fetch("/api/referral-stats");
+    const data = await res.json().catch(() => null);
+    if (data) setReferralStats(data);
+  }
+
   useEffect(() => {
     loadProfile();
     loadBillingStatus();
+    loadReferralStats();
   }, [supabase]);
 
   async function loadProfile() {
@@ -746,6 +755,7 @@ export default function DashboardClient({ initialProjects }) {
     { id: "leads", label: "Find Leads", Icon: IconLeads },
     { id: "invoices", label: "Invoices", Icon: IconInvoice },
     { id: "billing", label: "Billing", Icon: IconBilling },
+    { id: "referrals", label: "Referrals", Icon: IconShare },
     { id: "profile", label: "Profile", Icon: IconUser },
     { id: "settings", label: "Settings", Icon: IconSettings },
   ];
@@ -2813,6 +2823,96 @@ export default function DashboardClient({ initialProjects }) {
               view invoices, or use "Cancel subscription" to cancel directly — no need to leave the dashboard.
             </div>
 
+          </div>
+        )}
+
+        {/* ===== REFERRALS TAB ===== */}
+        {tab === "referrals" && (
+          <div style={{ padding: "48px 40px", maxWidth: 640, overflowY: "auto" }}>
+            <div style={{ fontFamily: display, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>Referrals</div>
+            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 32, lineHeight: 1.6 }}>
+              Share your link. When someone signs up through it and actually generates a site and runs a
+              lead search — not just makes an account — you get $5 off your next invoice automatically.
+            </div>
+
+            <div
+              style={{
+                borderRadius: 16,
+                padding: 24,
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 12 }}>Your referral link</div>
+              {referralStats?.referralCode ? (
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`https://sitebric.com/?ref=${referralStats.referralCode}`);
+                    setReferralCopied(true);
+                    setTimeout(() => setReferralCopied(false), 2000);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    width: "100%",
+                    background: "rgba(255,255,255,0.05)",
+                    color: "#F2F0FA",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: 10,
+                    padding: "12px 16px",
+                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                    fontSize: 13,
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <span style={{ wordBreak: "break-all" }}>{`sitebric.com/?ref=${referralStats.referralCode}`}</span>
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      fontFamily: display,
+                      fontWeight: 700,
+                      fontSize: 12,
+                      color: referralCopied ? "#4FD9C0" : "rgba(255,255,255,0.6)",
+                    }}
+                  >
+                    {referralCopied ? "Copied" : "Copy"}
+                  </span>
+                </button>
+              ) : (
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Loading your link…</div>
+              )}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 14, marginBottom: 20 }}>
+              {[
+                ["Signed up", referralStats?.totalSignups ?? "—"],
+                ["Became active", referralStats?.activated ?? "—"],
+                ["You've earned", referralStats ? `$${(referralStats.rewardCents / 100).toFixed(2)}` : "—"],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  style={{
+                    borderRadius: 14,
+                    padding: 18,
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 6 }}>{label}</div>
+                  <div style={{ fontFamily: display, fontWeight: 700, fontSize: 22 }}>{value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
+              "Became active" means they generated at least one site and ran at least one lead search — a
+              plain signup doesn't count, so you're only ever rewarded for a real user. The $5 shows up as a
+              credit on your account and comes off your next Stripe invoice automatically.
+            </div>
           </div>
         )}
 

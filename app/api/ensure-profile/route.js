@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { sanitizeReferralCode } from "@/lib/referral";
+import { sanitizeReferralCode, generateReferralCode } from "@/lib/referral";
 import { sanitizeUtmValue } from "@/lib/utm";
 
 // Bypasses RLS to create the initial trial row — safe since it only
@@ -35,16 +35,22 @@ export async function POST(req) {
     const body = await req.json().catch(() => ({}));
     const referredBy = sanitizeReferralCode(body?.ref);
 
-    await supabaseAdmin.from("profiles").upsert({
-      id: user.id,
-      plan: "trial",
-      generations_used: 0,
-      searches_used: 0,
-      referred_by: referredBy,
-      utm_source: sanitizeUtmValue(body?.utm_source),
-      utm_medium: sanitizeUtmValue(body?.utm_medium),
-      utm_campaign: sanitizeUtmValue(body?.utm_campaign),
-    });
+    // referral_code has a unique index — retry with a fresh code on the
+    // rare collision (23505) instead of failing profile creation over it.
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { error } = await supabaseAdmin.from("profiles").upsert({
+        id: user.id,
+        plan: "trial",
+        generations_used: 0,
+        searches_used: 0,
+        referred_by: referredBy,
+        referral_code: generateReferralCode(),
+        utm_source: sanitizeUtmValue(body?.utm_source),
+        utm_medium: sanitizeUtmValue(body?.utm_medium),
+        utm_campaign: sanitizeUtmValue(body?.utm_campaign),
+      });
+      if (!error || error.code !== "23505") break;
+    }
   }
 
   return NextResponse.json({ ok: true });

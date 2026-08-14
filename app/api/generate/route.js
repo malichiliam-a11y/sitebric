@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { limitsFor } from "@/lib/plans";
+import { maybeGrantReferralReward } from "@/lib/referral-reward";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -314,6 +315,12 @@ ${stockPhotos.length > 0
       .from("profiles")
       .update({ generations_used: profile.generations_used + 1 })
       .eq("id", user.id);
+
+    try {
+      await maybeGrantReferralReward(supabaseAdmin, user.id);
+    } catch (rewardErr) {
+      console.error("Referral reward check failed:", rewardErr.message);
+    }
 
     return NextResponse.json({ id: project.id, status: "done" });
   } catch (err) {
