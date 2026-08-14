@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { planForPriceId } from "@/lib/plans";
+import { maybeGrantReferralReward } from "@/lib/referral-reward";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -45,6 +46,15 @@ export async function POST(req) {
             generations_used: 0,
             searches_used: 0,
           });
+
+          // The moment this user became a paying subscriber, not before —
+          // this is the only point that can trigger the referrer's $5,
+          // so it can't be farmed with throwaway accounts that never pay.
+          try {
+            await maybeGrantReferralReward(supabaseAdmin, userId);
+          } catch (rewardErr) {
+            console.error("Referral reward check failed:", rewardErr.message);
+          }
         }
         break;
       }

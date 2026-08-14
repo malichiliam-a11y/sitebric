@@ -2831,8 +2831,8 @@ export default function DashboardClient({ initialProjects }) {
           <div style={{ padding: "48px 40px", maxWidth: 640, overflowY: "auto" }}>
             <div style={{ fontFamily: display, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>Referrals</div>
             <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 32, lineHeight: 1.6 }}>
-              Share your link. When someone signs up through it and actually generates a site and runs a
-              lead search — not just makes an account — you get $5 off your next invoice automatically.
+              Share your link. When someone signs up through it and subscribes to a paid plan — not just
+              makes a free trial account — you get $5 off your next invoice automatically.
             </div>
 
             <div
@@ -2890,7 +2890,7 @@ export default function DashboardClient({ initialProjects }) {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 14, marginBottom: 20 }}>
               {[
                 ["Signed up", referralStats?.totalSignups ?? "—"],
-                ["Became active", referralStats?.activated ?? "—"],
+                ["Became paying", referralStats?.activated ?? "—"],
                 ["You've earned", referralStats ? `$${(referralStats.rewardCents / 100).toFixed(2)}` : "—"],
               ].map(([label, value]) => (
                 <div
@@ -2909,9 +2909,9 @@ export default function DashboardClient({ initialProjects }) {
             </div>
 
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
-              "Became active" means they generated at least one site and ran at least one lead search — a
-              plain signup doesn't count, so you're only ever rewarded for a real user. The $5 shows up as a
-              credit on your account and comes off your next Stripe invoice automatically.
+              "Became paying" means they actually subscribed to a plan — a free trial signup doesn't count,
+              so you're only ever rewarded once real revenue is behind it. The $5 shows up as a credit on
+              your account and comes off your next Stripe invoice automatically.
             </div>
           </div>
         )}
