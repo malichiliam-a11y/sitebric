@@ -30,6 +30,11 @@ export function generateMetadata({ params }: { params: { audience: string } }): 
       url,
       siteName: "Sitebric",
       type: "website",
+      // Declaring openGraph here replaces the root layout's wholesale, and
+      // the app/opengraph-image card goes with it — these pages shipped
+      // previewing blank in DMs, which is where they get shared most.
+      // Named explicitly so it survives the override.
+      images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: "Sitebric" }],
     },
     twitter: {
       card: "summary_large_image",
