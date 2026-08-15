@@ -10,8 +10,13 @@ import AuthCard from "./AuthCard";
 // working, before any signup), with sign-in/sign-up one click away
 // rather than a separate page. AuthCard is left completely untouched —
 // this just decides which of the two cards occupies the slot.
-export default function HeroPanel() {
-  const [panel, setPanel] = useState<"demo" | "auth">("demo");
+//
+// /login opens on the auth card. It used to default to the demo like
+// everything else, which made "Log in" on /demo a loop: it navigated to
+// /login and landed the visitor back on the demo generator they were
+// trying to leave, with no way to reach the form.
+export default function HeroPanel({ initialPanel = "demo" }: { initialPanel?: "demo" | "auth" }) {
+  const [panel, setPanel] = useState<"demo" | "auth">(initialPanel);
 
   if (panel === "auth") {
     return (

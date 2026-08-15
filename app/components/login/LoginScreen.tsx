@@ -13,7 +13,9 @@ import HeroCopy from "./HeroCopy";
 import HeroPanel from "./HeroPanel";
 import Sections from "./Sections";
 
-export default function LoginScreen() {
+// Still one shared composition for / and /login — the two routes differ
+// only in which card the hero slot opens on, so they can't drift apart.
+export default function LoginScreen({ initialPanel = "demo" }: { initialPanel?: "demo" | "auth" }) {
   const router = useRouter();
 
   useEffect(() => {
@@ -123,7 +125,7 @@ export default function LoginScreen() {
         >
           <HeroCopy />
           <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-            <HeroPanel />
+            <HeroPanel initialPanel={initialPanel} />
           </div>
         </div>
       </section>
