@@ -5,6 +5,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { limitsFor, generationCost, MULTIPAGE_COST, MULTIPAGE_ENABLED } from "@/lib/plans";
 import { stripFakePhoneNumbers } from "@/lib/sanitize-site";
 import { UserFacingError, friendlyGenerationError } from "@/lib/generation-errors";
+import { generateMultiPageSite } from "@/lib/multipage";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -20,6 +21,14 @@ const supabaseAdmin = createAdminClient(
 // genuinely take a few minutes, and cutting it short leaves things
 // stuck on "generating" with no error ever being recorded.
 export const maxDuration = 300;
+
+// Every model call is aborted here, well short of maxDuration above.
+// Without it the platform kills the whole function at 300s: the route's
+// error handler never runs, the row is stranded on "generating" forever,
+// and — the expensive part — the output the model already produced is
+// billed and thrown away. Stopping ourselves means we stop paying and can
+// still record a real error.
+const GENERATION_DEADLINE_MS = 235000;
 
 // Real, topically-relevant stock photos for whatever this business actually
 // is — a "sushi restaurant" gets sushi photos, not a random Picsum image
@@ -295,27 +304,11 @@ export async function POST(req) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
-  try {
-    // Streamed, not a single buffered request. A 32k-token generation runs
-    // well past the point where a non-streaming HTTP call times out — the
-    // connection dies mid-generation and the browser reports a bare "Load
-    // failed" with no server error to show. Streaming keeps bytes flowing
-    // so neither the SDK nor any intermediary treats it as a stalled
-    // request; .finalMessage() still hands back the whole response.
-    const stream = anthropic.messages.stream({
-      model: "claude-sonnet-4-6",
-      max_tokens: 64000,
-      messages: [
-        {
-          role: "user",
-          content: `Generate a COMPLETE, SELF-CONTAINED, production-quality single HTML file for ${multiPage ? "a FOUR-PAGE small local business website (four page views inside that one file — see STRUCTURE)" : "a small local business website"}. This needs to look like a modern, award-worthy site — the kind that would win an "site of the day" award — not a generic template. Hold it to the bar of a hand-crafted Lovable or v0 output: considered type hierarchy, generous and intentional whitespace, layout choices that feel designed for this specific brand rather than a Bootstrap-y stack of identical boxes. Every section should look like a decision was made about it.
-
-Client/business: "${clientName}"
-Brief: "${prompt}"
-${photoUrls.length > 0 ? `\nREAL PHOTOS PROVIDED — use these actual URLs for the business's real photos (hero, gallery, about section) instead of stock images: ${photoUrls.join(", ")}. These are real photos of this specific business, so feature them prominently — they matter far more than any stock photo.` : ""}
-${stockPhotos.length > 0 ? `\nCURATED STOCK PHOTOS MATCHING THIS BUSINESS — real photos selected for this exact niche, not generic stock. Use ONLY these exact URLs for every photo on the page (hero, gallery, about, service cards) instead of any placeholder image service; do not invent or use any other image URL. Pick whichever ones best fit each section and crop with object-fit: cover as needed:\n${stockPhotos.map((p) => `- ${p.url}${p.alt ? ` (${p.alt})` : ""}`).join("\n")}` : ""}
-
-=== DESIGN — make this genuinely impressive ===
+  // Pulled out of the single-page prompt so the multi-page builder can
+  // reuse the exact same rules — one source of truth for how a site is
+  // designed, what it may say about contact details, and which images it
+  // is allowed to use.
+  const designBlock = `=== DESIGN — make this genuinely impressive ===
 - Read the brief for its own design direction FIRST, before anything below. If it specifies particular colors, a stated palette, a mood or vibe (elegant, warm, minimal, upscale, rustic, corporate, premium-but-approachable), specific fonts, or says anything like "don't make it look AI-generated" or "not futuristic" — that direction wins completely and everything below about the futuristic house style does not apply. Follow the brief as literally as a real paying client's brief would demand: "mostly white/cream backgrounds, deep charcoal text, subtle green or burgundy accents, elegant typography" means exactly that light, warm palette — never a dark reinterpretation of it with neon glow, glassmorphism, or a "futuristic" spin the brief didn't ask for. This has shipped wrong before: a detailed brief explicitly requesting a warm, light, non-AI-generated look still came back dark with neon cyan accents because the house style below was treated as a mandate instead of a fallback.
 - Only when the brief gives no design direction of its own (no colors, no mood words, no explicit style ask), default to the house style: futuristic/high-tech — dark, sleek, glowing, a step ahead of a typical small-business site. Within that default, still vary the palette, specific accent colors, and layout per business so a bakery, a law firm, and an auto shop don't look identical — a bakery's futuristic take might lean warm neon (amber/rose glow on near-black), a locksmith's might lean cold cyber (electric blue/cyan on near-black) — but the underlying tech-forward feel should be consistent. Do not default to the same layout or section order every time.
 - When using the futuristic default: a dark, near-black base (not pure #000 — a deep charcoal/navy/graphite reads more premium) with one or two saturated neon/glow accent colors (electric blue, cyan, violet, magenta, acid green — pick what fits the brand) used for highlights, glows, and CTAs against it; glassmorphism (translucent frosted-glass cards with backdrop-filter blur and a thin glowing 1px border), gradient meshes and drifting glow orbs, subtle grid/circuit-line/scanline background textures, holographic or iridescent gradient washes on accents, sharp geometric shapes and angular clip-paths rather than soft rounded skeuomorphic ones.
@@ -338,14 +331,9 @@ ${stockPhotos.length > 0 ? `\nCURATED STOCK PHOTOS MATCHING THIS BUSINESS — re
 - REQUIRED, first thing in <head>: <meta name="viewport" content="width=device-width, initial-scale=1">. Without this exact tag, mobile Safari and Chrome ignore all responsive CSS and render the page at a fake ~980px desktop width, shrunk to fit — that's what makes a page "not fit" on a phone even when the CSS itself is correct.
 
 ${multiPage ? MULTIPAGE_STRUCTURE : SINGLE_PAGE_STRUCTURE}
+`;
 
-=== COPYWRITING ===
-- Write real, specific, persuasive copy — headlines and body text should sound professionally written for this exact business, referencing details from the brief.
-- Avoid generic filler like "we are dedicated to providing quality service." Be specific about what they do, for whom, and why choose them over a competitor.
-- Any invented stat must be plausible for its own scale — this has shipped wrong before (a "9★ Google Rating" badge, which is impossible since Google ratings max out at 5.0). Star ratings: 0-5 only, one decimal (e.g. 4.8 or 4.9, never a round 5.0 — reads as fake). Percentages: 0-100. Sanity-check every number against what it claims to measure before writing it.
-- If a stat uses the animated counter pattern (a <span class="counter" data-target="..."> that JS counts up on scroll) for a decimal value like a rating, data-target must be the FULL decimal number (e.g. data-target="4.8") with data-decimal="1", and nothing else may be concatenated after the span. This has shipped wrong before: data-target="4" with a literal ".8★" typed after the span, which rendered as the broken "4.0.8★" once the counter animated to "4.0". Never split a decimal value between the counter's data-target and hand-typed text outside it.
-
-=== CONTACT & LOCATION — real data only, never invent fake info ===
+  const contactBlock = `=== CONTACT & LOCATION — real data only, never invent fake info ===
 ${phone
   ? `- Real phone number: "${phone}". Use this EXACT number for every "Call Now" link and everywhere the phone number is displayed in text. Never invent a placeholder number like (555) 123-4567. This page can be viewed either standalone or embedded in a sandboxed preview iframe, and sandboxed iframes unreliably block tel: navigation (especially in Safari) even with permissive sandbox attributes — so every "Call Now" link needs a fallback that works either way. Use exactly this pattern for every one of them: <a href="tel:${phone.replace(/[^\d+]/g, "")}" onclick="if(window.parent!==window){event.preventDefault();window.parent.postMessage({type:'sitebric-tel',href:this.href},'*');}">Call Now</a> — keep the real href so it still works standalone, and the onclick only kicks in when the page is actually embedded in a parent frame.`
   : `- No phone number was provided — do NOT invent a fake one. Every "Call Now" style button must instead be a real anchor link (href="#contact") that scrolls down to the contact section, never a fake tel: link to a made-up number.`}
@@ -356,8 +344,9 @@ ${address
 ${calendlyUrl
   ? `- A real scheduling link was provided: "${calendlyUrl}". Make the primary "Book a meeting" / "Schedule a call" call-to-action a genuine link to this exact URL with target="_blank" rel="noopener" — place it prominently near the lead form, not instead of it. Both the scheduling link and the lead form should be present and both should work.`
   : `- No scheduling link was provided, so "Book a meeting" style copy should point at the lead form above (e.g. an anchor link to #contact) rather than a fake calendar widget.`}
+`;
 
-=== IMAGES ===
+  const imageBlock = `=== IMAGES ===
 ${photoUrls.length > 0
   ? `- Use the real uploaded photo URLs listed above for the hero and key sections. Only fall back to stock images below for any additional supporting images beyond what was uploaded.`
   : ""}
@@ -365,14 +354,80 @@ ${stockPhotos.length > 0
   ? `- Use ONLY the curated stock photo URLs listed above — they were picked to actually match this business's niche. Do not use picsum.photos, loremflickr.com, or any other placeholder image service. Before placing any of these photos in a specific section (a named service card, a before/after slot, etc.), check its alt-text description actually matches what that section is about — the search that found these photos is not perfect, and it has shipped photos completely unrelated to their slot before (e.g. a coffee-meeting stock photo dropped onto a "Fence & Exterior Cleaning" card). If a photo's subject doesn't clearly fit a specific slot, reuse a photo that does fit elsewhere on the page instead of forcing a mismatched one in — a repeated photo is far less broken-looking than a wrong one.`
   : `- No curated photos matched this business — do NOT use picsum.photos, loremflickr.com, or any other random stock-photo service. A random photo next to a specific label (a highway shot on a "Bakery" card) looks broken, which has shipped to a real client site before and is worse than no photo at all. Instead, build every image slot as a deliberate flat placeholder: a solid or gradient panel using the site's own palette, with a large centered icon (a simple inline SVG line icon, or one relevant emoji at large size) and the slot's own label styled boldly. This should read as an intentional design choice, not a missing photo.`}
 - If the business has a natural before/after angle (detailing, renovation, fitness, cleaning, landscaping, etc.) AND real uploaded before/after photos of an actual job were provided above, build a REAL functional before/after image comparison slider with a draggable handle controlling a clip-path, using those real photos. This has shipped badly broken when built with stock/placeholder photos instead — two unrelated stock photos (e.g. an American flag "before" turning into a turf field "after") can never depict the same job before and after, so it looks like a mistake rather than a feature. Without real before/after photos of an actual job, skip the before/after slider entirely — do not fake one with stock or placeholder images.
+`;
 
+  const deadline = new AbortController();
+  const deadlineTimer = setTimeout(() => deadline.abort(), GENERATION_DEADLINE_MS);
+
+  try {
+    if (multiPage) {
+      let code = await generateMultiPageSite({
+        anthropic,
+        clientName,
+        brief: prompt,
+        contactBlock,
+        imageBlock,
+        designBlock,
+        signal: deadline.signal,
+      });
+
+      const sanitizedMulti = stripFakePhoneNumbers(code, phone);
+      if (sanitizedMulti.changed > 0) {
+        console.warn(
+          `Rewrote ${sanitizedMulti.changed} fabricated phone reference(s) in project ${project.id}`
+        );
+        code = sanitizedMulti.code;
+      }
+
+      const { error: multiSaveError } = await supabase
+        .from("projects")
+        .update({ code, status: "done", completed_at: new Date().toISOString() })
+        .eq("id", project.id);
+      if (multiSaveError) throw new Error(`Failed to save site: ${multiSaveError.message}`);
+
+      await supabaseAdmin
+        .from("profiles")
+        .update({ generations_used: profile.generations_used + cost })
+        .eq("id", user.id);
+
+      return NextResponse.json({ id: project.id, status: "done" });
+    }
+
+    // Streamed, not a single buffered request. A 32k-token generation runs
+    // well past the point where a non-streaming HTTP call times out — the
+    // connection dies mid-generation and the browser reports a bare "Load
+    // failed" with no server error to show. Streaming keeps bytes flowing
+    // so neither the SDK nor any intermediary treats it as a stalled
+    // request; .finalMessage() still hands back the whole response.
+    const stream = anthropic.messages.stream({
+      model: "claude-sonnet-4-6",
+      max_tokens: 64000,
+      messages: [
+        {
+          role: "user",
+          content: `Generate a COMPLETE, SELF-CONTAINED, production-quality single HTML file for ${multiPage ? "a FOUR-PAGE small local business website (four page views inside that one file — see STRUCTURE)" : "a small local business website"}. This needs to look like a modern, award-worthy site — the kind that would win an "site of the day" award — not a generic template. Hold it to the bar of a hand-crafted Lovable or v0 output: considered type hierarchy, generous and intentional whitespace, layout choices that feel designed for this specific brand rather than a Bootstrap-y stack of identical boxes. Every section should look like a decision was made about it.
+
+Client/business: "${clientName}"
+Brief: "${prompt}"
+${photoUrls.length > 0 ? `\nREAL PHOTOS PROVIDED — use these actual URLs for the business's real photos (hero, gallery, about section) instead of stock images: ${photoUrls.join(", ")}. These are real photos of this specific business, so feature them prominently — they matter far more than any stock photo.` : ""}
+${stockPhotos.length > 0 ? `\nCURATED STOCK PHOTOS MATCHING THIS BUSINESS — real photos selected for this exact niche, not generic stock. Use ONLY these exact URLs for every photo on the page (hero, gallery, about, service cards) instead of any placeholder image service; do not invent or use any other image URL. Pick whichever ones best fit each section and crop with object-fit: cover as needed:\n${stockPhotos.map((p) => `- ${p.url}${p.alt ? ` (${p.alt})` : ""}`).join("\n")}` : ""}
+
+${designBlock}
+=== COPYWRITING ===
+- Write real, specific, persuasive copy — headlines and body text should sound professionally written for this exact business, referencing details from the brief.
+- Avoid generic filler like "we are dedicated to providing quality service." Be specific about what they do, for whom, and why choose them over a competitor.
+- Any invented stat must be plausible for its own scale — this has shipped wrong before (a "9★ Google Rating" badge, which is impossible since Google ratings max out at 5.0). Star ratings: 0-5 only, one decimal (e.g. 4.8 or 4.9, never a round 5.0 — reads as fake). Percentages: 0-100. Sanity-check every number against what it claims to measure before writing it.
+- If a stat uses the animated counter pattern (a <span class="counter" data-target="..."> that JS counts up on scroll) for a decimal value like a rating, data-target must be the FULL decimal number (e.g. data-target="4.8") with data-decimal="1", and nothing else may be concatenated after the span. This has shipped wrong before: data-target="4" with a literal ".8★" typed after the span, which rendered as the broken "4.0.8★" once the counter animated to "4.0". Never split a decimal value between the counter's data-target and hand-typed text outside it.
+
+${contactBlock}
+${imageBlock}
 === TECHNICAL RULES ===
 - Output ONLY raw HTML, no markdown fences, no explanation before or after.
 - All CSS in a single <style> tag, all JS in a single <script> tag, everything in one file (Google Fonts <link> tags are fine).
 - Keep CSS/JS efficient so the full page finishes generating within the response — prioritize finishing a complete, working page over cramming in extra effects if space runs tight.`,
           },
       ],
-    });
+    }, { signal: deadline.signal });
 
     // The SDK raises typed errors for a non-2xx, so there is no status to
     // branch on here — the catch below records the failure.
@@ -445,5 +500,7 @@ ${stockPhotos.length > 0
       .update({ status: "error" })
       .eq("id", project.id);
     return NextResponse.json({ error: friendlyGenerationError(err) }, { status: 500 });
+  } finally {
+    clearTimeout(deadlineTimer);
   }
 }
