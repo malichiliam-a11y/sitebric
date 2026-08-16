@@ -34,8 +34,13 @@ export async function POST(req) {
 
   if (!project) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  // Finalising twice would charge twice. The first one through wins.
-  if (project.status === "done") {
+  // A finished site can be re-assembled from its stored pieces at no
+  // cost, because assembly makes no model calls — it only re-runs the
+  // stitching. That is how a fix to the router reaches sites that were
+  // built before the fix existed, without charging for four pages that
+  // have already been generated and paid for.
+  const rebuilding = project.status === "done";
+  if (rebuilding && !project.build?.pages) {
     return NextResponse.json({ id: project.id, status: "done", alreadyDone: true });
   }
 
@@ -54,19 +59,26 @@ export async function POST(req) {
       code = sanitized.code;
     }
 
-    // Only rows still generating are moved to done, so two finalise calls
-    // racing each other cannot both bill the user.
-    const { data: updated, error: updateError } = await supabase
+    // On a first build only rows still generating are moved to done, so
+    // two finalise calls racing each other cannot both bill the user. A
+    // rebuild is already done and updates unconditionally.
+    let query = supabase
       .from("projects")
       .update({ code, status: "done", completed_at: new Date().toISOString() })
       .eq("id", projectId)
-      .eq("user_id", user.id)
-      .eq("status", "generating")
-      .select("id");
+      .eq("user_id", user.id);
+    if (!rebuilding) query = query.eq("status", "generating");
+
+    const { data: updated, error: updateError } = await query.select("id");
 
     if (updateError) throw new Error(`Failed to save site: ${updateError.message}`);
     if (!updated || updated.length === 0) {
       return NextResponse.json({ id: projectId, status: "done", alreadyDone: true });
+    }
+
+    // A rebuild costs nothing, so it charges nothing.
+    if (rebuilding) {
+      return NextResponse.json({ id: projectId, status: "done", rebuilt: true });
     }
 
     const { data: profile } = await supabase

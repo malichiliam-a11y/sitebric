@@ -43,6 +43,7 @@ export default function DashboardClient({ initialProjects }) {
   // the right estimate even though multiPage itself gets reset on success.
   const [genStart, setGenStart] = useState(null);
   const [genStage, setGenStage] = useState(null);
+  const [rebuilding, setRebuilding] = useState(false);
   const [showContactFields, setShowContactFields] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -814,6 +815,37 @@ export default function DashboardClient({ initialProjects }) {
   // Reflects whether a site is actually reachable, not just whether it
   // finished generating. A finished-but-unpublished site isn't on the
   // internet yet, so labelling it "live" was misleading.
+  // Re-stitches a multi-page site from the pieces already stored on the
+  // row. No model calls, so no generations and no API spend — this exists
+  // so a fix to the shared page-switching script can reach sites built
+  // before the fix, instead of asking someone to pay to generate again.
+  async function rebuildSite(project) {
+    setRebuilding(true);
+    setError("");
+    try {
+      const res = await fetch("/api/generate-finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id }),
+      });
+      const body = await res.text();
+      let result;
+      try { result = JSON.parse(body); } catch { result = {}; }
+      if (!res.ok) throw new Error(result.error || "Couldn't rebuild this site.");
+
+      const { data } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (data) setProjects(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setRebuilding(false);
+    }
+  }
+
   function projectMeta(project) {
     if (project.status === "generating") {
       const age = Date.now() - new Date(project.created_at).getTime();
@@ -2283,6 +2315,43 @@ export default function DashboardClient({ initialProjects }) {
               )}
               {active.status === "done" && view === "settings" && (
                 <div style={{ height: "100%", overflow: "auto", padding: 20, maxWidth: 480 }}>
+                  {active.multi_page && active.build?.pages && (
+                    <div
+                      style={{
+                        marginBottom: 20,
+                        padding: "14px 16px",
+                        borderRadius: 12,
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                      }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#F2F0FA", marginBottom: 4 }}>
+                        Rebuild pages
+                      </div>
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.6, marginBottom: 12 }}>
+                        Re-stitches this site from the four pages already saved for it, picking up any
+                        improvements to how the pages link together. It generates nothing new, so it costs
+                        no generations.
+                      </div>
+                      <button
+                        onClick={() => rebuildSite(active)}
+                        disabled={rebuilding}
+                        style={{
+                          background: "rgba(255,255,255,0.1)",
+                          border: "1px solid rgba(255,255,255,0.22)",
+                          borderRadius: 10,
+                          padding: "10px 16px",
+                          color: "#fff",
+                          fontFamily: body,
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: rebuilding ? "default" : "pointer",
+                        }}
+                      >
+                        {rebuilding ? "Rebuilding…" : "Rebuild — free"}
+                      </button>
+                    </div>
+                  )}
                   <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 20, lineHeight: 1.6 }}>
                     Contact info for {active.client_name}. Saving updates the live page too — Call Now, the map,
                     and the booking link all change to match.
