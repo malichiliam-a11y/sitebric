@@ -2351,7 +2351,23 @@ export default function DashboardClient({ initialProjects }) {
 
             {leadResults && leadResults.length === 0 && (
               <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
-                No websiteless businesses found for that search — try a different city or category.
+                No businesses found for that search — try a different city or category.
+              </div>
+            )}
+
+            {leadResults && leadResults.length > 0 && (
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 14 }}>
+                <span style={{ color: "#FFFFFF", fontWeight: 600 }}>{leadResults.length}</span>{" "}
+                {leadResults.length === 1 ? "business" : "businesses"} found
+                {leadResults.filter((l) => !l.hasWebsite).length > 0 && (
+                  <>
+                    {" — "}
+                    <span style={{ color: "#4ADE80", fontWeight: 600 }}>
+                      {leadResults.filter((l) => !l.hasWebsite).length} with no website
+                    </span>
+                    , shown first
+                  </>
+                )}
               </div>
             )}
 
@@ -2377,7 +2393,36 @@ export default function DashboardClient({ initialProjects }) {
                     }}
                   >
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{lead.name}</div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          marginBottom: 4,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <span style={{ fontWeight: 600, fontSize: 14 }}>{lead.name}</span>
+                        {/* Which pitch this is: "you have nothing" vs
+                            "yours is dated". Both are leads, so the badge
+                            labels rather than hides. */}
+                        <span
+                          style={{
+                            fontSize: 10.5,
+                            fontWeight: 600,
+                            letterSpacing: "0.04em",
+                            padding: "2px 7px",
+                            borderRadius: 999,
+                            whiteSpace: "nowrap",
+                            color: lead.hasWebsite ? "rgba(255,255,255,0.45)" : "#4ADE80",
+                            background: lead.hasWebsite
+                              ? "rgba(255,255,255,0.06)"
+                              : "rgba(74,222,128,0.12)",
+                          }}
+                        >
+                          {lead.hasWebsite ? "HAS A SITE" : "NO WEBSITE"}
+                        </span>
+                      </div>
                       <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 8 }}>
                         {lead.address}
                       </div>
@@ -2400,6 +2445,18 @@ export default function DashboardClient({ initialProjects }) {
                             style={{ color: "rgba(255,255,255,0.72)", textDecoration: "none" }}
                           >
                             View on Maps →
+                          </a>
+                        )}
+                        {/* The pitch writes itself once you've seen what
+                            they're currently running. */}
+                        {lead.website && (
+                          <a
+                            href={lead.website}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            style={{ color: "rgba(255,255,255,0.72)", textDecoration: "none" }}
+                          >
+                            Their site →
                           </a>
                         )}
                       </div>

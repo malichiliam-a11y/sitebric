@@ -107,23 +107,37 @@ export async function POST(req) {
       }
     } while (pageToken && pagesFetched < 3);
 
-    // Only keep businesses that have no website listed — those are the leads.
+    // Everything found is returned, not just the businesses with no site.
+    // Discarding the rest threw away most of a search: Google lists a
+    // website for the large majority of businesses, so a 60-result search
+    // collapsed to a handful of cards and sometimes one. A business with a
+    // neglected site is still a lead — often a better one, since it has
+    // already paid for a web presence once.
+    //
+    // The no-website ones stay at the top, so the easiest sell is still
+    // what the reseller sees first.
     const leads = allPlaces
-      .filter((p) => !p.websiteUri)
       .map((p) => ({
         id: p.id,
         name: p.displayName?.text || "Unknown business",
         address: p.formattedAddress || "",
         phone: p.nationalPhoneNumber || "",
         mapsUrl: p.googleMapsUri || "",
-      }));
+        website: p.websiteUri || null,
+        hasWebsite: Boolean(p.websiteUri),
+      }))
+      .sort((a, b) => Number(a.hasWebsite) - Number(b.hasWebsite));
 
     await supabaseAdmin
       .from("profiles")
       .update({ searches_used: profile.searches_used + 1 })
       .eq("id", user.id);
 
-    return NextResponse.json({ leads });
+    return NextResponse.json({
+      leads,
+      total: leads.length,
+      withoutWebsite: leads.filter((l) => !l.hasWebsite).length,
+    });
   } catch (err) {
     console.error("Lead search failed:", err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
