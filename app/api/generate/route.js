@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { limitsFor, generationCost, MULTIPAGE_COST } from "@/lib/plans";
+import { limitsFor, generationCost, MULTIPAGE_COST, MULTIPAGE_ENABLED } from "@/lib/plans";
 import { stripFakePhoneNumbers } from "@/lib/sanitize-site";
 import { UserFacingError, friendlyGenerationError } from "@/lib/generation-errors";
 
@@ -191,7 +191,9 @@ export async function POST(req) {
   const address = typeof rawAddress === "string" ? rawAddress.trim().slice(0, 300) : "";
   const ownerEmail = typeof rawOwnerEmail === "string" ? rawOwnerEmail.trim().slice(0, 200) : "";
   const calendlyUrl = typeof rawCalendlyUrl === "string" ? rawCalendlyUrl.trim().slice(0, 300) : "";
-  const multiPage = rawMultiPage === true;
+  // Forced off at the server too, not just hidden in the UI — a stale tab
+  // or a direct POST must not be able to start a build that cannot finish.
+  const multiPage = MULTIPAGE_ENABLED && rawMultiPage === true;
   const cost = generationCost(multiPage);
   if (!clientName || !prompt) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });

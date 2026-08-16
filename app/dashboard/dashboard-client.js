@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase-browser";
-import { PLAN_LIMITS, MULTIPAGE_COST } from "@/lib/plans";
+import { PLAN_LIMITS, MULTIPAGE_COST, MULTIPAGE_ENABLED } from "@/lib/plans";
 import GeneratingProgress from "./GeneratingProgress";
 
 // A generation that exceeds the platform's function time limit is killed
@@ -789,7 +789,7 @@ export default function DashboardClient({ initialProjects }) {
   // offered when the allowance actually covers it — better to grey it out
   // with the reason than to let someone fill in the whole brief and get
   // rejected at the end.
-  const canMultiPage = gensRemaining >= MULTIPAGE_COST;
+  const canMultiPage = MULTIPAGE_ENABLED && gensRemaining >= MULTIPAGE_COST;
   const searchesUsedBilling = profile?.searches_used || 0;
   const publishedCount = projects.filter((p) => p.published).length;
   const displayName =
@@ -1665,6 +1665,8 @@ export default function DashboardClient({ initialProjects }) {
                   </div>
                 )}
 
+                {MULTIPAGE_ENABLED && (
+                <>
                 {/* Priced rather than plan-gated: a four-page build burns
                     roughly three times the tokens, so it costs three
                     generations on every plan instead of being locked to
@@ -1745,6 +1747,8 @@ export default function DashboardClient({ initialProjects }) {
                     </span>
                   </span>
                 </button>
+                </>
+                )}
 
                 <button
                   onClick={generate}
