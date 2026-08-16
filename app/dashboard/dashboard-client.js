@@ -338,8 +338,8 @@ export default function DashboardClient({ initialProjects }) {
           error: "unreadable_response",
           message:
             res.status === 504 || /timed out|timeout/i.test(rawBody)
-              ? "This site took longer than the time limit allows. Nothing was charged against your plan — try a shorter brief, or generate it as a single-page site."
-              : "The server sent back something unreadable. Nothing was charged against your plan — please try again.",
+              ? "This site took longer than the time limit allows. This didn't use up one of your generations — try a shorter brief, or generate it as a single-page site."
+              : "The server sent back something unreadable. This didn't use up one of your generations — please try again.",
         };
       }
 
