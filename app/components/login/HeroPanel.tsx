@@ -5,16 +5,15 @@ import { palette } from "@/lib/design";
 import DemoPanel from "./DemoPanel";
 import AuthCard from "./AuthCard";
 
-// The hero's single card slot does double duty: a first-time visitor
-// lands on the live demo generator by default (the actual product,
-// working, before any signup), with sign-in/sign-up one click away
-// rather than a separate page. AuthCard is left completely untouched —
-// this just decides which of the two cards occupies the slot.
+// The hero's single card slot holds either the sign-in form or the live
+// demo generator. Both / and /login open on the form; the demo is reached
+// from "Try it live" in the nav or the link under the card. AuthCard and
+// DemoPanel are both untouched — this only decides which one occupies the
+// slot, so either can be made the front door by changing a prop.
 //
-// /login opens on the auth card. It used to default to the demo like
-// everything else, which made "Log in" on /demo a loop: it navigated to
-// /login and landed the visitor back on the demo generator they were
-// trying to leave, with no way to reach the form.
+// The default used to be the demo on every route, which made "Log in" on
+// /demo a loop: it navigated to /login and dropped the visitor back on the
+// demo they were trying to leave, with no route to the form at all.
 export default function HeroPanel({ initialPanel = "demo" }: { initialPanel?: "demo" | "auth" }) {
   const [panel, setPanel] = useState<"demo" | "auth">(initialPanel);
 
