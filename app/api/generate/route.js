@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { limitsFor, generationCost, MULTIPAGE_COST } from "@/lib/plans";
 import { stripFakePhoneNumbers } from "@/lib/sanitize-site";
+import { UserFacingError, friendlyGenerationError } from "@/lib/generation-errors";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -385,7 +386,9 @@ ${stockPhotos.length > 0
     // A truncated generation is a broken site, not a site — better to fail
     // loudly than to publish half a page.
     if (data.stop_reason === "max_tokens") {
-      throw new Error(
+      // Safe to show verbatim — it names something the reseller can
+      // actually change about their own request.
+      throw new UserFacingError(
         multiPage
           ? "The four-page site came out longer than the size limit. Try a shorter brief, or generate it as a single-page site."
           : "The site came out longer than the size limit. Try a shorter brief."
@@ -430,12 +433,12 @@ ${stockPhotos.length > 0
 
     return NextResponse.json({ id: project.id, status: "done" });
   } catch (err) {
-    console.error("Generation failed:", err.message);
+    // The real error stays here, in the server logs, where it's useful.
+    console.error("Generation failed:", err?.status || "", err?.message);
     await supabase
       .from("projects")
       .update({ status: "error" })
       .eq("id", project.id);
-    // Temporarily returning the real error message so we can debug.
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: friendlyGenerationError(err) }, { status: 500 });
   }
 }

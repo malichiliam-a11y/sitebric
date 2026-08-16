@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { waitUntil } from "@vercel/functions";
 import { stripFakePhoneNumbers } from "@/lib/sanitize-site";
+import { UserFacingError, friendlyGenerationError } from "@/lib/generation-errors";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -149,7 +150,7 @@ ${stockPhotos.length > 0 ? `\nCURATED STOCK PHOTOS MATCHING THIS BUSINESS — re
       .trim();
 
     if (data.stop_reason === "max_tokens") {
-      throw new Error("The site came out longer than the demo's size limit. Try a shorter description.");
+      throw new UserFacingError("The site came out longer than the demo's size limit. Try a shorter description.");
     }
     if (!code) throw new Error("empty response from model");
 
@@ -166,10 +167,16 @@ ${stockPhotos.length > 0 ? `\nCURATED STOCK PHOTOS MATCHING THIS BUSINESS — re
       .update({ status: "done", code, completed_at: new Date().toISOString() })
       .eq("id", jobId);
   } catch (err) {
-    console.error("Demo generation failed:", err.message);
+    // A stranger evaluating the product must never be shown a raw vendor
+    // error — the real one is logged here instead.
+    console.error("Demo generation failed:", err?.status || "", err?.message);
     await supabaseAdmin
       .from("demo_jobs")
-      .update({ status: "error", error: err.message, completed_at: new Date().toISOString() })
+      .update({
+        status: "error",
+        error: friendlyGenerationError(err),
+        completed_at: new Date().toISOString(),
+      })
       .eq("id", jobId);
   }
 }
