@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { PLAN_LIMITS } from "@/lib/plans";
 import { readReferralCode, clearReferralCode } from "@/lib/referral";
 import { readUtmParams, clearUtmParams } from "@/lib/utm";
+import { COUNTRY_CODES, countryLabel, guessCountryFromBrowser } from "@/lib/countries";
 import { t, cardBg } from "@/lib/theme";
 import { Wordmark } from "@/app/components/Brand";
 import DashAmbient from "@/app/components/dashboard/DashAmbient";
@@ -182,6 +183,14 @@ export default function DashboardClient({ initialProjects }) {
   }, []);
 
   // Loaded on demand rather than alongside every project — most sites
+  // Set after mount rather than in the initial state: the server has no
+  // navigator to read, so seeding it during render would hydrate to a
+  // different value than it rendered with.
+  useEffect(() => {
+    const guessed = guessCountryFromBrowser();
+    if (guessed) setLeadCountry(guessed);
+  }, []);
+
   // never get opened to this tab in a given session.
   useEffect(() => {
     if (view !== "inquiries" || !activeId) return;
@@ -359,6 +368,9 @@ export default function DashboardClient({ initialProjects }) {
   const [publishError, setPublishError] = useState("");
   const [leadLocation, setLeadLocation] = useState("");
   const [leadCategory, setLeadCategory] = useState("");
+  // Empty means "let the server decide from the request's country header",
+  // which is right far more often than defaulting everyone to the US.
+  const [leadCountry, setLeadCountry] = useState("");
   const [leadResults, setLeadResults] = useState(null);
   const [leadBusy, setLeadBusy] = useState(false);
   const [leadError, setLeadError] = useState("");
@@ -473,7 +485,14 @@ export default function DashboardClient({ initialProjects }) {
       const res = await fetch("/api/find-leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ location: leadLocation, category: leadCategory }),
+        body: JSON.stringify({
+          location: leadLocation,
+          category: leadCategory,
+          country: leadCountry || undefined,
+          // Names and addresses come back in this language instead of
+          // always English.
+          language: typeof navigator !== "undefined" ? navigator.language : undefined,
+        }),
       });
       const result = await res.json();
 
@@ -2312,7 +2331,7 @@ export default function DashboardClient({ initialProjects }) {
                 <input
                   value={leadLocation}
                   onChange={(e) => setLeadLocation(e.target.value)}
-                  placeholder="City — e.g. Austin, TX"
+                  placeholder="City — e.g. Austin, Manchester, Lyon"
                   style={{
                     flex: "1 1 200px",
                     background: "rgba(255,255,255,0.05)",
@@ -2325,6 +2344,34 @@ export default function DashboardClient({ initialProjects }) {
                     outline: "none",
                   }}
                 />
+                {/* Which country decides which Manchester. Defaults to the
+                    browser's region, and to the request's own country on
+                    the server when the browser doesn't name one. */}
+                <select
+                  value={leadCountry}
+                  onChange={(e) => setLeadCountry(e.target.value)}
+                  aria-label="Country to search in"
+                  style={{
+                    flex: "0 1 190px",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                    color: "#fff",
+                    fontFamily: body,
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                >
+                  <option value="" style={{ background: "#111" }}>
+                    Detect my country
+                  </option>
+                  {COUNTRY_CODES.map((code) => (
+                    <option key={code} value={code} style={{ background: "#111" }}>
+                      {countryLabel(code)}
+                    </option>
+                  ))}
+                </select>
                 <button
                   onClick={findLeads}
                   disabled={leadBusy || !leadCategory.trim() || !leadLocation.trim()}
@@ -2429,7 +2476,7 @@ export default function DashboardClient({ initialProjects }) {
                       <div style={{ display: "flex", gap: 14, fontSize: 12, flexWrap: "wrap" }}>
                         {lead.phone ? (
                           <a
-                            href={`tel:${lead.phone.replace(/[^0-9+]/g, "")}`}
+                            href={`tel:${(lead.phoneDial || lead.phone).replace(/[^0-9+]/g, "")}`}
                             style={{ color: "#FFFFFF", textDecoration: "none" }}
                           >
                             📞 {lead.phone}

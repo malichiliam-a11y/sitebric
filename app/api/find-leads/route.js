@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { limitsFor } from "@/lib/plans";
+import { sanitizeCountryCode, sanitizeLanguageCode } from "@/lib/countries";
 
 // Used only to increment searches_used — bypasses RLS since users
 // don't have update permission on their own profile row.
@@ -60,10 +61,23 @@ export async function POST(req) {
     return NextResponse.json({ error: "search_limit", message }, { status: 402 });
   }
 
-  const { location, category } = await req.json();
+  const { location, category, country, language } = await req.json();
   if (!location || !category) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });
   }
+
+  // Without a regionCode an ambiguous city resolves by global prominence
+  // rather than by who is asking — a reseller in England searching
+  // "Manchester" could be handed Manchester, New Hampshire. The user's own
+  // choice wins; Vercel's geo header is the fallback when they haven't
+  // touched the picker. Both are untrusted input, so both are validated
+  // against the ISO list before going anywhere near Google.
+  const regionCode =
+    sanitizeCountryCode(country) || sanitizeCountryCode(req.headers.get("x-vercel-ip-country"));
+
+  // Google returns English whenever no language is given, regardless of
+  // where the businesses actually are.
+  const languageCode = sanitizeLanguageCode(language);
 
   try {
     let allPlaces = [];
@@ -75,6 +89,8 @@ export async function POST(req) {
         textQuery: `${category} in ${location}`,
         maxResultCount: 20,
       };
+      if (regionCode) body.regionCode = regionCode;
+      if (languageCode) body.languageCode = languageCode;
       if (pageToken) body.pageToken = pageToken;
 
       const placesRes = await fetch(
@@ -84,8 +100,11 @@ export async function POST(req) {
           headers: {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": process.env.GOOGLE_PLACES_API_KEY,
+            // internationalPhoneNumber carries the country code, which the
+            // national format drops — the only version that still works
+            // when the reseller and the business aren't in one country.
             "X-Goog-FieldMask":
-              "places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.id,places.googleMapsUri,nextPageToken",
+              "places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri,places.id,places.googleMapsUri,nextPageToken",
           },
           body: JSON.stringify(body),
         }
@@ -121,7 +140,10 @@ export async function POST(req) {
         id: p.id,
         name: p.displayName?.text || "Unknown business",
         address: p.formattedAddress || "",
-        phone: p.nationalPhoneNumber || "",
+        // Shown in the local format a reseller recognises, dialled via the
+        // international one so the tel: link works from anywhere.
+        phone: p.nationalPhoneNumber || p.internationalPhoneNumber || "",
+        phoneDial: p.internationalPhoneNumber || p.nationalPhoneNumber || "",
         mapsUrl: p.googleMapsUri || "",
         website: p.websiteUri || null,
         hasWebsite: Boolean(p.websiteUri),
