@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { limitsFor } from "@/lib/plans";
+import { limitsFor, generationCost, MULTIPAGE_COST } from "@/lib/plans";
 import { stripFakePhoneNumbers } from "@/lib/sanitize-site";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -85,6 +85,83 @@ function extractSearchTerms(clientName, prompt) {
   return ordered.join(" ");
 }
 
+const SINGLE_PAGE_STRUCTURE = `=== STRUCTURE (all required, in an order that makes sense for this business) ===
+1. Sticky nav — business name/logo text, a few anchor links, and a "Call Now" / "Get a Quote" button (see CONTACT & LOCATION below for what this actually links to)
+2. Hero — a strong, specific headline (not generic filler), a supporting subheadline, a clear call-to-action button, and a hero image or animated background
+3. About/services — real, specific service descriptions for what THIS business actually does, based on the brief
+4. "Why choose us" — 3-4 concrete differentiators specific to the business type
+5. A process/"how it works" section OR a gallery/portfolio section — whichever fits better
+6. Social proof — 2-3 short, realistic-sounding testimonials with names
+7. Contact/booking section — the real lead form and, if we have an address, the Google Maps embed (both specified in CONTACT & LOCATION below)
+8. A clear final call-to-action section before the footer
+9. Footer — business name, plausible service area, contact info, copyright line`;
+
+// The multi-page build. Still exactly one HTML file — four page views live
+// in that file and JS swaps which one is visible, so publishing, storage
+// and the preview iframe all stay exactly as they are for a single-page
+// site. To a visitor it behaves like a four-page site.
+//
+// Hash routing is what makes that work without breaking anything already
+// relied on: the hash IS the page id, so the existing "no phone number"
+// fallback of href="#contact" keeps working untouched — it just navigates
+// to the contact page instead of scrolling down to a section.
+//
+// The reveal-animation rules below are the part most likely to ship
+// broken. Elements inside a display:none page are zero-sized, so an
+// IntersectionObserver never fires for them; without the re-run on page
+// switch, every page except the landing one renders permanently blank.
+const MULTIPAGE_STRUCTURE = `=== STRUCTURE — THIS IS A MULTI-PAGE SITE ===
+Build FOUR separate pages inside ONE HTML file. Do not build a single long scrolling page.
+
+How the pages work:
+- Each page is a top-level container: <section class="page" id="home">, <section class="page" id="services">, <section class="page" id="about">, <section class="page" id="contact">. Use exactly these four ids.
+- Only one page is visible at a time. CSS: .page { display: none; } .page.active { display: block; }
+- The nav and the footer live OUTSIDE the four page containers so they appear on every page. Do not duplicate them inside each page.
+- Navigation is hash-based: every nav link is href="#home", href="#services", href="#about" or href="#contact". Write a small router that runs on both 'DOMContentLoaded' and 'hashchange': read location.hash, strip the '#', default to 'home' when it's empty or doesn't match one of the four ids, then remove .active from every .page and add it to the matching one.
+- This means any link anywhere on the site pointing to href="#contact" navigates to the contact page. That is intended — use it for every "Get a Quote" / "Book Now" style call to action.
+- On every page switch: scroll to the top (window.scrollTo(0, 0)), update which nav link has an "active" style, and close the mobile nav menu if it's open. A visitor who taps "Services" on a phone and lands halfway down the page with the menu still covering the screen will think the site is broken.
+
+CRITICAL — animations must be re-run on page switch:
+- Scroll-reveal elements and count-up statistics on a hidden page will NEVER animate on their own. A display:none element has zero size, so an IntersectionObserver never fires for it, and the element stays stuck at opacity 0 forever. If you ignore this, three of the four pages render completely blank.
+- So: wrap the reveal/counter setup in a function, and call it again every single time a page becomes active — after the .active class is applied, not before.
+- Add a safety-net sweep as well, but scope it to what the visitor can actually see: a function that force-reveals every still-hidden element whose getBoundingClientRect().top is less than window.innerHeight + 100 (i.e. on screen or just below it), leaving anything further down alone. Run that sweep on a ~1.2s timeout after each page switch AND on scroll. Do NOT force-reveal the entire page on a timeout — that fires every animation at once on all four pages and throws away the scroll-reveal effect entirely, which makes a multi-page site look worse than a single-page one. The rule is: nothing on screen is ever blank, everything below the fold still animates in as you reach it.
+- Counters: fire each one when its page becomes active, and guard it so it only ever counts up once (a flag on the element) — otherwise it restarts every time the visitor returns to that page.
+- Simplest reliable approach, in this order: on page switch, disconnect and rebuild the observer for just the new page's elements, start the ~1.2s sweep timeout, and attach the scroll sweep. Elements already revealed keep their revealed state, so coming back to a page shows it instantly instead of re-animating.
+
+What goes on each page (all required):
+
+1. HOME (#home)
+   - Hero — a strong, specific headline (not generic filler), a supporting subheadline, a clear call-to-action button, and a hero image or animated background
+   - A short teaser of 3 core services as cards, each linking to href="#services"
+   - "Why choose us" — 3-4 concrete differentiators specific to the business type
+   - Social proof — 2-3 short, realistic-sounding testimonials with names
+   - A clear final call-to-action block linking to href="#contact"
+
+2. SERVICES (#services)
+   - A page headline and short intro
+   - Every service this business actually offers, based on the brief, each with its own real write-up of a few sentences — not one-line labels. This page must have genuinely more depth than the teaser cards on the home page; if it just repeats them, the whole feature is pointless.
+   - A process / "how it works" section — the steps a customer goes through
+   - A call-to-action block linking to href="#contact"
+
+3. ABOUT (#about)
+   - The business's story and what makes it different, written specifically from the brief
+   - A gallery / portfolio section, or the team, or the service area — whichever genuinely fits this business
+   - Trust signals: years in business, certifications, guarantees, areas served
+   - A call-to-action block linking to href="#contact"
+
+4. CONTACT (#contact)
+   - A page headline and a short line inviting the visitor to get in touch
+   - The real lead-capture form specified in CONTACT & LOCATION below
+   - The Google Maps embed, if an address was provided
+   - Contact details and plausible opening hours
+   - This page is where every call-to-action on the site leads, so it must feel complete on its own — do not leave it as a bare form on an empty background.
+
+Shared across all four pages:
+- Sticky nav — business name/logo text, links to all four pages, and a "Call Now" / "Get a Quote" button (see CONTACT & LOCATION below for what this actually links to). The link for the page currently being viewed should be visibly styled as active.
+- Footer — business name, plausible service area, contact info, links to the four pages, copyright line
+
+BUDGET: four pages of real content is a lot of output. Share one stylesheet across all pages rather than writing per-page CSS, reuse the same card and section components, and pick fewer animation techniques than you would for a one-page site. A complete four-page site with plainer effects is the goal; an elaborate site that gets cut off mid-page is a failure.`;
+
 export async function POST(req) {
   const supabase = createClient();
   const {
@@ -93,6 +170,30 @@ export async function POST(req) {
 
   if (!user) {
     return NextResponse.json({ error: "not authenticated" }, { status: 401 });
+  }
+
+  // Read before the usage check below, not after: a multi-page build costs
+  // more than one generation, so the allowance check can't run until we
+  // know which kind of site was asked for.
+  const {
+    clientName,
+    prompt,
+    photoUrls: rawPhotoUrls,
+    phone: rawPhone,
+    address: rawAddress,
+    ownerEmail: rawOwnerEmail,
+    calendlyUrl: rawCalendlyUrl,
+    multiPage: rawMultiPage,
+  } = await req.json();
+  const photoUrls = Array.isArray(rawPhotoUrls) ? rawPhotoUrls.filter(Boolean) : [];
+  const phone = typeof rawPhone === "string" ? rawPhone.trim().slice(0, 40) : "";
+  const address = typeof rawAddress === "string" ? rawAddress.trim().slice(0, 300) : "";
+  const ownerEmail = typeof rawOwnerEmail === "string" ? rawOwnerEmail.trim().slice(0, 200) : "";
+  const calendlyUrl = typeof rawCalendlyUrl === "string" ? rawCalendlyUrl.trim().slice(0, 300) : "";
+  const multiPage = rawMultiPage === true;
+  const cost = generationCost(multiPage);
+  if (!clientName || !prompt) {
+    return NextResponse.json({ error: "missing fields" }, { status: 400 });
   }
 
   // ---- Plan + usage check ----
@@ -123,12 +224,29 @@ export async function POST(req) {
   }
 
   const limit = limitsFor(plan);
-  if (profile.generations_used >= limit.generations) {
-    const message =
-      plan === "trial"
-        ? "You've used your free trial generation. Subscribe to a plan to keep building."
-        : `You've used all ${limit.generations} generations for this month. Upgrade for more.`;
-    return NextResponse.json({ error: "generation_limit", message }, { status: 402 });
+  const remaining = limit.generations - profile.generations_used;
+  if (remaining < cost) {
+    // Two different situations reach this branch and they need different
+    // wording: out of generations entirely, versus having some left but
+    // not the 3 a multi-page build costs. Telling someone with 2 left
+    // that they've "used all 10" reads as a bug.
+    let message;
+    if (remaining <= 0) {
+      message =
+        plan === "trial"
+          ? "You've used your free trial generations. Subscribe to a plan to keep building."
+          : `You've used all ${limit.generations} generations for this month. Upgrade for more.`;
+    } else {
+      message = `A multi-page site uses ${MULTIPAGE_COST} generations and you have ${remaining} left this month. Generate a single-page site instead, or upgrade for more.`;
+    }
+    // remaining is sent so the dashboard can tell the two cases apart:
+    // genuinely out of generations means send them to /pricing, whereas
+    // having some left but not enough for a multi-page build just needs
+    // the message shown inline so they can untick the box.
+    return NextResponse.json(
+      { error: "generation_limit", message, remaining: Math.max(0, remaining) },
+      { status: 402 }
+    );
   }
 
   const { count: siteCount } = await supabase
@@ -144,24 +262,6 @@ export async function POST(req) {
       },
       { status: 402 }
     );
-  }
-
-  const {
-    clientName,
-    prompt,
-    photoUrls: rawPhotoUrls,
-    phone: rawPhone,
-    address: rawAddress,
-    ownerEmail: rawOwnerEmail,
-    calendlyUrl: rawCalendlyUrl,
-  } = await req.json();
-  const photoUrls = Array.isArray(rawPhotoUrls) ? rawPhotoUrls.filter(Boolean) : [];
-  const phone = typeof rawPhone === "string" ? rawPhone.trim().slice(0, 40) : "";
-  const address = typeof rawAddress === "string" ? rawAddress.trim().slice(0, 300) : "";
-  const ownerEmail = typeof rawOwnerEmail === "string" ? rawOwnerEmail.trim().slice(0, 200) : "";
-  const calendlyUrl = typeof rawCalendlyUrl === "string" ? rawCalendlyUrl.trim().slice(0, 300) : "";
-  if (!clientName || !prompt) {
-    return NextResponse.json({ error: "missing fields" }, { status: 400 });
   }
 
   // Only bother searching when there's no real photo of the business
@@ -183,6 +283,7 @@ export async function POST(req) {
       address: address || null,
       owner_email: ownerEmail || null,
       calendly_url: calendlyUrl || null,
+      multi_page: multiPage,
     })
     .select()
     .single();
@@ -204,7 +305,7 @@ export async function POST(req) {
       messages: [
         {
           role: "user",
-          content: `Generate a COMPLETE, SELF-CONTAINED, production-quality single HTML file for a small local business website. This needs to look like a modern, award-worthy site — the kind that would win an "site of the day" award — not a generic template. Hold it to the bar of a hand-crafted Lovable or v0 output: considered type hierarchy, generous and intentional whitespace, layout choices that feel designed for this specific brand rather than a Bootstrap-y stack of identical boxes. Every section should look like a decision was made about it.
+          content: `Generate a COMPLETE, SELF-CONTAINED, production-quality single HTML file for ${multiPage ? "a FOUR-PAGE small local business website (four page views inside that one file — see STRUCTURE)" : "a small local business website"}. This needs to look like a modern, award-worthy site — the kind that would win an "site of the day" award — not a generic template. Hold it to the bar of a hand-crafted Lovable or v0 output: considered type hierarchy, generous and intentional whitespace, layout choices that feel designed for this specific brand rather than a Bootstrap-y stack of identical boxes. Every section should look like a decision was made about it.
 
 Client/business: "${clientName}"
 Brief: "${prompt}"
@@ -233,16 +334,7 @@ ${stockPhotos.length > 0 ? `\nCURATED STOCK PHOTOS MATCHING THIS BUSINESS — re
 - Add a real <title> tag and a meta description tag with relevant copy for this business.
 - REQUIRED, first thing in <head>: <meta name="viewport" content="width=device-width, initial-scale=1">. Without this exact tag, mobile Safari and Chrome ignore all responsive CSS and render the page at a fake ~980px desktop width, shrunk to fit — that's what makes a page "not fit" on a phone even when the CSS itself is correct.
 
-=== STRUCTURE (all required, in an order that makes sense for this business) ===
-1. Sticky nav — business name/logo text, a few anchor links, and a "Call Now" / "Get a Quote" button (see CONTACT & LOCATION below for what this actually links to)
-2. Hero — a strong, specific headline (not generic filler), a supporting subheadline, a clear call-to-action button, and a hero image or animated background
-3. About/services — real, specific service descriptions for what THIS business actually does, based on the brief
-4. "Why choose us" — 3-4 concrete differentiators specific to the business type
-5. A process/"how it works" section OR a gallery/portfolio section — whichever fits better
-6. Social proof — 2-3 short, realistic-sounding testimonials with names
-7. Contact/booking section — the real lead form and, if we have an address, the Google Maps embed (both specified in CONTACT & LOCATION below)
-8. A clear final call-to-action section before the footer
-9. Footer — business name, plausible service area, contact info, copyright line
+${multiPage ? MULTIPAGE_STRUCTURE : SINGLE_PAGE_STRUCTURE}
 
 === COPYWRITING ===
 - Write real, specific, persuasive copy — headlines and body text should sound professionally written for this exact business, referencing details from the brief.
@@ -293,7 +385,11 @@ ${stockPhotos.length > 0
     // A truncated generation is a broken site, not a site — better to fail
     // loudly than to publish half a page.
     if (data.stop_reason === "max_tokens") {
-      throw new Error("The site came out longer than the size limit. Try a shorter brief.");
+      throw new Error(
+        multiPage
+          ? "The four-page site came out longer than the size limit. Try a shorter brief, or generate it as a single-page site."
+          : "The site came out longer than the size limit. Try a shorter brief."
+      );
     }
 
     if (!code) throw new Error("empty response from model");
@@ -323,9 +419,13 @@ ${stockPhotos.length > 0
     // Only count it against their monthly limit once generation
     // actually succeeds. Uses the admin client since users don't have
     // update permission on their own profile row.
+    //
+    // A multi-page build costs more than one because it burns roughly
+    // three times the output tokens; a failed one costs nothing, same as
+    // a failed single-page build.
     await supabaseAdmin
       .from("profiles")
-      .update({ generations_used: profile.generations_used + 1 })
+      .update({ generations_used: profile.generations_used + cost })
       .eq("id", user.id);
 
     return NextResponse.json({ id: project.id, status: "done" });

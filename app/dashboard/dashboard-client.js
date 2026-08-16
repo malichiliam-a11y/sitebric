@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase-browser";
-import { PLAN_LIMITS } from "@/lib/plans";
+import { PLAN_LIMITS, MULTIPAGE_COST } from "@/lib/plans";
 import { readReferralCode, clearReferralCode } from "@/lib/referral";
 import { readUtmParams, clearUtmParams } from "@/lib/utm";
 import { COUNTRY_CODES, countryLabel, guessCountryFromBrowser } from "@/lib/countries";
@@ -29,6 +29,7 @@ export default function DashboardClient({ initialProjects }) {
   const [address, setAddress] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [calendlyUrl, setCalendlyUrl] = useState("");
+  const [multiPage, setMultiPage] = useState(false);
   const [showContactFields, setShowContactFields] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -300,13 +301,20 @@ export default function DashboardClient({ initialProjects }) {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName, prompt, photoUrls, phone, address, ownerEmail, calendlyUrl }),
+        body: JSON.stringify({ clientName, prompt, photoUrls, phone, address, ownerEmail, calendlyUrl, multiPage }),
       });
       const result = await res.json();
 
       if (res.status === 402) {
         if (result.error === "site_limit") {
           setError(result.message + " Delete an existing site to free up a slot, or upgrade your plan.");
+          return;
+        }
+        // Still has generations left, just not the 3 a multi-page build
+        // costs — that's a fixable mistake, not a reason to be thrown at
+        // the pricing page.
+        if (result.error === "generation_limit" && result.remaining > 0) {
+          setError(result.message);
           return;
         }
         window.location.href = "/pricing";
@@ -329,6 +337,7 @@ export default function DashboardClient({ initialProjects }) {
       setAddress("");
       setOwnerEmail("");
       setCalendlyUrl("");
+      setMultiPage(false);
       setShowContactFields(false);
       loadProfile();
     } catch (err) {
@@ -732,6 +741,12 @@ export default function DashboardClient({ initialProjects }) {
     currentPlan === "starter" ? "Growth" : currentPlan === "growth" ? "Pro" : "Starter";
   const sitesUsed = projects.length;
   const gensUsed = profile?.generations_used || 0;
+  const gensRemaining = Math.max(0, limits.generations - gensUsed);
+  // A multi-page build costs several generations, so the option is only
+  // offered when the allowance actually covers it — better to grey it out
+  // with the reason than to let someone fill in the whole brief and get
+  // rejected at the end.
+  const canMultiPage = gensRemaining >= MULTIPAGE_COST;
   const searchesUsedBilling = profile?.searches_used || 0;
   const publishedCount = projects.filter((p) => p.published).length;
   const displayName =
@@ -1607,6 +1622,87 @@ export default function DashboardClient({ initialProjects }) {
                   </div>
                 )}
 
+                {/* Priced rather than plan-gated: a four-page build burns
+                    roughly three times the tokens, so it costs three
+                    generations on every plan instead of being locked to
+                    the expensive tiers. */}
+                <button
+                  type="button"
+                  onClick={() => canMultiPage && !busy && setMultiPage((v) => !v)}
+                  disabled={!canMultiPage || busy}
+                  aria-pressed={multiPage}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 12,
+                    textAlign: "left",
+                    background: multiPage ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${multiPage ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.12)"}`,
+                    borderRadius: 12,
+                    padding: "13px 14px",
+                    marginBottom: 14,
+                    cursor: canMultiPage ? "pointer" : "not-allowed",
+                    opacity: canMultiPage ? 1 : 0.5,
+                    fontFamily: body,
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      flexShrink: 0,
+                      width: 18,
+                      height: 18,
+                      marginTop: 1,
+                      borderRadius: 5,
+                      border: `1px solid ${multiPage ? "#fff" : "rgba(255,255,255,0.35)"}`,
+                      background: multiPage ? "#fff" : "transparent",
+                      color: "#0A0A10",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      lineHeight: "17px",
+                      textAlign: "center",
+                    }}
+                  >
+                    {multiPage ? "✓" : ""}
+                  </span>
+                  <span style={{ flex: 1 }}>
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        flexWrap: "wrap",
+                        fontSize: 13.5,
+                        fontWeight: 600,
+                        color: "rgba(255,255,255,0.92)",
+                        marginBottom: 3,
+                      }}
+                    >
+                      Multi-page site
+                      <span
+                        style={{
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                          letterSpacing: "0.05em",
+                          textTransform: "uppercase",
+                          color: "rgba(255,255,255,0.55)",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          borderRadius: 999,
+                          padding: "2px 7px",
+                        }}
+                      >
+                        Uses {MULTIPAGE_COST} generations
+                      </span>
+                    </span>
+                    <span style={{ display: "block", fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>
+                      {canMultiPage
+                        ? "Home, Services, About and Contact as four real pages instead of one long scrolling page."
+                        : `You have ${gensRemaining} generation${gensRemaining === 1 ? "" : "s"} left this month — a multi-page site needs ${MULTIPAGE_COST}.`}
+                    </span>
+                  </span>
+                </button>
+
                 <button
                   onClick={generate}
                   disabled={busy || !clientName.trim() || !prompt.trim()}
@@ -1624,7 +1720,13 @@ export default function DashboardClient({ initialProjects }) {
                     boxShadow: busy ? "none" : "0 6px 20px rgba(0,0,0,0.4)",
                   }}
                 >
-                  {busy ? "Generating…" : "Generate site →"}
+                  {busy
+                    ? multiPage
+                      ? "Generating 4 pages…"
+                      : "Generating…"
+                    : multiPage
+                      ? `Generate 4-page site → (${MULTIPAGE_COST} generations)`
+                      : "Generate site →"}
                 </button>
                 {error && (
                   <div

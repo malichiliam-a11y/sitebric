@@ -22,6 +22,9 @@ create table if not exists projects (
 alter table projects add column if not exists published boolean default false;
 alter table projects add column if not exists slug text;
 alter table projects add column if not exists custom_domain text;
+-- Whether this site was generated as a four-page build (costs three
+-- generations) rather than a single page.
+alter table projects add column if not exists multi_page boolean default false;
 
 -- Publishing picks a subdomain per site, so slugs have to be unique.
 create unique index if not exists projects_slug_key on projects (slug);
