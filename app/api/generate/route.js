@@ -5,7 +5,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { limitsFor, generationCost, MULTIPAGE_COST, MULTIPAGE_ENABLED } from "@/lib/plans";
 import { stripFakePhoneNumbers } from "@/lib/sanitize-site";
 import { UserFacingError, friendlyGenerationError } from "@/lib/generation-errors";
-import { generateMultiPageSite } from "@/lib/multipage";
+import { generateShell } from "@/lib/multipage";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -364,36 +364,31 @@ ${stockPhotos.length > 0
 
   try {
     if (multiPage) {
-      let code = await generateMultiPageSite({
+      // Only the shared shell is built here. The four pages each get their
+      // own request, and their own full function budget, so no single
+      // ceiling is shared between five model calls any more.
+      const shell = await generateShell({
         anthropic,
         clientName,
         brief: prompt,
-        contactBlock,
         imageBlock,
         designBlock,
         signal: deadline.signal,
       });
 
-      const sanitizedMulti = stripFakePhoneNumbers(code, phone);
-      if (sanitizedMulti.changed > 0) {
-        console.warn(
-          `Rewrote ${sanitizedMulti.changed} fabricated phone reference(s) in project ${project.id}`
-        );
-        code = sanitizedMulti.code;
-      }
-
-      const { error: multiSaveError } = await supabase
+      const { error: shellSaveError } = await supabase
         .from("projects")
-        .update({ code, status: "done", completed_at: new Date().toISOString() })
+        .update({ build: { shell, contactBlock, imageBlock, pages: {} } })
         .eq("id", project.id);
-      if (multiSaveError) throw new Error(`Failed to save site: ${multiSaveError.message}`);
+      if (shellSaveError) throw new Error(`Failed to save shell: ${shellSaveError.message}`);
 
-      await supabaseAdmin
-        .from("profiles")
-        .update({ generations_used: profile.generations_used + cost })
-        .eq("id", user.id);
-
-      return NextResponse.json({ id: project.id, status: "done" });
+      // The row stays "generating" and no generations are charged until
+      // the pages land and /api/generate-finalize stitches them.
+      return NextResponse.json({
+        id: project.id,
+        status: "building",
+        pages: ["home", "services", "about", "contact"],
+      });
     }
 
     // Streamed, not a single buffered request. A 32k-token generation runs

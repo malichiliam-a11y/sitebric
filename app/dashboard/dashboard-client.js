@@ -42,6 +42,7 @@ export default function DashboardClient({ initialProjects }) {
   // Snapshotted when a generation starts, so the countdown keeps showing
   // the right estimate even though multiPage itself gets reset on success.
   const [genStart, setGenStart] = useState(null);
+  const [genStage, setGenStage] = useState(null);
   const [showContactFields, setShowContactFields] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -317,6 +318,7 @@ export default function DashboardClient({ initialProjects }) {
     setBusy(true);
     setError("");
     setGenStart({ at: Date.now(), multiPage });
+    setGenStage(multiPage ? "shell" : null);
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -361,6 +363,54 @@ export default function DashboardClient({ initialProjects }) {
 
       if (!res.ok) throw new Error(result.message || result.error || "failed");
 
+      // A multi-page build comes back with only the shell done. Each page
+      // is then its own request, so none of them share a time limit, and
+      // they run at the same time.
+      if (result.status === "building") {
+        setGenStage("pages");
+        const outcomes = await Promise.all(
+          result.pages.map(async (page) => {
+            const r = await fetch("/api/generate-page", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ projectId: result.id, page }),
+            });
+            const body = await r.text();
+            let parsed;
+            try { parsed = JSON.parse(body); } catch { parsed = {}; }
+            return { page, ok: r.ok, message: parsed.error };
+          })
+        );
+
+        // One failed page is retried once, by itself. The pages that
+        // succeeded are already saved and are not regenerated.
+        const failed = outcomes.filter((o) => !o.ok);
+        for (const f of failed) {
+          const r = await fetch("/api/generate-page", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ projectId: result.id, page: f.page }),
+          });
+          if (!r.ok) {
+            const body = await r.text();
+            let parsed;
+            try { parsed = JSON.parse(body); } catch { parsed = {}; }
+            throw new Error(parsed.error || `The ${f.page} page couldn't be built.`);
+          }
+        }
+
+        setGenStage("finishing");
+        const fin = await fetch("/api/generate-finalize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId: result.id }),
+        });
+        const finBody = await fin.text();
+        let finResult;
+        try { finResult = JSON.parse(finBody); } catch { finResult = {}; }
+        if (!fin.ok) throw new Error(finResult.error || "Couldn't finish the site.");
+      }
+
       const { data } = await supabase
         .from("projects")
         .select("*")
@@ -404,6 +454,7 @@ export default function DashboardClient({ initialProjects }) {
     } finally {
       setBusy(false);
       setGenStart(null);
+      setGenStage(null);
     }
   }
 
@@ -1780,6 +1831,7 @@ export default function DashboardClient({ initialProjects }) {
                   <GeneratingProgress
                     startedAt={genStart.at}
                     multiPage={genStart.multiPage}
+                    stage={genStage}
                     accent={accent}
                     body={body}
                   />

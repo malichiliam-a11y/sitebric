@@ -14,10 +14,19 @@ import { useEffect, useState } from "react";
 //
 // The numbers are deliberately a little pessimistic. Finishing early
 // reads as fast; overrunning reads as stuck.
+// Real stages, not decoration: the build genuinely runs in these three
+// steps, as separate requests, so the label is reporting where it is
+// rather than guessing.
+const STAGE_LABELS = {
+  shell: "Designing the site — colours, type and layout.",
+  pages: "Writing all four pages at once.",
+  finishing: "Putting the pages together.",
+};
+
 const ESTIMATE_SINGLE = 120;
 const ESTIMATE_MULTI = 260;
 
-export default function GeneratingProgress({ startedAt, multiPage, accent, body }) {
+export default function GeneratingProgress({ startedAt, multiPage, accent, body, stage }) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -69,7 +78,7 @@ export default function GeneratingProgress({ startedAt, multiPage, accent, body 
         {overrun
           ? "This one's running longer than usual — still working on it."
           : multiPage
-            ? "Estimated time left — four pages take longer than one."
+            ? STAGE_LABELS[stage] || "Estimated time left — four pages take longer than one."
             : "Estimated time left — a detailed brief can take longer."}
       </div>
 
