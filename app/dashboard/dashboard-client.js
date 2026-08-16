@@ -3,6 +3,15 @@
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { PLAN_LIMITS, MULTIPAGE_COST } from "@/lib/plans";
+import GeneratingProgress from "./GeneratingProgress";
+
+// A generation that exceeds the platform's function time limit is killed
+// outright — the route's own error handler never runs, so the row keeps
+// saying "generating" forever, the card spins for the rest of time, and
+// the status poll hits the database every 2 seconds with it. Past the
+// point where the function cannot still be alive, treat it as failed.
+// Must stay above /api/generate's maxDuration.
+const STALE_GENERATING_MS = 6 * 60 * 1000;
 import { readReferralCode, clearReferralCode } from "@/lib/referral";
 import { readUtmParams, clearUtmParams } from "@/lib/utm";
 import { COUNTRY_CODES, countryLabel, guessCountryFromBrowser } from "@/lib/countries";
@@ -30,6 +39,9 @@ export default function DashboardClient({ initialProjects }) {
   const [ownerEmail, setOwnerEmail] = useState("");
   const [calendlyUrl, setCalendlyUrl] = useState("");
   const [multiPage, setMultiPage] = useState(false);
+  // Snapshotted when a generation starts, so the countdown keeps showing
+  // the right estimate even though multiPage itself gets reset on success.
+  const [genStart, setGenStart] = useState(null);
   const [showContactFields, setShowContactFields] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -280,7 +292,14 @@ export default function DashboardClient({ initialProjects }) {
   }
 
   useEffect(() => {
-    const hasGenerating = projects.some((p) => p.status === "generating");
+    // Only poll for rows that could still plausibly be running. A row left
+    // stuck at "generating" by a killed function would otherwise keep this
+    // interval hitting the database every 2 seconds forever.
+    const hasGenerating = projects.some(
+      (p) =>
+        p.status === "generating" &&
+        Date.now() - new Date(p.created_at).getTime() <= STALE_GENERATING_MS
+    );
     if (!hasGenerating || !user) return;
     const interval = setInterval(async () => {
       const { data } = await supabase
@@ -297,13 +316,32 @@ export default function DashboardClient({ initialProjects }) {
     if (!clientName.trim() || !prompt.trim()) return;
     setBusy(true);
     setError("");
+    setGenStart({ at: Date.now(), multiPage });
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ clientName, prompt, photoUrls, phone, address, ownerEmail, calendlyUrl, multiPage }),
       });
-      const result = await res.json();
+
+      // Not every response is JSON. When the function exceeds its time
+      // limit the platform replies with a plain-text error page, and
+      // res.json() on that threw "Unexpected token 'A', "An error o"... is
+      // not valid JSON" straight into the error box — a parse error where
+      // an explanation should be. Read the body once, then decide.
+      const rawBody = await res.text();
+      let result;
+      try {
+        result = JSON.parse(rawBody);
+      } catch {
+        result = {
+          error: "unreadable_response",
+          message:
+            res.status === 504 || /timed out|timeout/i.test(rawBody)
+              ? "This site took longer than the time limit allows. Nothing was charged against your plan — try a shorter brief, or generate it as a single-page site."
+              : "The server sent back something unreadable. Nothing was charged against your plan — please try again.",
+        };
+      }
 
       if (res.status === 402) {
         if (result.error === "site_limit") {
@@ -365,6 +403,7 @@ export default function DashboardClient({ initialProjects }) {
       }
     } finally {
       setBusy(false);
+      setGenStart(null);
     }
   }
 
@@ -725,7 +764,11 @@ export default function DashboardClient({ initialProjects }) {
   // finished generating. A finished-but-unpublished site isn't on the
   // internet yet, so labelling it "live" was misleading.
   function projectMeta(project) {
-    if (project.status === "generating") return { color: "rgba(255,255,255,0.85)", label: "generating" };
+    if (project.status === "generating") {
+      const age = Date.now() - new Date(project.created_at).getTime();
+      if (age > STALE_GENERATING_MS) return { color: "#F87171", label: "failed" };
+      return { color: "rgba(255,255,255,0.85)", label: "generating" };
+    }
     if (project.status === "error") return { color: "#F87171", label: "failed" };
     if (project.published) return { color: "#4ADE80", label: "live" };
     // Amber, not grey: an unpublished site is waiting on the user, so it
@@ -1728,6 +1771,15 @@ export default function DashboardClient({ initialProjects }) {
                       ? `Generate 4-page site → (${MULTIPAGE_COST} generations)`
                       : "Generate site →"}
                 </button>
+
+                {busy && genStart && (
+                  <GeneratingProgress
+                    startedAt={genStart.at}
+                    multiPage={genStart.multiPage}
+                    accent={accent}
+                    body={body}
+                  />
+                )}
                 {error && (
                   <div
                     style={{

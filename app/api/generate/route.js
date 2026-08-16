@@ -409,9 +409,12 @@ ${stockPhotos.length > 0
       code = sanitized.code;
     }
 
+    // completed_at is what makes the dashboard's "time remaining" estimate
+    // improvable — paired with created_at it records how long this build
+    // actually took, single-page and multi-page separately.
     const { error: updateError } = await supabase
       .from("projects")
-      .update({ code, status: "done" })
+      .update({ code, status: "done", completed_at: new Date().toISOString() })
       .eq("id", project.id);
 
     if (updateError) {
