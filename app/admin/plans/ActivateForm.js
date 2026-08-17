@@ -12,6 +12,24 @@ export default function ActivateForm() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [repairBusy, setRepairBusy] = useState(false);
+  const [repairResult, setRepairResult] = useState(null);
+
+  async function repairSites() {
+    if (repairBusy) return;
+    setRepairBusy(true);
+    setRepairResult(null);
+    try {
+      const res = await fetch("/api/admin/repair-sites", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Repair failed.");
+      setRepairResult(data);
+    } catch (err) {
+      setRepairResult({ error: err.message });
+    } finally {
+      setRepairBusy(false);
+    }
+  }
 
   async function activate() {
     if (!email.trim() || busy) return;
@@ -139,6 +157,66 @@ export default function ActivateForm() {
           There is no subscription behind this, so nothing renews and nothing bills again. Note when
           their month is up and collect payment before extending it.
         </p>
+
+        <div style={{ marginTop: 44, paddingTop: 28, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+          <h2 style={{ fontSize: 18, margin: "0 0 6px" }}>Repair every site&apos;s buttons</h2>
+          <p style={{ fontSize: 13.5, color: "rgba(255,255,255,0.5)", lineHeight: 1.6, margin: "0 0 16px" }}>
+            Points dead call-to-action links at the contact section and guarantees every contact form
+            reaches your dashboard. Runs over every site already generated, including published ones.
+            No AI is involved, so it costs nothing and uses no generations. Safe to run more than once.
+          </p>
+          <button
+            onClick={repairSites}
+            disabled={repairBusy}
+            style={{
+              background: "rgba(255,255,255,0.1)",
+              border: "1px solid rgba(255,255,255,0.22)",
+              borderRadius: 10,
+              padding: "12px 20px",
+              color: "#fff",
+              fontSize: 13.5,
+              fontWeight: 600,
+              cursor: repairBusy ? "default" : "pointer",
+            }}
+          >
+            {repairBusy ? "Repairing…" : "Repair all sites"}
+          </button>
+
+          {repairResult && !repairResult.error && (
+            <div
+              style={{
+                marginTop: 16,
+                padding: "14px 16px",
+                borderRadius: 10,
+                background: "rgba(74,222,128,0.08)",
+                border: "1px solid rgba(74,222,128,0.3)",
+                color: "#86EFAC",
+                fontSize: 13.5,
+                lineHeight: 1.6,
+              }}
+            >
+              Repaired <strong>{repairResult.repaired}</strong> site
+              {repairResult.repaired === 1 ? "" : "s"} — {repairResult.totalDeadLinksFixed} dead
+              button{repairResult.totalDeadLinksFixed === 1 ? "" : "s"} fixed.{" "}
+              {repairResult.untouched} already fine.
+            </div>
+          )}
+          {repairResult?.error && (
+            <div
+              style={{
+                marginTop: 16,
+                padding: "12px 14px",
+                borderRadius: 10,
+                background: "rgba(220,38,38,0.1)",
+                border: "1px solid rgba(220,38,38,0.3)",
+                color: "#FCA5A5",
+                fontSize: 13.5,
+              }}
+            >
+              {repairResult.error}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

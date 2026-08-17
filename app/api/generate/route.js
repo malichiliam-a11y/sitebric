@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { limitsFor, generationCost, MULTIPAGE_COST, MULTIPAGE_ENABLED } from "@/lib/plans";
 import { stripFakePhoneNumbers } from "@/lib/sanitize-site";
+import { makeButtonsWork } from "@/lib/fix-buttons";
 import { UserFacingError, friendlyGenerationError } from "@/lib/generation-errors";
 import { generateShell } from "@/lib/multipage";
 
@@ -494,6 +495,14 @@ ${imageBlock}
       );
       code = sanitized.code;
     }
+
+    // Dead call-to-action links and an unwired contact form both look
+    // completely fine on screen, so they are enforced rather than trusted.
+    const buttons = makeButtonsWork(code, project.id);
+    if (buttons.deadLinksFixed > 0) {
+      console.warn(`Fixed ${buttons.deadLinksFixed} dead link(s) in project ${project.id}`);
+    }
+    code = buttons.code;
 
     // completed_at is what makes the dashboard's "time remaining" estimate
     // improvable — paired with created_at it records how long this build

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { assembleSite } from "@/lib/multipage";
 import { stripFakePhoneNumbers } from "@/lib/sanitize-site";
+import { makeButtonsWork } from "@/lib/fix-buttons";
 import { friendlyGenerationError } from "@/lib/generation-errors";
 import { generationCost } from "@/lib/plans";
 
@@ -58,6 +59,14 @@ export async function POST(req) {
       );
       code = sanitized.code;
     }
+
+    // Same guard as the single-page path. Applied at assembly, so a
+    // rebuild repairs a site that was generated before this existed.
+    const buttons = makeButtonsWork(code, project.id);
+    if (buttons.deadLinksFixed > 0) {
+      console.warn(`Fixed ${buttons.deadLinksFixed} dead link(s) in project ${project.id}`);
+    }
+    code = buttons.code;
 
     // On a first build only rows still generating are moved to done, so
     // two finalise calls racing each other cannot both bill the user. A
