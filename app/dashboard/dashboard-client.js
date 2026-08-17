@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
 import { PLAN_LIMITS, MULTIPAGE_COST, MULTIPAGE_ENABLED } from "@/lib/plans";
 import GeneratingProgress from "./GeneratingProgress";
+import { withPreviewAnchorFix } from "@/lib/preview-anchors";
 
 // A generation that exceeds the platform's function time limit is killed
 // outright — the route's own error handler never runs, so the row keeps
@@ -2441,7 +2442,7 @@ export default function DashboardClient({ initialProjects }) {
                 <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
                   <iframe
                     title="full screen preview"
-                    srcDoc={active.code}
+                    srcDoc={withPreviewAnchorFix(active.code)}
                     sandbox="allow-scripts allow-modals allow-forms allow-popups allow-top-navigation-to-custom-protocols"
                     style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none", background: "white" }}
                   />
@@ -2468,7 +2469,7 @@ export default function DashboardClient({ initialProjects }) {
                 <iframe
                   ref={previewFrameRef}
                   title="preview"
-                  srcDoc={active.code}
+                  srcDoc={withPreviewAnchorFix(active.code)}
                   sandbox="allow-scripts allow-modals allow-forms allow-popups allow-top-navigation-to-custom-protocols"
                   style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none", background: "white" }}
                 />
