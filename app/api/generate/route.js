@@ -311,27 +311,58 @@ export async function POST(req) {
   // reuse the exact same rules — one source of truth for how a site is
   // designed, what it may say about contact details, and which images it
   // is allowed to use.
-  const designBlock = `=== DESIGN — make this genuinely impressive ===
-- Read the brief for its own design direction FIRST, before anything below. If it specifies particular colors, a stated palette, a mood or vibe (elegant, warm, minimal, upscale, rustic, corporate, premium-but-approachable), specific fonts, or says anything like "don't make it look AI-generated" or "not futuristic" — that direction wins completely and everything below about the futuristic house style does not apply. Follow the brief as literally as a real paying client's brief would demand: "mostly white/cream backgrounds, deep charcoal text, subtle green or burgundy accents, elegant typography" means exactly that light, warm palette — never a dark reinterpretation of it with neon glow, glassmorphism, or a "futuristic" spin the brief didn't ask for. This has shipped wrong before: a detailed brief explicitly requesting a warm, light, non-AI-generated look still came back dark with neon cyan accents because the house style below was treated as a mandate instead of a fallback.
-- Only when the brief gives no design direction of its own (no colors, no mood words, no explicit style ask), default to the house style: futuristic/high-tech — dark, sleek, glowing, a step ahead of a typical small-business site. Within that default, still vary the palette, specific accent colors, and layout per business so a bakery, a law firm, and an auto shop don't look identical — a bakery's futuristic take might lean warm neon (amber/rose glow on near-black), a locksmith's might lean cold cyber (electric blue/cyan on near-black) — but the underlying tech-forward feel should be consistent. Do not default to the same layout or section order every time.
-- When using the futuristic default: a dark, near-black base (not pure #000 — a deep charcoal/navy/graphite reads more premium) with one or two saturated neon/glow accent colors (electric blue, cyan, violet, magenta, acid green — pick what fits the brand) used for highlights, glows, and CTAs against it; glassmorphism (translucent frosted-glass cards with backdrop-filter blur and a thin glowing 1px border), gradient meshes and drifting glow orbs, subtle grid/circuit-line/scanline background textures, holographic or iridescent gradient washes on accents, sharp geometric shapes and angular clip-paths rather than soft rounded skeuomorphic ones.
-- When following an explicit brief direction instead, use whatever visual language actually fits it — soft shadows instead of glow, generous whitespace, refined or classic typography, rounded-but-not-glassy cards — and treat the futuristic motifs above as off-limits for that site.
-- Use at least two font families via Google Fonts. For the futuristic default: a bold, geometric/technical display font (e.g. Space Grotesk, Sora, Orbitron) plus a clean geometric sans body font. For an explicit brief direction: whatever fonts actually fit it — a refined serif or elegant humanist sans reads right for an upscale/warm brief, a tech-forward sans reads wrong for one that explicitly isn't supposed to look futuristic.
-- Push hard on modern, high-end visual techniques — pick whichever of these genuinely fit the business, and implement them for real, not just describe them:
-  - Scroll-triggered reveal animations (elements fade/slide into view using IntersectionObserver as the user scrolls — not everything visible at once on load). This has shipped broken before: later elements (a 4th step in a process list, testimonials further down the page) stay stuck at opacity 0 forever because the observer never fires for them on some viewports. Use a low threshold (0.1-0.15), and — critically — after attaching the observer, also add a single safety net: a scroll or load-triggered check (or a several-second timeout) that force-reveals ANY element still unrevealed, so nothing can end up permanently invisible. A visitor should never see a blank gap where content should be.
-  - A subtle parallax effect on the hero (background moves slower than foreground on scroll)
-  - An animated gradient mesh or drifting blurred color-orb background in the hero (like premium SaaS sites), built in pure CSS/JS. Size these relative to the viewport (vw/vh or clamp()), not fixed pixels — an orb sized to be a tasteful accent on a 1440px desktop (e.g. 500px wide) is bigger than the entire screen on a 390px phone, so instead of a subtle glow it floods the whole viewport with solid color. Cap orb size at a fraction of 100vw on mobile (a media query is fine) so it stays a subtle accent at every width.
-  - A horizontally scrolling marquee/ticker strip for things like service tags, certifications, or "as seen in" style trust badges
-  - Animated counting-up statistics (years in business, jobs completed, etc. counting up from 0 when scrolled into view) — trigger each counter off its own element (or a small stats row) with a low IntersectionObserver threshold like 0.1-0.2, never 0.5+ on a large wrapping section, since a tall hero on a short/mobile viewport (or a scaled-down preview) can permanently fail to cross a high threshold and leave the numbers stuck at 0. Always add a ~1.5s setTimeout fallback that fires the count-up regardless of whether the observer ever fired — a stat frozen at 0 is worse than one that animates without a scroll trigger.
-  - Magnetic or hover-tilt effects on buttons/cards (subtle transform following cursor position or a lift+glow on hover)
-  - Glassmorphism cards (translucent, blurred backgrounds) for pricing/service cards where it fits the aesthetic
-  - A sticky progress indicator or subtly animated nav bar that changes appearance on scroll
-- Don't cram in every technique on every site — pick 3-5 that genuinely fit this business's vibe and execute them well, rather than using all of them shallowly.
-- Make sure it's fully responsive: nothing should overflow or overlap on a ~375px mobile width. Disable or simplify heavy scroll/parallax effects on mobile if needed for performance.
-- Test your hero mentally against a landscape phone (a short viewport, ~390-430px tall, not just narrow) — not just a portrait one. A hero sized with large display-font headlines plus min-height: 100vh can end up 700px+ tall, meaning a visitor in landscape has to scroll almost two full screens just to reach the call-to-action button, which reads as broken even though nothing is technically lost. Add an "@media (max-height: 500px) and (orientation: landscape)" rule that shrinks the hero's heading font-size, vertical padding, and min-height so the CTA is reachable within roughly one screen.
-- Respect prefers-reduced-motion — disable non-essential animations for users who have that OS setting on.
-- Add a real <title> tag and a meta description tag with relevant copy for this business.
-- REQUIRED, first thing in <head>: <meta name="viewport" content="width=device-width, initial-scale=1">. Without this exact tag, mobile Safari and Chrome ignore all responsive CSS and render the page at a fake ~980px desktop width, shrunk to fit — that's what makes a page "not fit" on a phone even when the CSS itself is correct.
+  const designBlock = `=== DESIGN ===
+Design this the way a good studio would: choose a direction that fits THIS business, then execute it with restraint. Restraint is the whole point. The difference between a site that looks professionally made and one that looks machine-made is almost never the number of effects — it is type, spacing, and knowing what to leave out.
+
+STEP 1 — follow the brief when it has a direction of its own.
+If the brief names colours, a palette, a mood (elegant, warm, minimal, upscale, rustic, corporate, industrial), fonts, or says anything like "don't make it look AI-generated" — that wins completely, over everything below. Follow it as literally as a paying client would expect: "mostly white/cream backgrounds, deep charcoal text, subtle green or burgundy accents" means exactly that, never a dark reinterpretation of it. This has shipped wrong before.
+
+STEP 2 — when the brief gives no direction, pick the one that fits the trade.
+There is no house style. A bakery and a law firm should not come out looking like variations of the same template. Choose from directions like these, or something equally appropriate:
+- Warm editorial — cream and off-white grounds, deep brown or charcoal text, one muted accent (terracotta, olive, ochre), a refined serif for headings. Fits food, salons, florists, wellness, boutique retail, hospitality.
+- Clean professional — white and light grey, near-black text, a single confident accent (deep blue, forest green), a crisp humanist sans. Fits legal, dental, medical, accounting, consulting, real estate, insurance.
+- Grounded and sturdy — off-white or warm grey grounds, strong dark text, a working accent (safety orange, deep red, steel blue), a solid geometric sans, squared corners. Fits trades: plumbing, HVAC, roofing, auto, construction, moving, landscaping.
+- Refined dark — genuinely dark grounds used deliberately, warm neutral text, one restrained metallic or jewel accent. Only where darkness actually belongs: fine dining, nightlife, photography, tattoo studios, performance automotive, high-end fitness.
+- Bright and modern — white with generous space, a saturated but singular accent, large type, rounded cards. Fits tech-adjacent services, studios, agencies, coaching.
+
+Most local businesses read best LIGHT. Reach for a dark palette only when the trade genuinely calls for it — not as a default, and not to look impressive.
+
+STEP 3 — the things that actually make it look expensive.
+- Typography carries the design. Two families at most: one for headings, one for body. Build a real scale — a hero headline around clamp(2.5rem, 6vw, 4.5rem), section headings well below it, body text 16-18px with line-height near 1.6 and a measure of 60-75 characters. Confident size contrast between a heading and its body copy does more than any effect.
+- Whitespace is the budget item most machine-made sites underspend. Sections want roughly 80-120px of vertical padding on desktop, 48-64px on mobile. Let things breathe.
+- One accent colour, used sparingly — primary buttons, a link, a small underline. When everything is highlighted, nothing is.
+- Depth through soft, low shadows and hairline borders (1px at low contrast). Not glow.
+- Consistent corner radius throughout, and consistent spacing values. Pick a rhythm and hold it.
+- Align to a grid. Left-aligned text blocks generally read better than centring everything.
+- Photography should be large and given room, not squeezed into small boxes.
+
+STEP 4 — do not do these. They are what make a site read as machine-generated.
+- Neon or glowing accents on a near-black background as a default look
+- Glassmorphism — translucent frosted cards with blurred backgrounds — used as a signature
+- Drifting blurred colour orbs, animated gradient meshes, scanlines, circuit-board or grid textures, holographic or iridescent washes
+- Gradient-filled heading text, especially on every heading
+- Emoji standing in for icons
+- Angular clip-path shapes used as decoration
+- Centring every single section
+- Stacking many effects to seem impressive
+
+STEP 5 — motion, sparingly.
+Pick at most two or three, and only where they earn their place:
+- A gentle fade-and-rise as sections scroll into view, via IntersectionObserver. This has shipped broken: elements further down stay at opacity 0 forever because the observer never fires on some viewports. Use a low threshold (0.1-0.15) and add a safety net — a scroll or timeout check that force-reveals anything still unrevealed. A visitor must never see a blank gap where content belongs.
+- A subtle hover lift on cards and buttons — a few pixels and a slightly deeper shadow, not a glow.
+- Counting statistics, only where a real number matters. Use <span class="counter" data-target="1200">0</span>, with the FULL value in data-target (a decimal like 4.8 needs data-target="4.8" and data-decimal="1", with nothing typed after the span — "4.0.8" has shipped). Trigger off the element itself at a low threshold, and add a ~1.5s timeout fallback so a stat can never sit frozen at 0.
+- A sticky nav that gains a subtle border or background once scrolled.
+If a decorative background shape is used at all, size it in vw/vh or clamp() and cap it on mobile — a 500px accent on a laptop is wider than a phone screen and floods it with colour.
+
+STEP 6 — the technical floor, all required.
+- REQUIRED, first thing in <head>: <meta name="viewport" content="width=device-width, initial-scale=1">. Without this exact tag mobile browsers render at a fake ~980px width, shrunk to fit, and no responsive CSS applies.
+- Fully responsive: nothing overflows or overlaps at 375px wide.
+- Add an "@media (max-height: 500px) and (orientation: landscape)" rule shrinking hero heading size, padding and min-height. A 100vh hero with large type leaves a landscape phone scrolling two screens to reach the call to action.
+- Respect prefers-reduced-motion: disable non-essential animation for anyone with it on.
+- Two font families via Google Fonts, chosen to fit the direction — a refined serif for warm editorial, a crisp sans for professional, a sturdy geometric sans for trades.
+- A real <title> and meta description written for this business.
+
+The bar: a small studio charged this client $3,000 and is proud to show it in a portfolio. Not a template with the business name dropped in, and not a demo of visual effects.
 
 ${multiPage ? MULTIPAGE_STRUCTURE : SINGLE_PAGE_STRUCTURE}
 `;
