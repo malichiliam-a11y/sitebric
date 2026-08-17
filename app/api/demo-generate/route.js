@@ -24,7 +24,7 @@ const MAX_PER_DAY = 3;
 // 300s ceiling rather than guessing at another number. This now bounds
 // the background job (see waitUntil below), not the client's request,
 // which returns almost immediately.
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 async function searchStockPhotos(query) {
   if (!process.env.PEXELS_API_KEY || !query) return [];

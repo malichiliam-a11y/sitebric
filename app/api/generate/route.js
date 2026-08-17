@@ -17,21 +17,20 @@ const supabaseAdmin = createAdminClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Give this function up to 5 minutes — large site generations can
-// genuinely take a few minutes, and cutting it short leaves things
-// stuck on "generating" with no error ever being recorded.
-export const maxDuration = 300;
+// A site is one long model call and 300 seconds was not enough for it.
+// Once the design instructions started producing properly built pages the
+// output grew to around 60k characters, and real generations came in at
+// 250-260s against a 275s abort — so anything slightly denser failed. A
+// prospect hit exactly that. The platform caps this to the plan maximum,
+// so asking for more is safe: it is granted or it is clamped.
+export const maxDuration = 800;
 
-// Every model call is aborted here, short of maxDuration above but using
-// the runway rather than leaving it idle: at 235s this stopped a run that
-// was still working, throwing away a site to protect against a ceiling
-// that was 65 seconds away. 275 leaves 25s to save the result.
-// Without it the platform kills the whole function at 300s: the route's
-// error handler never runs, the row is stranded on "generating" forever,
-// and — the expensive part — the output the model already produced is
-// billed and thrown away. Stopping ourselves means we stop paying and can
-// still record a real error.
-const GENERATION_DEADLINE_MS = 275000;
+// Aborted here, short of maxDuration above. Without an abort the platform
+// kills the whole function at the ceiling: the route's error handler
+// never runs, the row is stranded on "generating" forever, and the output
+// the model already produced is billed and thrown away. Stopping
+// ourselves means we stop paying and can still record a real error.
+const GENERATION_DEADLINE_MS = 760000;
 
 // Real, topically-relevant stock photos for whatever this business actually
 // is — a "sushi restaurant" gets sushi photos, not a random Picsum image
