@@ -922,7 +922,7 @@ export default function DashboardClient({ initialProjects }) {
   ];
 
   return (
-    <div className="sb-dash-shell" style={{ height: "100vh", display: "flex", color: t.text, background: t.bg, fontFamily: body, position: "relative" }}>
+    <div className={`sb-dash-shell${tab === "sites" && active ? " sb-dash-shell--project-open" : ""}`} style={{ height: "100vh", display: "flex", color: t.text, background: t.bg, fontFamily: body, position: "relative" }}>
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes sbDashDrift1 {
           0%   { transform: translate(-50%, 0) scale(1); }
@@ -1054,6 +1054,32 @@ export default function DashboardClient({ initialProjects }) {
              wins over this class and the sidebar never actually hides. */
           .sb-dash-sidebar--project-open { display: none !important; }
           .sb-mobile-back { display: inline-flex !important; }
+
+          /* With a project open the sidebar is gone, so the workspace is
+             the entire screen. Pin it to exactly one viewport and let the
+             preview take whatever the header and the editor bar don't,
+             instead of everything stacking and the page scrolling — which
+             is what left barely any site visible. */
+          .sb-dash-shell--project-open {
+            height: 100dvh !important;
+            min-height: 0 !important;
+            overflow: hidden;
+          }
+          .sb-dash-shell--project-open .sb-dash-main {
+            overflow: hidden !important;
+            min-height: 0 !important;
+            height: 100%;
+          }
+          .sb-dash-shell--project-open .sb-dash-preview {
+            min-height: 0 !important;
+            flex: 1;
+          }
+
+          /* Every pixel the chrome takes is a pixel of site you cannot
+             see, so it gets tighter on a phone. */
+          .sb-project-header { padding: 10px 12px !important; gap: 8px !important; }
+          .sb-view-tabs button { padding: 5px 10px !important; font-size: 11.5px !important; }
+          .sb-edit-bar { padding: 10px 12px !important; }
           .sb-overview-grid { grid-template-columns: 1fr !important; }
         }
         /* Nothing in the workspace may scroll the page sideways. A single
@@ -1990,6 +2016,7 @@ export default function DashboardClient({ initialProjects }) {
         {tab === "sites" && active && (
           <>
             <div
+              className="sb-project-header"
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -1998,6 +2025,7 @@ export default function DashboardClient({ initialProjects }) {
                 gap: 10,
                 padding: "16px 20px",
                 borderBottom: "1px solid rgba(255,255,255,0.08)",
+                flexShrink: 0,
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
@@ -2147,7 +2175,7 @@ export default function DashboardClient({ initialProjects }) {
                   {active.published ? "Unpublish" : "Publish"}
                 </button>
               </div>
-              <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 3 }}>
+              <div className="sb-view-tabs" style={{ display: "flex", gap: 4, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 3 }}>
                 <button
                   onClick={() => setView("preview")}
                   style={{
@@ -2613,10 +2641,12 @@ export default function DashboardClient({ initialProjects }) {
             </div>
             {active.status === "done" && (
               <div
+                className="sb-edit-bar"
                 style={{
                   padding: "14px 20px",
                   borderTop: "1px solid rgba(255,255,255,0.08)",
                   background: "rgba(255,255,255,0.015)",
+                  flexShrink: 0,
                 }}
               >
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
