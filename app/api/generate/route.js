@@ -17,20 +17,17 @@ const supabaseAdmin = createAdminClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// A site is one long model call and 300 seconds was not enough for it.
-// Once the design instructions started producing properly built pages the
-// output grew to around 60k characters, and real generations came in at
-// 250-260s against a 275s abort — so anything slightly denser failed. A
-// prospect hit exactly that. The platform caps this to the plan maximum,
-// so asking for more is safe: it is granted or it is clamped.
-export const maxDuration = 800;
+// 300 is the plan's ceiling — raising this to 800 was rejected at deploy,
+// so the limit cannot be bought out of. The fix has to be producing less
+// in one call, not asking for more time.
+export const maxDuration = 300;
 
 // Aborted here, short of maxDuration above. Without an abort the platform
 // kills the whole function at the ceiling: the route's error handler
 // never runs, the row is stranded on "generating" forever, and the output
 // the model already produced is billed and thrown away. Stopping
 // ourselves means we stop paying and can still record a real error.
-const GENERATION_DEADLINE_MS = 760000;
+const GENERATION_DEADLINE_MS = 275000;
 
 // Real, topically-relevant stock photos for whatever this business actually
 // is — a "sushi restaurant" gets sushi photos, not a random Picsum image
@@ -333,6 +330,7 @@ STEP 3 — the things that actually make it look expensive.
 - Depth through soft, low shadows and hairline borders (1px at low contrast). Not glow.
 - Consistent corner radius throughout, and consistent spacing values. Pick a rhythm and hold it.
 - Align to a grid. Left-aligned text blocks generally read better than centring everything.
+- Write the stylesheet EFFICIENTLY. It is the largest and slowest part of this response, and a response that runs past the time limit is thrown away entirely — the visitor gets an error instead of a site, which is worse than any styling you could have added. Define your palette and spacing once as CSS custom properties, build a handful of shared utility classes and reuse them across sections rather than writing a bespoke rule per section, group selectors that share declarations, and skip rules that add length without changing how the page reads. Aim for a tight, well-organised stylesheet rather than an exhaustive one.
 - Photography should be large and given room, not squeezed into small boxes.
 
 STEP 4 — do not do these. They are what make a site read as machine-generated.
@@ -360,6 +358,9 @@ STEP 6 — the technical floor, all required.
 - Respect prefers-reduced-motion: disable non-essential animation for anyone with it on.
 - Two font families via Google Fonts, chosen to fit the direction — a refined serif for warm editorial, a crisp sans for professional, a sturdy geometric sans for trades.
 - A real <title> and meta description written for this business.
+
+LENGTH — this matters as much as the design.
+The whole file must be written inside a strict time limit. Aim for a focused page of roughly 6-9 sections, each doing one job well, rather than an exhaustive one. Copy should be specific and tight — two or three strong sentences beat a paragraph of padding, and they read better anyway. Do not repeat the same idea in multiple sections. A complete, well-made page that arrives is worth everything; a more elaborate one that is cut off partway is worth nothing at all.
 
 The bar: a small studio charged this client $3,000 and is proud to show it in a portfolio. Not a template with the business name dropped in, and not a demo of visual effects.
 

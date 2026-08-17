@@ -6,7 +6,7 @@ import { friendlyGenerationError } from "@/lib/generation-errors";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-export const maxDuration = 800;
+export const maxDuration = 300;
 
 // One page, one request, one whole function budget. This is the entire
 // point of the split: a four-page build used to run every model call
@@ -17,7 +17,7 @@ export const maxDuration = 800;
 // Each page now gets its own 300 seconds to do about 90 seconds of work,
 // and the four run as four concurrent requests. A page that fails is
 // retried on its own without touching the ones that succeeded.
-const DEADLINE_MS = 760000;
+const DEADLINE_MS = 240000;
 
 const VALID = new Set(["home", "services", "about", "contact"]);
 
