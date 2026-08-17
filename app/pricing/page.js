@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { t } from "@/lib/theme";
+import { PLAN_LIMITS, MULTIPAGE_COST } from "@/lib/plans";
 
 export default function Pricing() {
   const [hovered, setHovered] = useState(null);
@@ -30,6 +31,16 @@ export default function Pricing() {
     }
   }
 
+  // Allowances come from lib/plans.js, which is what the API actually
+  // enforces. They used to be typed out here as well, which is how the
+  // lead-search allowance ended up missing from the page entirely while
+  // every plan had one.
+  const allowances = (plan) => [
+    `${PLAN_LIMITS[plan].sites} client sites`,
+    `${PLAN_LIMITS[plan].generations} AI generations / mo`,
+    `${PLAN_LIMITS[plan].searches} lead searches / mo`,
+  ];
+
   const tiers = [
     {
       id: "starter",
@@ -40,8 +51,7 @@ export default function Pricing() {
       hook: "Pays for itself before you finish your first sales call.",
       savings: "$10/mo cheaper than Lovable Pro",
       features: [
-        "5 client sites",
-        "10 AI generations / mo",
+        ...allowances("starter"),
         "Publish live sites instantly",
         "Google & email login",
       ],
@@ -57,8 +67,7 @@ export default function Pricing() {
       hook: "One client covers two months. Everything after is profit.",
       savings: "$20/mo cheaper than Lovable Business",
       features: [
-        "20 client sites",
-        "40 AI generations / mo",
+        ...allowances("growth"),
         "Custom domain for every client",
         "Everything in Starter",
       ],
@@ -74,8 +83,7 @@ export default function Pricing() {
       hook: "Under 5% of a single client invoice.",
       savings: "No equivalent tier at Lovable — you'd need Enterprise",
       features: [
-        "100 client sites",
-        "150 AI generations / mo",
+        ...allowances("pro"),
         "White-label — your brand, not ours",
         "Everything in Growth",
       ],
@@ -458,6 +466,36 @@ export default function Pricing() {
               </div>
             );
           })}
+        </div>
+
+        {/* What the two allowances actually mean. Both were listed as bare
+            numbers with nothing explaining them, and the lead-search one
+            was not listed at all. */}
+        <div
+          style={{
+            maxWidth: 1100,
+            margin: "28px auto 0",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 28,
+            fontSize: 13.5,
+            color: "rgba(255,255,255,0.5)",
+            lineHeight: 1.6,
+          }}
+        >
+          <p style={{ margin: 0, flex: "1 1 300px" }}>
+            <span style={{ color: t.text, fontWeight: 600 }}>A generation</span> is one website
+            built from your brief. Editing a site afterwards is unlimited and free — a generation
+            is only used when a new site is created. A{" "}
+            <span style={{ color: t.text, fontWeight: 600 }}>multi-page site</span> (Home,
+            Services, About and Contact) uses {MULTIPAGE_COST}.
+          </p>
+          <p style={{ margin: 0, flex: "1 1 300px" }}>
+            <span style={{ color: t.text, fontWeight: 600 }}>A lead search</span> finds local
+            businesses in any city and country — name, phone, address, and whether they already
+            have a website — so you have someone to sell the sites to. One search returns up to 60
+            businesses, and only counts once.
+          </p>
         </div>
       </div>
 
