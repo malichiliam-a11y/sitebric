@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
 import { PLAN_LIMITS, MULTIPAGE_COST, MULTIPAGE_ENABLED } from "@/lib/plans";
 import GeneratingProgress from "./GeneratingProgress";
@@ -45,6 +46,15 @@ export default function DashboardClient({ initialProjects }) {
   const [genStage, setGenStage] = useState(null);
   const [rebuilding, setRebuilding] = useState(false);
   const [previewFull, setPreviewFull] = useState(false);
+
+  // Without this the page behind keeps scrolling under the overlay on a
+  // phone, which reads as the site sliding around while you drag it.
+  useEffect(() => {
+    if (!previewFull) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [previewFull]);
   const [showContactFields, setShowContactFields] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -2365,7 +2375,15 @@ export default function DashboardClient({ initialProjects }) {
                 )}
               </div>
             )}
-            {previewFull && active.status === "done" && (
+            {/* Rendered into document.body, not here. position:fixed is
+                measured against the nearest ancestor carrying a transform,
+                filter or backdrop-filter rather than the viewport, and the
+                workspace has several — so the overlay was being boxed into
+                a band in the middle of the screen with the site clipped,
+                instead of covering it. A portal has no ancestors to be
+                trapped by. */}
+            {previewFull && active.status === "done" && typeof document !== "undefined" && createPortal(
+              (
               <div
                 style={{
                   position: "fixed",
@@ -2429,6 +2447,8 @@ export default function DashboardClient({ initialProjects }) {
                   />
                 </div>
               </div>
+              ),
+              document.body
             )}
             <div className="sb-dash-preview" style={{ flex: 1, background: "#0A0A10", minHeight: 0, position: "relative" }}>
               {active.status === "generating" && (
