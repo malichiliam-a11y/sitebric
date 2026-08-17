@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { ADMIN_EMAIL } from "@/lib/admin";
-import { makeButtonsWork, fixDeadLinks } from "@/lib/fix-buttons";
+import { makeButtonsWork } from "@/lib/fix-buttons";
 
 const supabaseAdmin = createAdminClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -44,21 +44,17 @@ export async function POST(req) {
   let untouched = 0;
 
   for (const project of projects || []) {
-    const alreadyGuarded = project.code.includes("sitebricSent");
-    const before = (project.code.match(/href=["'](#|javascript:void\(0\);?)["']/gi) || []).length;
+    // The guard replaces any earlier copy of itself rather than stacking,
+    // so this runs unconditionally and a site whose guard is out of date
+    // gets the current one. Sites already correct come out byte-identical
+    // and are counted as untouched.
+    const result = makeButtonsWork(project.code, project.id);
+    const nextCode = result.code;
 
-    if (alreadyGuarded && before === 0) {
+    if (nextCode === project.code) {
       untouched++;
       continue;
     }
-
-    // A site that already carries the fallback only needs its links
-    // fixed — appending the script twice would post every lead twice.
-    const hasContact = /id=["']contact["']/i.test(project.code);
-    const result = alreadyGuarded
-      ? fixDeadLinks(project.code, { hasContact })
-      : makeButtonsWork(project.code, project.id);
-    const nextCode = result.code;
 
     const { error: saveError } = await supabaseAdmin
       .from("projects")
@@ -75,8 +71,7 @@ export async function POST(req) {
     repaired.push({
       client: project.client_name,
       published: project.published,
-      deadLinksFixed: result.deadLinksFixed ?? result.changed ?? 0,
-      formGuardAdded: !alreadyGuarded,
+      deadLinksFixed: result.deadLinksFixed ?? 0,
     });
   }
 
