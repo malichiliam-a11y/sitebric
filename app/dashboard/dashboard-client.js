@@ -48,6 +48,37 @@ export default function DashboardClient({ initialProjects }) {
   const [rebuilding, setRebuilding] = useState(false);
   const [previewFull, setPreviewFull] = useState(false);
 
+  // Someone who clicked a plan before signing in gets sent to sign up,
+  // and the plan they picked is waiting here. Resuming it automatically
+  // is the difference between a completed purchase and someone landing in
+  // an unfamiliar dashboard wondering what happened to the thing they
+  // were buying.
+  useEffect(() => {
+    let plan = null;
+    try {
+      plan = window.localStorage.getItem("sb_pending_plan");
+      if (plan) window.localStorage.removeItem("sb_pending_plan");
+    } catch {
+      // Storage unavailable — nothing to resume.
+    }
+    if (!plan) return;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plan }),
+        });
+        const data = await res.json();
+        if (data.url) window.location.href = data.url;
+      } catch {
+        // Checkout can be reached again from Billing; failing here must
+        // not stop the dashboard loading.
+      }
+    })();
+  }, []);
+
   // Without this the page behind keeps scrolling under the overlay on a
   // phone, which reads as the site sliding around while you drag it.
   useEffect(() => {

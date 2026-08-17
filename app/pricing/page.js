@@ -7,6 +7,7 @@ import { PLAN_LIMITS, MULTIPAGE_COST } from "@/lib/plans";
 export default function Pricing() {
   const [hovered, setHovered] = useState(null);
   const [loadingPlan, setLoadingPlan] = useState(null);
+  const [checkoutError, setCheckoutError] = useState("");
   const display = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
   const body = "'Inter', sans-serif";
 
@@ -19,14 +20,32 @@ export default function Pricing() {
         body: JSON.stringify({ plan: planId }),
       });
       const data = await res.json();
+
       if (data.url) {
         window.location.href = data.url;
-      } else {
-        alert(data.error || "Something went wrong. Try again.");
-        setLoadingPlan(null);
+        return;
       }
+
+      // Not signed in. Subscribing needs an account, so remember which
+      // plan they picked and send them to create one — checkout resumes
+      // by itself once they land in the dashboard. Previously this was a
+      // browser alert saying "Please log in first" with nothing to click,
+      // which left anyone arriving from the marketing site stuck.
+      if (res.status === 401) {
+        try {
+          window.localStorage.setItem("sb_pending_plan", planId);
+        } catch {
+          // Private browsing can block storage — signing in still works,
+          // they just pick the plan again afterwards.
+        }
+        window.location.href = "/login";
+        return;
+      }
+
+      setCheckoutError(data.message || data.error || "Something went wrong. Try again.");
+      setLoadingPlan(null);
     } catch (err) {
-      alert("Something went wrong. Try again.");
+      setCheckoutError("Couldn't reach checkout. Check your connection and try again.");
       setLoadingPlan(null);
     }
   }
@@ -467,6 +486,24 @@ export default function Pricing() {
             );
           })}
         </div>
+
+        {checkoutError && (
+          <div
+            style={{
+              maxWidth: 1100,
+              margin: "24px auto 0",
+              padding: "14px 18px",
+              borderRadius: 12,
+              background: "rgba(220,38,38,0.1)",
+              border: "1px solid rgba(220,38,38,0.3)",
+              color: "#FCA5A5",
+              fontSize: 14,
+              lineHeight: 1.5,
+            }}
+          >
+            {checkoutError}
+          </div>
+        )}
 
         {/* What the two allowances actually mean. Both were listed as bare
             numbers with nothing explaining them, and the lead-search one

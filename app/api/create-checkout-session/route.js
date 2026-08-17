@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { PRICE_IDS } from "@/lib/plans";
+import { SITE_URL } from "@/lib/site";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -13,7 +14,12 @@ export async function POST(req) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Please log in first" }, { status: 401 });
+      // Signalled so the pricing page can send them to sign in and pick
+      // the same plan back up afterwards, rather than showing a dead end.
+      return NextResponse.json(
+        { error: "not_authenticated", message: "Create a free account to subscribe." },
+        { status: 401 }
+      );
     }
 
     const { plan } = await req.json();
@@ -23,7 +29,9 @@ export async function POST(req) {
       return NextResponse.json({ error: "Unknown plan" }, { status: 400 });
     }
 
-    const origin = req.headers.get("origin");
+    // Origin is absent on some requests, and a missing one silently
+    // produced "null/dashboard" as the return URL.
+    const origin = req.headers.get("origin") || SITE_URL;
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
