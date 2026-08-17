@@ -44,6 +44,7 @@ export default function DashboardClient({ initialProjects }) {
   const [genStart, setGenStart] = useState(null);
   const [genStage, setGenStage] = useState(null);
   const [rebuilding, setRebuilding] = useState(false);
+  const [previewFull, setPreviewFull] = useState(false);
   const [showContactFields, setShowContactFields] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -1037,7 +1038,14 @@ export default function DashboardClient({ initialProjects }) {
             overflow: visible !important;
             min-height: 70vh;
           }
-          .sb-dash-preview { min-height: 70vh; }
+          /* The preview shares a phone screen with a header, a tab row and
+             the editor bar. At 70vh there was barely a viewport of site
+             left to judge, so it gets most of the screen and the rest
+             scrolls. dvh so the iOS toolbar doesn't eat into it. */
+          .sb-dash-preview {
+            min-height: 78vh;
+            min-height: 78dvh;
+          }
           /* With a project open, the list above adds nothing but eats
              most of the screen — hide it and rely on the back button
              instead so the preview actually gets room to breathe. */
@@ -1047,6 +1055,14 @@ export default function DashboardClient({ initialProjects }) {
           .sb-dash-sidebar--project-open { display: none !important; }
           .sb-mobile-back { display: inline-flex !important; }
           .sb-overview-grid { grid-template-columns: 1fr !important; }
+        }
+        /* Nothing in the workspace may scroll the page sideways. A single
+           unbreakable string — a long business name, a pasted URL, a
+           domain — used to widen the whole layout, which on a phone reads
+           as the entire app being broken. */
+        .sb-dash-shell { max-width: 100%; overflow-x: hidden; }
+        @media (max-width: 860px) {
+          .sb-dash-main, .sb-dash-sidebar { max-width: 100%; overflow-x: hidden; }
         }
         .sb-mobile-back { display: none; }
       ` }} />
@@ -2003,7 +2019,21 @@ export default function DashboardClient({ initialProjects }) {
                 >
                   ← Sites
                 </button>
-                <span style={{ fontSize: 14, fontFamily: display, fontWeight: 600 }}>{active.client_name}</span>
+                <span
+                  style={{
+                    fontSize: 14,
+                    fontFamily: display,
+                    fontWeight: 600,
+                    // Without these the name sets the row's width, and a
+                    // long one pushes the whole page wider than the phone.
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    minWidth: 0,
+                  }}
+                >
+                  {active.client_name}
+                </span>
               </div>
               <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                 {active.published && (
@@ -2149,6 +2179,23 @@ export default function DashboardClient({ initialProjects }) {
                   Settings
                 </button>
                 <button
+                  onClick={() => setPreviewFull(true)}
+                  className="sb-fullscreen-tab"
+                  title="View the site full screen"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#F2F0FA",
+                    fontSize: 12,
+                    padding: "6px 14px",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    fontWeight: 500,
+                  }}
+                >
+                  Full screen
+                </button>
+                <button
                   onClick={() => setView("inquiries")}
                   style={{
                     background: view === "inquiries" ? "rgba(255,255,255,0.1)" : "none",
@@ -2288,6 +2335,71 @@ export default function DashboardClient({ initialProjects }) {
                     </a>
                   </div>
                 )}
+              </div>
+            )}
+            {previewFull && active.status === "done" && (
+              <div
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 100,
+                  background: "#0A0A10",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    padding: "10px 14px",
+                    borderBottom: "1px solid rgba(255,255,255,0.12)",
+                    flexShrink: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontFamily: display,
+                      fontWeight: 600,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {active.client_name}
+                  </span>
+                  <button
+                    onClick={() => setPreviewFull(false)}
+                    style={{
+                      background: "rgba(255,255,255,0.1)",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      borderRadius: 8,
+                      padding: "8px 16px",
+                      color: "#fff",
+                      fontFamily: body,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      flexShrink: 0,
+                    }}
+                  >
+                    Done
+                  </button>
+                </div>
+                {/* Same absolute-inset trick as the inline preview: a
+                    percentage height on an iframe does not resolve
+                    through a flex chain. */}
+                <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
+                  <iframe
+                    title="full screen preview"
+                    srcDoc={active.code}
+                    sandbox="allow-scripts allow-modals allow-forms allow-popups allow-top-navigation-to-custom-protocols"
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none", background: "white" }}
+                  />
+                </div>
               </div>
             )}
             <div className="sb-dash-preview" style={{ flex: 1, background: "#0A0A10", minHeight: 0, position: "relative" }}>
