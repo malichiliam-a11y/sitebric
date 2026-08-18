@@ -37,7 +37,17 @@ import {
 
 export default function DashboardClient({ initialProjects }) {
   const supabase = createClient();
-  const [tab, setTab] = useState("overview");
+
+  // Someone with no sites yet opens on the builder, not on the overview.
+  // The overview is a page of empty stat cards reading "Nothing yet" —
+  // a fair summary for a returning user and a dead end for a new one,
+  // who then has to work out that the thing they signed up to do lives
+  // behind another tab. 21 of the first 38 trial accounts never generated
+  // anything at all, and this is the first screen all of them saw.
+  //
+  // Decided from the server-rendered prop rather than in an effect, so
+  // there is no flash of the wrong tab and nothing to hydrate differently.
+  const [tab, setTab] = useState(initialProjects.length === 0 ? "sites" : "overview");
   const [projects, setProjects] = useState(initialProjects);
   const [activeId, setActiveId] = useState(null);
   const [view, setView] = useState("preview");
