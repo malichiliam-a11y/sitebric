@@ -74,6 +74,21 @@ Email signup mails a **6-digit code**, not a link. `AuthCard` collects it via
 - `/admin/referrals` estimates MRR from list price, so a discounted subscriber
   (APEX is on a $5-off coupon for 6 months) reads $5/mo high.
 
+## Working agreement
+
+The owner is the boss and Claude is the engineer. **Merge your own work once
+the checks are green** — tests passing, build clean, and UI changes driven in a
+browser. Don't park finished work in a draft PR waiting to be told; that was
+the old default and it just left fixes sitting unshipped while live sites stayed
+broken.
+
+Production deploys on merge to `main`, and a bad deploy is fixed by the next
+one, so shipping is the cheap direction. The expensive direction is a change
+that can't be undone by redeploying — bulk-overwriting customer data without a
+backup first, or mail going out to real users. Take a backup before the former
+(`projects_code_backup_*` is the pattern) and say what you're about to do for
+the latter.
+
 ## Conventions
 
 - Motion is gated on `prefers-reduced-motion`. A frozen background usually means
