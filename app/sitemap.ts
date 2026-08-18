@@ -7,7 +7,7 @@ import { SITE_URL } from "@/lib/site";
 // ephemeral, and listing them would invite crawlers into pages that can
 // only 404 or redirect.
 export default function sitemap(): MetadataRoute.Sitemap {
-  const staticRoutes = ["", "/pricing", "/demo", "/terms", "/privacy"];
+  const staticRoutes = ["", "/pricing", "/demo", "/domain-setup", "/terms", "/privacy"];
 
   return [
     ...staticRoutes.map((path) => ({
