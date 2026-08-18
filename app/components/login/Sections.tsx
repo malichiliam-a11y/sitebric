@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { palette, easing } from "@/lib/design";
+import { FAQS } from "@/lib/faqs";
 import { AUDIENCES } from "@/lib/audiences";
 
 /**
@@ -18,25 +19,6 @@ const STEPS = [
   ["02", "AI brings it to life", "A full, polished website gets generated in seconds — real copy, real design."],
   ["03", "Deliver it", "Preview it, publish it, connect their domain, and move on to the next client."],
 ] as const;
-
-const FAQS = [
-  {
-    q: "Do I own the sites I generate?",
-    a: "Yes — every site you generate belongs to you to hand off or host for your client.",
-  },
-  {
-    q: "Do clients need their own Sitebric account?",
-    a: "No — your clients never see Sitebric. You manage everything from your dashboard and hand off the finished site.",
-  },
-  {
-    q: "Can I use my own domain for client sites?",
-    a: "Yes — Growth and Pro plans let you connect any domain you or your client owns.",
-  },
-  {
-    q: "Can I cancel anytime?",
-    a: "Yes, no contracts — cancel whenever, no questions asked.",
-  },
-];
 
 const reveal = {
   hidden: { opacity: 0, y: 20 },
