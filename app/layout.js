@@ -41,6 +41,13 @@ export const metadata = {
   },
   verification: {
     google: "MVETH97B41E6pVIEJhrAe35ZevjcaFX5R5UcJIwHZnk",
+    // Bing has no dedicated field in Next's metadata type, so it goes
+    // through `other` as the raw meta name Bing looks for. Worth keeping
+    // even though Bing can import verification from Search Console:
+    // ChatGPT's search results come from Bing's index, not Google's.
+    other: {
+      "msvalidate.01": "4A11B2CF2A2FCC4E6D69802A6AD201AF",
+    },
   },
 };
 export const viewport = {

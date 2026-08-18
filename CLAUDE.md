@@ -39,6 +39,16 @@ password-reset links on the login page instead of the reset form. `AuthCard`
 forwards recovery landings to `/reset-password`; adding `https://sitebric.com/**`
 to the allow-list fixes it at the source.
 
+**A generated form that fakes success is worse than no form.** Several sites
+shipped a submit handler that called `preventDefault`, hid the form and showed
+"we'll call you shortly" — and posted nowhere. The lead guard in
+`lib/fix-buttons.js` used to treat `defaultPrevented` as "the page has this in
+hand" and stand down, so those forms stayed silently broken on live sites. The
+guard now decides at build time, by reading the page's own code for a post to
+`/api/site-lead`, and listens in the capture phase when it finds none — early
+enough to read the fields before the page's handler calls `form.reset()`.
+`node test/lead-guard.mjs` drives all of this in a real browser.
+
 **Referral capture must survive the whole signup path.** `?ref=` is stored in
 localStorage and only read in `app/api/ensure-profile/route.js`, the single point
 every profile is created through, and only on first creation. Anything that
