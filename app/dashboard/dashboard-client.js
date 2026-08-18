@@ -516,6 +516,10 @@ export default function DashboardClient({ initialProjects }) {
   const [editInstruction, setEditInstruction] = useState("");
   const [logoBusy, setLogoBusy] = useState(false);
   const [logoError, setLogoError] = useState("");
+  const [clientLinkBusy, setClientLinkBusy] = useState(false);
+  const [clientLinkUrl, setClientLinkUrl] = useState("");
+  const [clientLinkCopied, setClientLinkCopied] = useState(false);
+  const [clientLinkError, setClientLinkError] = useState("");
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState("");
   const [publishError, setPublishError] = useState("");
@@ -547,6 +551,12 @@ export default function DashboardClient({ initialProjects }) {
     setSettingsCalendlyUrl(active.calendly_url || "");
     setSettingsError("");
     setSettingsSaved(false);
+    // Same reason: a link belongs to one site, and showing the previous
+    // site's link here would get the wrong URL sent to a client.
+    setClientLinkUrl("");
+    setClientLinkCopied(false);
+    setClientLinkError("");
+    setLogoError("");
   }, [activeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function saveSettings() {
@@ -717,6 +727,40 @@ export default function DashboardClient({ initialProjects }) {
   // Putting a logo on a finished site is a plain HTML swap on the server —
   // no AI call — so it is instant and costs no generations. That is the
   // whole point: "change the logo" was costing the same as a new website.
+  // A private link to show a client, without putting the site on the
+  // public internet. Publishing was being used for this and then undone
+  // afterwards — seven sites were published and taken back down.
+  async function makeShareLink(project) {
+    if (!project) return;
+    setClientLinkBusy(true);
+    setClientLinkError("");
+    try {
+      const res = await fetch("/api/share-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Couldn't make a link.");
+      setClientLinkUrl(data.url);
+
+      // Clipboard access is refused in some in-app browsers, so a failure
+      // here leaves the link on screen to copy by hand rather than
+      // looking like the button did nothing.
+      try {
+        await navigator.clipboard.writeText(data.url);
+        setClientLinkCopied(true);
+        setTimeout(() => setClientLinkCopied(false), 2500);
+      } catch {
+        setClientLinkCopied(false);
+      }
+    } catch (err) {
+      setClientLinkError(err.message);
+    } finally {
+      setClientLinkBusy(false);
+    }
+  }
+
   async function setLogo(project, logoUrl) {
     setLogoBusy(true);
     setLogoError("");
@@ -2890,7 +2934,76 @@ export default function DashboardClient({ initialProjects }) {
                   <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.35)" }}>
                     Free — doesn&apos;t use a generation
                   </span>
+
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 1,
+                      height: 18,
+                      background: "rgba(255,255,255,0.12)",
+                      margin: "0 2px",
+                    }}
+                  />
+
+                  <button
+                    onClick={() => makeShareLink(active)}
+                    disabled={clientLinkBusy}
+                    style={{
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.14)",
+                      borderRadius: 9,
+                      padding: "8px 14px",
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      color: "#F2F0FA",
+                      cursor: clientLinkBusy ? "default" : "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {clientLinkBusy
+                      ? "Working…"
+                      : clientLinkCopied
+                        ? "Link copied ✓"
+                        : "Copy link for client"}
+                  </button>
                 </div>
+
+                {clientLinkUrl && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      display: "flex",
+                      gap: 8,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <input
+                      readOnly
+                      value={clientLinkUrl}
+                      onFocus={(e) => e.target.select()}
+                      style={{
+                        flex: "1 1 260px",
+                        minWidth: 0,
+                        background: "rgba(0,0,0,0.35)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        borderRadius: 8,
+                        padding: "8px 10px",
+                        color: "#F2F0FA",
+                        fontSize: 12,
+                        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                      }}
+                    />
+                    <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.4)" }}>
+                      Anyone with this link can see the site. It won&apos;t show up in Google, and
+                      you don&apos;t have to publish.
+                    </span>
+                  </div>
+                )}
+
+                {clientLinkError && (
+                  <div style={{ fontSize: 12, color: "#FCA5A5", marginTop: 8 }}>{clientLinkError}</div>
+                )}
 
                 {logoError && (
                   <div style={{ fontSize: 12, color: "#FCA5A5", marginTop: 8 }}>{logoError}</div>
