@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { t } from "@/lib/theme";
-import { PLAN_LIMITS, MULTIPAGE_COST } from "@/lib/plans";
+import { PLAN_LIMITS, MULTIPAGE_COST, PLAN_YEARLY_PRICES, yearlySavingCents } from "@/lib/plans";
 
 export default function Pricing() {
   const [hovered, setHovered] = useState(null);
@@ -11,13 +11,13 @@ export default function Pricing() {
   const display = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
   const body = "'Inter', sans-serif";
 
-  async function subscribe(planId) {
-    setLoadingPlan(planId);
+  async function subscribe(planId, interval = "month") {
+    setLoadingPlan(`${planId}:${interval}`);
     try {
       const res = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: planId }),
+        body: JSON.stringify({ plan: planId, interval }),
       });
       const data = await res.json();
 
@@ -34,6 +34,7 @@ export default function Pricing() {
       if (res.status === 401) {
         try {
           window.localStorage.setItem("sb_pending_plan", planId);
+          window.localStorage.setItem("sb_pending_interval", interval);
         } catch {
           // Private browsing can block storage — signing in still works,
           // they just pick the plan again afterwards.
@@ -479,8 +480,52 @@ export default function Pricing() {
                       transition: "transform 0.2s ease, box-shadow 0.2s ease",
                     }}
                   >
-                    {loadingPlan === tier.id ? "Redirecting…" : tier.cta}
+                    {loadingPlan === `${tier.id}:month` ? "Redirecting…" : tier.cta}
                   </button>
+
+                  {/* Yearly sits under the monthly button rather than
+                      behind a toggle: a toggle hides one of the two
+                      prices, and the saving is the argument. */}
+                  <button
+                    onClick={() => subscribe(tier.id, "year")}
+                    disabled={loadingPlan !== null}
+                    style={{
+                      width: "100%",
+                      marginTop: 10,
+                      background: "transparent",
+                      border: "1px solid rgba(255,255,255,0.16)",
+                      borderRadius: 12,
+                      padding: "12px 10px",
+                      color: "#F2F0FA",
+                      fontFamily: display,
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                      cursor: loadingPlan !== null ? "default" : "pointer",
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    {loadingPlan === `${tier.id}:year` ? (
+                      "Redirecting…"
+                    ) : (
+                      <>
+                        ${(PLAN_YEARLY_PRICES[tier.id] / 100).toFixed(0)}/year
+                        <span style={{ color: "rgba(255,255,255,0.45)", fontWeight: 500 }}>
+                          {" — "}2 months free
+                        </span>
+                      </>
+                    )}
+                  </button>
+
+                  <div
+                    style={{
+                      marginTop: 6,
+                      fontSize: 11.5,
+                      color: "rgba(255,255,255,0.35)",
+                      textAlign: "center",
+                    }}
+                  >
+                    Save ${(yearlySavingCents(tier.id) / 100).toFixed(0)} a year
+                  </div>
                 </div>
               </div>
             );
