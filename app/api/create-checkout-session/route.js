@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
-import { PRICE_IDS } from "@/lib/plans";
+import { priceIdFor } from "@/lib/plans";
 import { SITE_URL } from "@/lib/site";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -22,8 +22,11 @@ export async function POST(req) {
       );
     }
 
-    const { plan } = await req.json();
-    const priceId = PRICE_IDS[plan];
+    const { plan, interval } = await req.json();
+
+    // Defaults to monthly, so an older client that doesn't send an
+    // interval keeps working exactly as it did.
+    const priceId = priceIdFor(plan, interval || "month");
 
     if (!priceId) {
       return NextResponse.json({ error: "Unknown plan" }, { status: 400 });
@@ -38,7 +41,7 @@ export async function POST(req) {
       line_items: [{ price: priceId, quantity: 1 }],
       client_reference_id: user.id,
       customer_email: user.email,
-      metadata: { plan, user_id: user.id },
+      metadata: { plan, user_id: user.id, interval: interval || "month" },
       // Shows the "Add promotion code" box at checkout. Who a code applies
       // to is controlled in Stripe (redemption limits, customer or price
       // restrictions), deliberately not here — special-casing an email in

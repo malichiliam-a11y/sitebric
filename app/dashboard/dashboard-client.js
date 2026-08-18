@@ -63,9 +63,14 @@ export default function DashboardClient({ initialProjects }) {
   // were buying.
   useEffect(() => {
     let plan = null;
+    let interval = null;
     try {
       plan = window.localStorage.getItem("sb_pending_plan");
+      // Read alongside the plan: someone who picked the yearly price
+      // while logged out must not land in a monthly checkout.
+      interval = window.localStorage.getItem("sb_pending_interval");
       if (plan) window.localStorage.removeItem("sb_pending_plan");
+      window.localStorage.removeItem("sb_pending_interval");
     } catch {
       // Storage unavailable — nothing to resume.
     }
@@ -76,7 +81,7 @@ export default function DashboardClient({ initialProjects }) {
         const res = await fetch("/api/create-checkout-session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan }),
+          body: JSON.stringify({ plan, interval: interval || "month" }),
         });
         const data = await res.json();
         if (data.url) window.location.href = data.url;
