@@ -6,6 +6,14 @@ import { createClient } from "@/lib/supabase-browser";
 import { PLAN_LIMITS, MULTIPAGE_COST, MULTIPAGE_ENABLED } from "@/lib/plans";
 import GeneratingProgress from "./GeneratingProgress";
 import { withPreviewAnchorFix } from "@/lib/preview-anchors";
+import { currentLogoUrl } from "@/lib/logo";
+
+// Read straight out of the site's own HTML rather than tracked in its own
+// column, so the button can never disagree with what the site actually
+// shows.
+function logoUrlOf(project) {
+  return project?.code ? currentLogoUrl(project.code) : null;
+}
 
 // A generation that exceeds the platform's function time limit is killed
 // outright — the route's own error handler never runs, so the row keeps
@@ -506,6 +514,8 @@ export default function DashboardClient({ initialProjects }) {
   const [domainBusy, setDomainBusy] = useState(false);
   const [domainError, setDomainError] = useState("");
   const [editInstruction, setEditInstruction] = useState("");
+  const [logoBusy, setLogoBusy] = useState(false);
+  const [logoError, setLogoError] = useState("");
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState("");
   const [publishError, setPublishError] = useState("");
@@ -702,6 +712,66 @@ export default function DashboardClient({ initialProjects }) {
 
   function removePhoto(url) {
     setPhotoUrls((prev) => prev.filter((u) => u !== url));
+  }
+
+  // Putting a logo on a finished site is a plain HTML swap on the server —
+  // no AI call — so it is instant and costs no generations. That is the
+  // whole point: "change the logo" was costing the same as a new website.
+  async function setLogo(project, logoUrl) {
+    setLogoBusy(true);
+    setLogoError("");
+    try {
+      const res = await fetch("/api/set-logo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id, logoUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Couldn't update the logo.");
+
+      const { data: rows } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (rows) setProjects(rows);
+    } catch (err) {
+      setLogoError(err.message);
+    } finally {
+      setLogoBusy(false);
+    }
+  }
+
+  async function handleLogoFile(e, project) {
+    const file = (e.target.files || [])[0];
+    e.target.value = "";
+    if (!file || !project) return;
+
+    // Checked here as well as on the server so the reseller gets an
+    // instant answer instead of waiting on an upload that cannot work.
+    if (!/^image\//.test(file.type)) {
+      setLogoError("That file isn't an image. Use a PNG, JPG or SVG.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError("That logo is over 2MB — a smaller file will load faster for visitors.");
+      return;
+    }
+
+    setLogoBusy(true);
+    setLogoError("");
+    try {
+      const path = `${user?.id || "anon"}/logo-${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("client-photos")
+        .upload(path, file);
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from("client-photos").getPublicUrl(path);
+      await setLogo(project, data.publicUrl);
+    } catch (err) {
+      setLogoError("Logo upload failed: " + err.message);
+      setLogoBusy(false);
+    }
   }
 
   async function editSite() {
@@ -2742,6 +2812,89 @@ export default function DashboardClient({ initialProjects }) {
                     {editBusy ? "Applying…" : "Apply edit"}
                   </button>
                 </div>
+
+                {/* The logo sits beside the chat box rather than inside it
+                    because it isn't an instruction — it's a file, it takes
+                    effect immediately, and unlike an edit it is free. */}
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    marginTop: 10,
+                  }}
+                >
+                  <label
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.14)",
+                      borderRadius: 9,
+                      padding: "8px 14px",
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      color: "#F2F0FA",
+                      cursor: logoBusy ? "default" : "pointer",
+                      opacity: logoBusy ? 0.5 : 1,
+                    }}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={logoBusy}
+                      onChange={(e) => handleLogoFile(e, active)}
+                      style={{ display: "none" }}
+                    />
+                    {logoBusy
+                      ? "Working…"
+                      : logoUrlOf(active)
+                        ? "Replace logo"
+                        : "Upload logo"}
+                  </label>
+
+                  {logoUrlOf(active) && !logoBusy && (
+                    <>
+                      <img
+                        src={logoUrlOf(active)}
+                        alt="Current logo"
+                        style={{
+                          height: 26,
+                          width: "auto",
+                          maxWidth: 110,
+                          objectFit: "contain",
+                          borderRadius: 4,
+                          background: "rgba(255,255,255,0.06)",
+                          padding: 3,
+                        }}
+                      />
+                      <button
+                        onClick={() => setLogo(active, null)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "rgba(255,255,255,0.5)",
+                          fontSize: 12,
+                          cursor: "pointer",
+                          textDecoration: "underline",
+                          padding: 0,
+                        }}
+                      >
+                        Use the name instead
+                      </button>
+                    </>
+                  )}
+
+                  <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.35)" }}>
+                    Free — doesn&apos;t use a generation
+                  </span>
+                </div>
+
+                {logoError && (
+                  <div style={{ fontSize: 12, color: "#FCA5A5", marginTop: 8 }}>{logoError}</div>
+                )}
                 {editError && (
                   <div style={{ fontSize: 12, color: "#FCA5A5", marginTop: 8 }}>{editError}</div>
                 )}

@@ -14,6 +14,7 @@ client business and get a finished website they can hand off.
 | `lib/design.ts` | Login-screen tokens |
 | `lib/theme.js` | Dashboard tokens |
 | `lib/plans.js` | Plan limits and Stripe price IDs — the single source of truth |
+| `lib/logo.js` | Swaps a site's text wordmark for an uploaded logo — a pure transform, no model call |
 
 ## Traps that have bitten this codebase
 
