@@ -9,7 +9,17 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/dashboard", "/admin", "/api/", "/reset-password", "/demo/result/", "/s/"],
+      disallow: [
+        "/dashboard",
+        "/admin",
+        "/api/",
+        "/reset-password",
+        "/demo/result/",
+        "/s/",
+        // Private client previews. The route sends noindex too — this is
+        // the belt to that pair of braces.
+        "/preview/",
+      ],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
