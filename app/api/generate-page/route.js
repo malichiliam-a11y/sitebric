@@ -2,7 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { generatePage } from "@/lib/multipage";
-import { friendlyGenerationError } from "@/lib/generation-errors";
+import { friendlyGenerationError, isBillingFailure } from "@/lib/generation-errors";
+import { alertOwner } from "@/lib/alert-owner";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -101,6 +102,13 @@ export async function POST(req) {
     });
   } catch (err) {
     console.error(`Page generation failed (${page}):`, err?.status || "", err?.message);
+    // The owner finding out from a customer screenshot is how this
+    // outage was discovered the first time. alertOwner never throws
+    // and rate-limits itself to one message an hour.
+    if (isBillingFailure(err)) {
+      await alertOwner("api_credit", String(err?.message || "").slice(0, 500));
+    }
+
     return NextResponse.json({ error: friendlyGenerationError(err), page }, { status: 500 });
   } finally {
     clearTimeout(timer);
