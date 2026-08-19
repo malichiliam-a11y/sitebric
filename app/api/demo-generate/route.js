@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { waitUntil } from "@vercel/functions";
 import { stripFakePhoneNumbers } from "@/lib/sanitize-site";
-import { UserFacingError, friendlyGenerationError } from "@/lib/generation-errors";
+import { UserFacingError, friendlyGenerationError, isBillingFailure } from "@/lib/generation-errors";
+import { alertOwner } from "@/lib/alert-owner";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -170,6 +171,14 @@ ${stockPhotos.length > 0 ? `\nCURATED STOCK PHOTOS MATCHING THIS BUSINESS — re
     // A stranger evaluating the product must never be shown a raw vendor
     // error — the real one is logged here instead.
     console.error("Demo generation failed:", err?.status || "", err?.message);
+
+    // The owner finding out from a customer screenshot is how this outage
+    // was discovered the first time. alertOwner never throws and
+    // rate-limits itself to one message an hour.
+    if (isBillingFailure(err)) {
+      await alertOwner("api_credit", String(err?.message || "").slice(0, 500));
+    }
+
     await supabaseAdmin
       .from("demo_jobs")
       .update({

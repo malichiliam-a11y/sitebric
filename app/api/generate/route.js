@@ -6,7 +6,8 @@ import { limitsFor, generationCost, MULTIPAGE_COST, MULTIPAGE_ENABLED } from "@/
 import { stripFakePhoneNumbers } from "@/lib/sanitize-site";
 import { makeButtonsWork } from "@/lib/fix-buttons";
 import { parseOrderLinks, orderLinksBlock } from "@/lib/order-links";
-import { UserFacingError, friendlyGenerationError } from "@/lib/generation-errors";
+import { UserFacingError, friendlyGenerationError, isBillingFailure } from "@/lib/generation-errors";
+import { alertOwner } from "@/lib/alert-owner";
 import { generateShell } from "@/lib/multipage";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -558,6 +559,13 @@ ${imageBlock}
       .from("projects")
       .update({ status: "error" })
       .eq("id", project.id);
+    // The owner finding out from a customer screenshot is how this
+    // outage was discovered the first time. alertOwner never throws
+    // and rate-limits itself to one message an hour.
+    if (isBillingFailure(err)) {
+      await alertOwner("api_credit", String(err?.message || "").slice(0, 500));
+    }
+
     return NextResponse.json({ error: friendlyGenerationError(err) }, { status: 500 });
   } finally {
     clearTimeout(deadlineTimer);
