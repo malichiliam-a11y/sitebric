@@ -15,6 +15,9 @@ client business and get a finished website they can hand off.
 | `lib/theme.js` | Dashboard tokens |
 | `lib/plans.js` | Plan limits and Stripe price IDs — the single source of truth |
 | `lib/logo.js` | Swaps a site's text wordmark for an uploaded logo — a pure transform, no model call |
+| `lib/lead-script.js` | The words to say on a cold call, built from a lead's own facts — pure, no model call |
+| `lib/leads-csv.js` | The saved-leads download, with the Excel formula-injection guard |
+| `app/dashboard/LeadCards.js`, `LeadDetail.js` | The leads UI, split out so it can be driven in a browser without a login |
 
 ## Traps that have bitten this codebase
 
@@ -50,6 +53,14 @@ guard now decides at build time, by reading the page's own code for a post to
 enough to read the fields before the page's handler calls `form.reset()`.
 `node test/lead-guard.mjs` drives all of this in a real browser.
 
+**A clickable card must not be `role="button"`.** The lead cards carry
+their own buttons (Save, Open), and an ARIA button may not contain other
+controls — the card's accessible name is computed from everything inside
+it, so the whole card announced as one button called "Northgate Locksmiths
+NO WEBSITE 112 Northgate St … Save", and Playwright aiming at the Save
+button hit the card instead. Clickable wrapper: plain `div` with `onClick`,
+plus a real `<button>` inside for keyboard and screen readers.
+
 **Referral capture must survive the whole signup path.** `?ref=` is stored in
 localStorage and only read in `app/api/ensure-profile/route.js`, the single point
 every profile is created through, and only on first creation. Anything that
@@ -74,6 +85,13 @@ Email signup mails a **6-digit code**, not a link. `AuthCard` collects it via
   working.
 - `/admin/referrals` estimates MRR from list price, so a discounted subscriber
   (APEX is on a $5-off coupon for 6 months) reads $5/mo high.
+- `projects_code_backup_20260817` has RLS disabled and holds customer site
+  code. The repo is public, so the anon key is public. Enabling RLS with no
+  policies locks it to the service role, which is all that ever reads it:
+  `alter table public.projects_code_backup_20260817 enable row level security;`
+- Dashboard UI still can't be driven end-to-end here — there's no way to sign
+  in from the sandbox. The leads components are verifiable because they were
+  split into their own files; the rest of `dashboard-client.js` is not.
 
 ## Working agreement
 

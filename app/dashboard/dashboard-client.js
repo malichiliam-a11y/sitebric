@@ -7,6 +7,9 @@ import { PLAN_LIMITS, MULTIPAGE_COST, MULTIPAGE_ENABLED } from "@/lib/plans";
 import GeneratingProgress from "./GeneratingProgress";
 import { withPreviewAnchorFix } from "@/lib/preview-anchors";
 import { currentLogoUrl } from "@/lib/logo";
+import { leadsToCsv, csvFilename } from "@/lib/leads-csv";
+import LeadDetail from "./LeadDetail";
+import { LeadResultCard, SavedLeadRow } from "./LeadCards";
 
 // Read straight out of the site's own HTML rather than tracked in its own
 // column, so the button can never disagree with what the site actually
@@ -548,6 +551,18 @@ export default function DashboardClient({ initialProjects }) {
   const [leadResults, setLeadResults] = useState(null);
   const [leadBusy, setLeadBusy] = useState(false);
   const [leadError, setLeadError] = useState("");
+  // Which search produced the results on screen. Held separately from the
+  // input boxes so that editing "locksmiths" to "plumbers" without
+  // pressing Search doesn't quietly rewrite the script for leads that
+  // came from the previous search.
+  const [leadSearchedFor, setLeadSearchedFor] = useState({ category: "", location: "" });
+  const [leadView, setLeadView] = useState("search");
+  const [openLead, setOpenLead] = useState(null);
+  // null until the list has been fetched, so an empty list and a list
+  // that hasn't loaded yet don't both render "you haven't saved anyone".
+  const [savedLeads, setSavedLeads] = useState(null);
+  const [savedBusy, setSavedBusy] = useState(false);
+  const [savedError, setSavedError] = useState("");
   const [siteSearch, setSiteSearch] = useState("");
   const [settingsPhone, setSettingsPhone] = useState("");
   const [settingsAddress, setSettingsAddress] = useState("");
@@ -684,6 +699,8 @@ export default function DashboardClient({ initialProjects }) {
       if (!res.ok) throw new Error(result.message || result.error || "failed");
 
       setLeadResults(result.leads);
+      setLeadSearchedFor({ category: leadCategory.trim(), location: leadLocation.trim() });
+      setLeadView("search");
       loadProfile();
     } catch (err) {
       setLeadError(err.message);
@@ -711,6 +728,159 @@ export default function DashboardClient({ initialProjects }) {
     setOwnerEmail("");
     setCalendlyUrl("");
     setShowContactFields(Boolean(lead.phone || lead.address));
+    setOpenLead(null);
+  }
+
+  // ===== The call list =====
+  //
+  // A lead search costs against the monthly allowance and the results used
+  // to live in React state alone: a refresh, or a click on any other tab,
+  // threw away a paid search. Saving is what makes a search worth
+  // spending.
+
+  async function loadSavedLeads() {
+    setSavedBusy(true);
+    setSavedError("");
+    try {
+      const res = await fetch("/api/saved-leads");
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "failed");
+      setSavedLeads(result.leads || []);
+    } catch (err) {
+      setSavedError(err.message);
+      // An empty array rather than null: the list renders its empty state
+      // instead of spinning forever next to the error.
+      setSavedLeads((current) => current || []);
+    } finally {
+      setSavedBusy(false);
+    }
+  }
+
+  // Fetched the first time the tab is opened rather than on page load —
+  // most sessions never touch Find Leads, and the dashboard already makes
+  // enough requests on mount.
+  useEffect(() => {
+    if (tab === "leads" && savedLeads === null && !savedBusy) loadSavedLeads();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  function isSaved(placeId) {
+    return Boolean(savedLeads?.some((l) => l.place_id === placeId));
+  }
+
+  async function saveLead(lead, context) {
+    // Optimistic: the button is the kind people press while a phone is
+    // ringing, and a spinner there reads as "it didn't work".
+    const optimistic = {
+      place_id: lead.id,
+      name: lead.name,
+      address: lead.address || "",
+      phone: lead.phone || "",
+      phone_dial: lead.phoneDial || lead.phone || "",
+      maps_url: lead.mapsUrl || "",
+      website: lead.website || null,
+      has_website: Boolean(lead.hasWebsite),
+      category: context?.category || "",
+      location: context?.location || "",
+      created_at: new Date().toISOString(),
+    };
+    setSavedLeads((current) => [optimistic, ...(current || []).filter((l) => l.place_id !== lead.id)]);
+    setSavedError("");
+
+    try {
+      const res = await fetch("/api/saved-leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lead, category: context?.category, location: context?.location }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "failed");
+      setSavedLeads((current) =>
+        (current || []).map((l) => (l.place_id === lead.id ? result.lead : l))
+      );
+    } catch (err) {
+      // Put it back the way it was, so the list on screen is never a list
+      // the server doesn't have.
+      setSavedLeads((current) => (current || []).filter((l) => l.place_id !== lead.id));
+      setSavedError(`Couldn't save ${lead.name} — ${err.message}`);
+    }
+  }
+
+  async function unsaveLead(placeId) {
+    const previous = savedLeads || [];
+    setSavedLeads(previous.filter((l) => l.place_id !== placeId));
+    setSavedError("");
+    try {
+      const res = await fetch(`/api/saved-leads?placeId=${encodeURIComponent(placeId)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const result = await res.json().catch(() => ({}));
+        throw new Error(result.error || "failed");
+      }
+    } catch (err) {
+      setSavedLeads(previous);
+      setSavedError(`Couldn't remove that lead — ${err.message}`);
+    }
+  }
+
+  function downloadSavedLeads() {
+    const rows = savedLeads || [];
+    if (rows.length === 0) return;
+    // Built in the browser from what's already on screen — no round trip,
+    // and it works the moment the list is loaded.
+    const blob = new Blob([leadsToCsv(rows)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = csvFilename();
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    // Revoked on the next tick — revoking synchronously cancels the
+    // download in some browsers.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // Whether a site already exists for this business, and where it lives.
+  // Matched on name because that is the only thing a project and a Google
+  // listing share — generateForLead fills client_name straight from the
+  // lead, so the match holds for anything built through that button.
+  //
+  // It changes the script from "I could build you one" to "I already
+  // built it", which is the whole reason this product beats a cold call
+  // about a website that doesn't exist yet.
+  function siteForLead(lead) {
+    const wanted = String(lead?.name || "").trim().toLowerCase();
+    if (!wanted) return { built: false, link: "" };
+    const match = projects.find(
+      (p) => p.status === "done" && String(p.client_name || "").trim().toLowerCase() === wanted
+    );
+    if (!match) return { built: false, link: "" };
+    // Only a link that a stranger can actually open. An unpublished site
+    // has no public URL, and putting a dashboard URL in a text message
+    // to a business owner would send them to a login screen.
+    const link = match.published
+      ? match.slug
+        ? `https://${match.slug}.sitebric.com`
+        : `https://sitebric.com/s/${match.id}`
+      : "";
+    return { built: true, link };
+  }
+
+  // A saved row and a fresh search result are the same business in two
+  // different shapes. The detail panel takes one shape.
+  function normalizeSaved(row) {
+    return {
+      id: row.place_id,
+      name: row.name,
+      address: row.address,
+      phone: row.phone,
+      phoneDial: row.phone_dial || row.phone,
+      mapsUrl: row.maps_url,
+      website: row.website,
+      hasWebsite: row.has_website,
+    };
   }
 
   async function handlePhotoUpload(e) {
@@ -3187,139 +3357,189 @@ export default function DashboardClient({ initialProjects }) {
               )}
             </div>
 
-            {leadResults && leadResults.length === 0 && (
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
-                No businesses found for that search — try a different city or category.
-              </div>
+            {/* Search results and the call list are the same tab, because
+                they are the same job: the list is what a search is FOR.
+                A separate nav entry would have made saving feel like
+                filing rather than like working. */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
+              {[
+                ["search", leadResults ? `Results (${leadResults.length})` : "Search results"],
+                ["saved", `My call list${savedLeads?.length ? ` (${savedLeads.length})` : ""}`],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setLeadView(id)}
+                  style={{
+                    background: leadView === id ? "rgba(255,255,255,0.1)" : "transparent",
+                    border: "1px solid",
+                    borderColor: leadView === id ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)",
+                    borderRadius: 999,
+                    padding: "7px 16px",
+                    color: leadView === id ? "#FFFFFF" : "rgba(255,255,255,0.5)",
+                    fontFamily: body,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {savedError && (
+              <div style={{ fontSize: 12.5, color: "#FCA5A5", marginBottom: 14 }}>{savedError}</div>
             )}
 
-            {leadResults && leadResults.length > 0 && (
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 14 }}>
-                <span style={{ color: "#FFFFFF", fontWeight: 600 }}>{leadResults.length}</span>{" "}
-                {leadResults.length === 1 ? "business" : "businesses"} found
-                {leadResults.filter((l) => !l.hasWebsite).length > 0 && (
-                  <>
-                    {" — "}
-                    <span style={{ color: "#4ADE80", fontWeight: 600 }}>
-                      {leadResults.filter((l) => !l.hasWebsite).length} with no website
-                    </span>
-                    , shown first
-                  </>
+            {leadView === "search" && (
+              <>
+                {leadResults && leadResults.length === 0 && (
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
+                    No businesses found for that search — try a different city or category.
+                  </div>
                 )}
-              </div>
-            )}
 
-            {leadResults && leadResults.length > 0 && (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-                  gap: 14,
-                }}
-              >
-                {leadResults.map((lead) => (
+                {!leadResults && (
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", lineHeight: 1.7 }}>
+                    Search above to pull real businesses off Google Maps. Click any result to get
+                    their details and the exact words to say when you call them.
+                  </div>
+                )}
+
+                {leadResults && leadResults.length > 0 && (
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 14 }}>
+                    <span style={{ color: "#FFFFFF", fontWeight: 600 }}>{leadResults.length}</span>{" "}
+                    {leadResults.length === 1 ? "business" : "businesses"} found
+                    {leadResults.filter((l) => !l.hasWebsite).length > 0 && (
+                      <>
+                        {" — "}
+                        <span style={{ color: "#4ADE80", fontWeight: 600 }}>
+                          {leadResults.filter((l) => !l.hasWebsite).length} with no website
+                        </span>
+                        , shown first
+                      </>
+                    )}
+                    {". Click one for their details and a call script."}
+                  </div>
+                )}
+
+                {leadResults && leadResults.length > 0 && (
                   <div
-                    key={lead.id}
                     style={{
-                      borderRadius: 14,
-                      padding: "16px 18px",
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 12,
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+                      gap: 14,
                     }}
                   >
-                    <div>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          marginBottom: 4,
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <span style={{ fontWeight: 600, fontSize: 14 }}>{lead.name}</span>
-                        {/* Which pitch this is: "you have nothing" vs
-                            "yours is dated". Both are leads, so the badge
-                            labels rather than hides. */}
-                        <span
-                          style={{
-                            fontSize: 10.5,
-                            fontWeight: 600,
-                            letterSpacing: "0.04em",
-                            padding: "2px 7px",
-                            borderRadius: 999,
-                            whiteSpace: "nowrap",
-                            color: lead.hasWebsite ? "rgba(255,255,255,0.45)" : "#4ADE80",
-                            background: lead.hasWebsite
-                              ? "rgba(255,255,255,0.06)"
-                              : "rgba(74,222,128,0.12)",
-                          }}
-                        >
-                          {lead.hasWebsite ? "HAS A SITE" : "NO WEBSITE"}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 8 }}>
-                        {lead.address}
-                      </div>
-                      <div style={{ display: "flex", gap: 14, fontSize: 12, flexWrap: "wrap" }}>
-                        {lead.phone ? (
-                          <a
-                            href={`tel:${(lead.phoneDial || lead.phone).replace(/[^0-9+]/g, "")}`}
-                            style={{ color: "#FFFFFF", textDecoration: "none" }}
-                          >
-                            📞 {lead.phone}
-                          </a>
-                        ) : (
-                          <span style={{ color: "rgba(255,255,255,0.3)" }}>No phone listed</span>
-                        )}
-                        {lead.mapsUrl && (
-                          <a
-                            href={lead.mapsUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ color: "rgba(255,255,255,0.72)", textDecoration: "none" }}
-                          >
-                            View on Maps →
-                          </a>
-                        )}
-                        {/* The pitch writes itself once you've seen what
-                            they're currently running. */}
-                        {lead.website && (
-                          <a
-                            href={lead.website}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            style={{ color: "rgba(255,255,255,0.72)", textDecoration: "none" }}
-                          >
-                            Their site →
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => generateForLead(lead)}
+                    {leadResults.map((lead) => (
+                      <LeadResultCard
+                        key={lead.id}
+                        lead={lead}
+                        built={siteForLead(lead).built}
+                        saved={isSaved(lead.id)}
+                        onOpen={() => setOpenLead(lead)}
+                        onSave={(l) => saveLead(l, leadSearchedFor)}
+                        onUnsave={unsaveLead}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {leadView === "saved" && (
+              <>
+                {savedBusy && savedLeads === null && (
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>Loading your list…</div>
+                )}
+
+                {savedLeads && savedLeads.length === 0 && (
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", lineHeight: 1.7 }}>
+                    Nothing saved yet. Search for businesses, then press Save on the ones worth
+                    calling — they stay here after you close the tab, and you can download the whole
+                    list as a spreadsheet.
+                  </div>
+                )}
+
+                {savedLeads && savedLeads.length > 0 && (
+                  <>
+                    <div
                       style={{
-                        width: "100%",
-                        background: accent,
-                        color: "#0A0A10",
-                        border: "none",
-                        borderRadius: 8,
-                        padding: "9px 16px",
-                        fontFamily: display,
-                        fontWeight: 700,
-                        fontSize: 12,
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        marginBottom: 14,
                       }}
                     >
-                      Generate site →
-                    </button>
-                  </div>
-                ))}
-              </div>
+                      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>
+                        <span style={{ color: "#FFFFFF", fontWeight: 600 }}>{savedLeads.length}</span>{" "}
+                        {savedLeads.length === 1 ? "business" : "businesses"} to call
+                      </div>
+                      <button
+                        onClick={downloadSavedLeads}
+                        style={{
+                          background: accent,
+                          color: "#0A0A10",
+                          border: "none",
+                          borderRadius: 10,
+                          padding: "10px 18px",
+                          fontFamily: display,
+                          fontWeight: 700,
+                          fontSize: 13,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Download as spreadsheet
+                      </button>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {savedLeads.map((row) => {
+                        const lead = normalizeSaved(row);
+                        return (
+                          <SavedLeadRow
+                            key={row.place_id}
+                            row={row}
+                            lead={lead}
+                            built={siteForLead(lead).built}
+                            onOpen={() => setOpenLead(lead)}
+                            onRemove={unsaveLead}
+                          />
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            {openLead && (
+              <LeadDetail
+                lead={openLead}
+                /* A saved lead remembers the search it came from, and that
+                   is the one the script should use — the boxes at the top
+                   may say something else entirely by the time the call
+                   list is opened. */
+                category={
+                  savedLeads?.find((l) => l.place_id === openLead.id)?.category ||
+                  leadSearchedFor.category ||
+                  ""
+                }
+                location={
+                  savedLeads?.find((l) => l.place_id === openLead.id)?.location ||
+                  leadSearchedFor.location ||
+                  ""
+                }
+                built={siteForLead(openLead).built}
+                link={siteForLead(openLead).link}
+                saved={isSaved(openLead.id)}
+                onSave={(lead) => saveLead(lead, leadSearchedFor)}
+                onUnsave={unsaveLead}
+                onGenerate={generateForLead}
+                onClose={() => setOpenLead(null)}
+              />
             )}
           </div>
         )}
