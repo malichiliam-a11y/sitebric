@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { isOwner } from "@/lib/admin";
 import { planForPriceId } from "@/lib/plans";
 import { maybeGrantReferralReward } from "@/lib/referral-reward";
 
@@ -13,6 +14,35 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
+
+// Sitebric's own account is not a customer, and Stripe must not decide
+// what it can do.
+//
+// The owner cancelled their subscription while testing, which meant
+// customer.subscription.deleted was going to fire at period end and set
+// plan to "none" — locking the owner out of their own product, weeks
+// later, with no obvious cause. Any fix that lives only in the profiles
+// row loses to this webhook eventually; the guard has to be here.
+async function ownsThisCustomer(customerId) {
+  if (!customerId) return false;
+  try {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("stripe_customer_id", customerId)
+      .maybeSingle();
+    if (!profile) return false;
+
+    const { data } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+    return isOwner(data?.user?.email);
+  } catch (err) {
+    // Fail open on the plan write rather than swallowing a real
+    // customer's upgrade because a lookup hiccuped.
+    console.error("ownsThisCustomer failed:", err?.message);
+    return false;
+  }
+}
 
 export async function POST(req) {
   const body = await req.text();
@@ -80,7 +110,7 @@ export async function POST(req) {
         const priceId = subscription.items?.data?.[0]?.price?.id;
         const plan = planForPriceId(priceId);
 
-        if (plan) {
+        if (plan && !(await ownsThisCustomer(subscription.customer))) {
           await supabaseAdmin
             .from("profiles")
             .update({ plan, stripe_subscription_id: subscription.id })
@@ -93,10 +123,12 @@ export async function POST(req) {
         const subscription = event.data.object;
         const customerId = subscription.customer;
 
-        await supabaseAdmin
-          .from("profiles")
-          .update({ plan: "none" })
-          .eq("stripe_customer_id", customerId);
+        if (!(await ownsThisCustomer(customerId))) {
+          await supabaseAdmin
+            .from("profiles")
+            .update({ plan: "none" })
+            .eq("stripe_customer_id", customerId);
+        }
         break;
       }
 
