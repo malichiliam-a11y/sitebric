@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { canUseCustomDomain } from "@/lib/plans";
 
 export async function POST(req) {
   const supabase = createClient();
@@ -9,6 +10,27 @@ export async function POST(req) {
 
   if (!user) {
     return NextResponse.json({ error: "not authenticated" }, { status: 401 });
+  }
+
+  // The FAQ has always said custom domains are a Growth and Pro feature.
+  // Nothing enforced it: any account with a project could register a
+  // domain against the Vercel project, which is both a paid feature given
+  // away and a way for a free trial to attach arbitrary hostnames to our
+  // deployment.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", user.id)
+    .single();
+
+  if (!canUseCustomDomain(profile?.plan)) {
+    return NextResponse.json(
+      {
+        error: "plan_required",
+        message: "Connecting your own domain is on Growth and Pro. Upgrade to point a client's domain at their site.",
+      },
+      { status: 402 }
+    );
   }
 
   const { projectId, domain } = await req.json();

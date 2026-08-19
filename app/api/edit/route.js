@@ -1,17 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { limitsFor } from "@/lib/plans";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-// Used only for the generations_used increment — bypasses RLS since
-// users don't have update permission on their own profile row.
-const supabaseAdmin = createAdminClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 export const maxDuration = 300;
 
@@ -27,7 +18,7 @@ export async function POST(req) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("plan, generations_used")
+    .select("plan")
     .eq("id", user.id)
     .single();
 
@@ -39,16 +30,21 @@ export async function POST(req) {
     );
   }
 
-  const limit = limitsFor(plan);
-  if (profile.generations_used >= limit.generations) {
-    return NextResponse.json(
-      {
-        error: "generation_limit",
-        message: `You've used all ${limit.generations} generations for this month. Upgrade for more.`,
-      },
-      { status: 402 }
-    );
-  }
+  // Editing does NOT cost a generation, and must not start doing so.
+  //
+  // The pricing page has always said, in as many words: "Editing a site
+  // afterwards is unlimited and free — a generation is only used when a
+  // new site is created." This route charged one anyway and refused the
+  // edit once the month's allowance was gone, so a Starter customer who
+  // built five sites could no longer fix a typo on any of them. People
+  // bought the plan on the sentence, so the sentence is what is right and
+  // the code was what was wrong.
+  //
+  // An edit cannot be used to get more sites out of a plan — it rewrites
+  // a project that already exists, and the number of projects is capped
+  // by plan in /api/generate. If edit volume ever becomes a real cost
+  // problem, cap it per hour rather than reintroducing a charge that
+  // contradicts the price list.
 
   const { projectId, instruction } = await req.json();
   if (!projectId || !instruction) {
@@ -110,10 +106,6 @@ Rules:
     if (!code) throw new Error("empty response from model");
 
     await supabase.from("projects").update({ code, status: "done" }).eq("id", projectId);
-    await supabaseAdmin
-      .from("profiles")
-      .update({ generations_used: profile.generations_used + 1 })
-      .eq("id", user.id);
 
     return NextResponse.json({ status: "done" });
   } catch (err) {
