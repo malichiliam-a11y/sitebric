@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
-import { PLAN_LIMITS, MULTIPAGE_COST, MULTIPAGE_ENABLED } from "@/lib/plans";
+import { PLAN_LIMITS, MULTIPAGE_COST, MULTIPAGE_ENABLED, canUseCustomDomain } from "@/lib/plans";
 import GeneratingProgress from "./GeneratingProgress";
 import { withPreviewAnchorFix } from "@/lib/preview-anchors";
 import { currentLogoUrl } from "@/lib/logo";
@@ -1051,7 +1051,9 @@ export default function DashboardClient({ initialProjects }) {
         body: JSON.stringify({ projectId: project.id, domain: domainInput.trim() }),
       });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "failed");
+      // message before error: the plan gate returns a sentence worth
+      // showing, and the raw code ("plan_required") is not one.
+      if (!res.ok) throw new Error(result.message || result.error || "failed");
 
       const { data } = await supabase
         .from("projects")
@@ -2680,6 +2682,30 @@ export default function DashboardClient({ initialProjects }) {
                         does, the domain will start showing this site automatically.
                       </div>
                     </div>
+                  </div>
+                ) : !canUseCustomDomain(profile?.plan) ? (
+                  /* Say so before they type a domain in. Letting someone
+                     fill the box and press Connect only to be told no is
+                     the worst version of a plan gate. */
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.6, maxWidth: 520 }}>
+                    Connecting a client&apos;s own domain is on Growth and Pro. Until then this
+                    site is live on its own sitebric.com address, which you can hand over as-is.{" "}
+                    <button
+                      onClick={() => setTab("invoices")}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        color: "#FFFFFF",
+                        fontFamily: body,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        textDecoration: "underline",
+                        cursor: "pointer",
+                      }}
+                    >
+                      See plans
+                    </button>
                   </div>
                 ) : (
                   <div>

@@ -85,13 +85,27 @@ Email signup mails a **6-digit code**, not a link. `AuthCard` collects it via
   working.
 - `/admin/referrals` estimates MRR from list price, so a discounted subscriber
   (APEX is on a $5-off coupon for 6 months) reads $5/mo high.
-- `projects_code_backup_20260817` has RLS disabled and holds customer site
-  code. The repo is public, so the anon key is public. Enabling RLS with no
-  policies locks it to the service role, which is all that ever reads it:
-  `alter table public.projects_code_backup_20260817 enable row level security;`
 - Dashboard UI still can't be driven end-to-end here — there's no way to sign
   in from the sandbox. The leads components are verifiable because they were
   split into their own files; the rest of `dashboard-client.js` is not.
+
+## Promises the code has to keep
+
+`test/promises.mjs` reads the marketing copy and the routes and fails if
+they disagree. Two had already drifted silently:
+
+- The pricing page says **editing is unlimited and free**. `/api/edit` was
+  charging a generation and refusing once the allowance ran out, so a
+  Starter customer with five sites couldn't fix a typo on any of them.
+  Edits are free now. If edit volume ever becomes a real API cost, cap it
+  per hour — don't reintroduce a charge the price list denies.
+- The FAQ says **custom domains are Growth and Pro**. `/api/connect-domain`
+  checked only project ownership, so a trial account could attach a
+  hostname to the Vercel project. `canUseCustomDomain` in `lib/plans.js` is
+  now the single source, used by the route and the dashboard.
+
+Any new sentence on a pricing or FAQ page that a route has to honour
+belongs in that test.
 
 ## Working agreement
 
