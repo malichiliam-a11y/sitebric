@@ -54,11 +54,16 @@ export default function AudienceLanding({ audience }: { audience: Audience }) {
           position: relative;
           background: ${palette.bg};
           color: ${palette.text};
-          font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
+          font-family: var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
           scroll-behavior: smooth;
         }
+          h1, h2, h3 {
+            font-family: var(--font-display), Georgia, serif;
+            font-weight: 600;
+            letter-spacing: -0.012em;
+          }
         .sb-land [id] { scroll-margin-top: 24px; }
 
         /* The hero clips its own backdrop so the terrain doesn't stretch

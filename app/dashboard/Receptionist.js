@@ -10,8 +10,8 @@ import { useState } from "react";
 // and this is the most complicated screen in the product to get wrong
 // quietly.
 
-const DISPLAY = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
-const BODY = "'Inter', sans-serif";
+const DISPLAY = "var(--font-display), Georgia, serif";
+const BODY = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
 
 const panel = {
   background: "rgba(255,255,255,0.03)",
@@ -41,7 +41,7 @@ const input = {
 const PLACEHOLDER_CSS = `
   .sb-rx input::placeholder,
   .sb-rx textarea::placeholder {
-    color: rgba(255,255,255,0.26);
+    color: rgba(255,255,255,0.34);
     opacity: 1;
   }
 `;
@@ -50,11 +50,11 @@ const label = {
   display: "block",
   fontSize: 12,
   fontWeight: 600,
-  color: "rgba(255,255,255,0.72)",
+  color: "rgba(255,255,255,0.82)",
   marginBottom: 5,
 };
 
-const hint = { fontSize: 11.5, color: "rgba(255,255,255,0.4)", lineHeight: 1.5, marginTop: 4 };
+const hint = { fontSize: 12.5, color: "rgba(255,255,255,0.74)", lineHeight: 1.5, marginTop: 4 };
 
 // A number as a person reads it, not as it is dialled.
 export function prettyNumber(e164) {
@@ -73,7 +73,7 @@ function Urgency({ level }) {
   return (
     <span
       style={{
-        fontSize: 10.5,
+        fontSize: 11,
         fontWeight: 700,
         letterSpacing: "0.05em",
         padding: "2px 7px",
@@ -126,11 +126,11 @@ export function CallRow({ call, onOpen }) {
           </button>
           <Urgency level={call.urgency} />
         </div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.64)", marginTop: 2 }}>
           {call.summary || "No details taken."}
         </div>
       </div>
-      <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.35)", flexShrink: 0 }}>
+      <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.7)", flexShrink: 0 }}>
         {when ? when.toLocaleString() : ""}
         {call.seconds ? ` · ${Math.round(call.seconds)}s` : ""}
       </div>
@@ -165,7 +165,7 @@ export default function Receptionist({
         <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 17, marginBottom: 8 }}>
           Give a client a number that answers
         </div>
-        <p style={{ fontSize: 13.5, lineHeight: 1.65, color: "rgba(255,255,255,0.6)", margin: "0 0 14px" }}>
+        <p style={{ fontSize: 13.5, lineHeight: 1.65, color: "rgba(255,255,255,0.74)", margin: "0 0 14px" }}>
           A website is a one-time sale. A receptionist is every month. It picks up when they
           can&apos;t, takes the caller&apos;s name, number and what they need, and puts real
           emergencies straight through to their mobile.
@@ -200,7 +200,7 @@ export default function Receptionist({
         <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 17, marginBottom: 8 }}>
           Almost ready
         </div>
-        <p style={{ fontSize: 13.5, lineHeight: 1.65, color: "rgba(255,255,255,0.6)", margin: 0 }}>
+        <p style={{ fontSize: 13.5, lineHeight: 1.65, color: "rgba(255,255,255,0.74)", margin: 0 }}>
           Phone numbers aren&apos;t switched on yet. Everything else here is built and waiting —
           this turns on the moment the telephony account is connected.
         </p>
@@ -303,7 +303,7 @@ export default function Receptionist({
                 >
                   <span style={{ fontWeight: 600, fontSize: 13.5 }}>
                     {prettyNumber(n.phoneNumber)}
-                    <span style={{ color: "rgba(255,255,255,0.4)", fontWeight: 400 }}>
+                    <span style={{ color: "rgba(255,255,255,0.74)", fontWeight: 400 }}>
                       {n.locality ? ` · ${n.locality}` : ""}
                       {n.region ? `, ${n.region}` : ""}
                     </span>
@@ -313,7 +313,7 @@ export default function Receptionist({
                     onClick={() => onBuy({ ...draft, phoneNumber: n.phoneNumber })}
                     style={{
                       background: draft.businessName.trim() ? "#fff" : "rgba(255,255,255,0.1)",
-                      color: draft.businessName.trim() ? "#0A0A10" : "rgba(255,255,255,0.4)",
+                      color: draft.businessName.trim() ? "#0A0A10" : "rgba(255,255,255,0.74)",
                       border: "none",
                       borderRadius: 8,
                       padding: "8px 16px",
@@ -343,7 +343,7 @@ export default function Receptionist({
                 <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 22, letterSpacing: "-0.02em" }}>
                   {prettyNumber(number.phone_number)}
                 </div>
-                <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.45)", marginTop: 3 }}>
+                <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.64)", marginTop: 3 }}>
                   Answering for {number.business_name}
                 </div>
               </div>
@@ -354,7 +354,7 @@ export default function Receptionist({
                   border: "1px solid rgba(255,255,255,0.12)",
                   borderRadius: 8,
                   padding: "8px 14px",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "rgba(255,255,255,0.7)",
                   fontFamily: BODY,
                   fontSize: 12,
                   fontWeight: 600,
@@ -369,7 +369,7 @@ export default function Receptionist({
             {/* The spend ceiling, shown before it is hit rather than after. */}
             <div style={{ marginTop: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 5 }}>
-                <span style={{ color: "rgba(255,255,255,0.55)" }}>Minutes this month</span>
+                <span style={{ color: "rgba(255,255,255,0.7)" }}>Minutes this month</span>
                 <span style={{ fontVariantNumeric: "tabular-nums" }}>
                   {Math.round(number.minutes_used)} / {number.minutes_limit}
                 </span>
@@ -426,7 +426,7 @@ export default function Receptionist({
               onClick={() => onSave({ id: number.id, ...editing })}
               style={{
                 background: editing ? "#fff" : "rgba(255,255,255,0.08)",
-                color: editing ? "#0A0A10" : "rgba(255,255,255,0.4)",
+                color: editing ? "#0A0A10" : "rgba(255,255,255,0.74)",
                 border: "none",
                 borderRadius: 8,
                 padding: "10px 20px",
@@ -489,7 +489,7 @@ export default function Receptionist({
                 <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 17 }}>
                   {openCall.caller_name || prettyNumber(openCall.callback_number) || "Unknown caller"}
                 </div>
-                <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.45)", marginTop: 3 }}>
+                <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.64)", marginTop: 3 }}>
                   {prettyNumber(openCall.callback_number) || "Number withheld"}
                 </div>
               </div>
@@ -553,11 +553,11 @@ export default function Receptionist({
                     style={{
                       flexShrink: 0,
                       width: 62,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 700,
                       letterSpacing: "0.05em",
                       textTransform: "uppercase",
-                      color: t.role === "caller" ? "#4ADE80" : "rgba(255,255,255,0.35)",
+                      color: t.role === "caller" ? "#4ADE80" : "rgba(255,255,255,0.7)",
                       paddingTop: 2,
                     }}
                   >

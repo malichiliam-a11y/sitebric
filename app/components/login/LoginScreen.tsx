@@ -39,11 +39,16 @@ export default function LoginScreen({ initialPanel = "demo" }: { initialPanel?: 
           position: relative;
           background: ${palette.bg};
           color: ${palette.text};
-          font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
+          font-family: var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
           scroll-behavior: smooth;
         }
+          h1, h2, h3 {
+            font-family: var(--font-display), Georgia, serif;
+            font-weight: 600;
+            letter-spacing: -0.012em;
+          }
 
         /* The hero owns the terrain, so it clips its own backdrop instead
            of letting it stretch down behind the marketing sections. */

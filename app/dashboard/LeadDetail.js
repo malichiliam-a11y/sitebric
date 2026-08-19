@@ -11,8 +11,8 @@ import { leadScript } from "@/lib/lead-script";
 // screen with its own state, and the only thing it needs from the parent
 // is the lead itself and four callbacks.
 
-const DISPLAY = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
-const BODY = "'Inter', sans-serif";
+const DISPLAY = "var(--font-display), Georgia, serif";
+const BODY = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
 
 const panel = {
   background: "rgba(255,255,255,0.03)",
@@ -46,9 +46,9 @@ function Action({ href, onClick, label, hint, primary, disabled }) {
       {hint && (
         <span
           style={{
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 400,
-            color: primary ? "rgba(10,10,16,0.6)" : "rgba(255,255,255,0.4)",
+            color: primary ? "rgba(10,10,16,0.6)" : "rgba(255,255,255,0.74)",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -101,11 +101,11 @@ function Copyable({ id, label, text, copiedKey, onCopy, mono }) {
       >
         <span
           style={{
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: "0.07em",
             textTransform: "uppercase",
-            color: "rgba(255,255,255,0.42)",
+            color: "rgba(255,255,255,0.62)",
           }}
         >
           {label}
@@ -118,7 +118,7 @@ function Copyable({ id, label, text, copiedKey, onCopy, mono }) {
             border: "none",
             color: copied ? "#4ADE80" : "rgba(255,255,255,0.5)",
             fontFamily: BODY,
-            fontSize: 11.5,
+            fontSize: 12.5,
             fontWeight: 600,
             cursor: "pointer",
             padding: 0,
@@ -247,7 +247,7 @@ export default function LeadDetail({
               >
                 {lead.name}
               </div>
-              <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.45)" }}>
+              <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.64)" }}>
                 {lead.address || "No address listed"}
               </div>
             </div>
@@ -278,11 +278,11 @@ export default function LeadDetail({
               alignItems: "center",
               gap: 7,
               marginTop: 11,
-              fontSize: 11.5,
+              fontSize: 12.5,
               fontWeight: 600,
               padding: "4px 10px",
               borderRadius: 999,
-              color: lead.hasWebsite ? "rgba(255,255,255,0.6)" : "#4ADE80",
+              color: lead.hasWebsite ? "rgba(255,255,255,0.74)" : "#4ADE80",
               background: lead.hasWebsite ? "rgba(255,255,255,0.06)" : "rgba(74,222,128,0.12)",
             }}
           >
@@ -294,7 +294,7 @@ export default function LeadDetail({
                 display: "inline-flex",
                 marginLeft: 8,
                 marginTop: 11,
-                fontSize: 11.5,
+                fontSize: 12.5,
                 fontWeight: 600,
                 padding: "4px 10px",
                 borderRadius: 999,
@@ -361,7 +361,7 @@ export default function LeadDetail({
           </button>
 
           <div style={{ ...panel, marginBottom: 16, borderColor: "rgba(255,255,255,0.14)" }}>
-            <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.55)", marginBottom: 6 }}>
+            <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.7)", marginBottom: 6 }}>
               {script.angle}
             </div>
             <div style={{ fontSize: 13.5, lineHeight: 1.6 }}>{script.prep.text}</div>
@@ -421,7 +421,7 @@ export default function LeadDetail({
               {script.objections.map((o, i) => (
                 <div key={i} style={{ marginBottom: i === script.objections.length - 1 ? 0 : 16 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 4 }}>{o.q}</div>
-                  <div style={{ fontSize: 13.5, lineHeight: 1.62, color: "rgba(255,255,255,0.78)" }}>
+                  <div style={{ fontSize: 13.5, lineHeight: 1.62, color: "rgba(255,255,255,0.86)" }}>
                     {o.a}
                   </div>
                 </div>

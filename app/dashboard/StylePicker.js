@@ -13,8 +13,8 @@ import { SITE_STYLES } from "@/lib/site-styles";
 // Its own file so it can be rendered in a browser without a login, the
 // same reason the lead cards live in one.
 
-const DISPLAY = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
-const BODY = "'Inter', sans-serif";
+const DISPLAY = "var(--font-display), Georgia, serif";
+const BODY = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
 
 export default function StylePicker({ value, onChange, disabled }) {
   return (
@@ -39,7 +39,7 @@ export default function StylePicker({ value, onChange, disabled }) {
         >
           Look
         </span>
-        <span style={{ fontFamily: BODY, fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+        <span style={{ fontFamily: BODY, fontSize: 12, color: "rgba(255,255,255,0.74)" }}>
           Costs nothing extra
         </span>
       </div>
@@ -70,7 +70,7 @@ export default function StylePicker({ value, onChange, disabled }) {
               style={{
                 textAlign: "left",
                 background: active ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.03)",
-                border: `1px solid ${active ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.1)"}`,
+                border: `1px solid ${active ? "rgba(255,255,255,0.64)" : "rgba(255,255,255,0.1)"}`,
                 borderRadius: 10,
                 padding: "9px 12px",
                 cursor: disabled ? "default" : "pointer",
@@ -96,9 +96,9 @@ export default function StylePicker({ value, onChange, disabled }) {
               <span
                 style={{
                   display: "block",
-                  fontSize: 11,
+                  fontSize: 12,
                   lineHeight: 1.35,
-                  color: "rgba(255,255,255,0.42)",
+                  color: "rgba(255,255,255,0.62)",
                 }}
               >
                 {style.blurb}
