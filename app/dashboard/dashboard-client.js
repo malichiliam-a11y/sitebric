@@ -9,6 +9,8 @@ import { withPreviewAnchorFix } from "@/lib/preview-anchors";
 import { currentLogoUrl } from "@/lib/logo";
 import { leadsToCsv, csvFilename } from "@/lib/leads-csv";
 import LeadDetail from "./LeadDetail";
+import StylePicker from "./StylePicker";
+import { DEFAULT_STYLE, styleById } from "@/lib/site-styles";
 import { LeadResultCard, SavedLeadRow } from "./LeadCards";
 
 // Read straight out of the site's own HTML rather than tracked in its own
@@ -63,6 +65,7 @@ export default function DashboardClient({ initialProjects }) {
   const [calendlyUrl, setCalendlyUrl] = useState("");
   const [orderLinks, setOrderLinks] = useState("");
   const [multiPage, setMultiPage] = useState(false);
+  const [style, setStyle] = useState(DEFAULT_STYLE);
   // Snapshotted when a generation starts, so the countdown keeps showing
   // the right estimate even though multiPage itself gets reset on success.
   const [genStart, setGenStart] = useState(null);
@@ -394,7 +397,7 @@ export default function DashboardClient({ initialProjects }) {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName, prompt, photoUrls, phone, address, ownerEmail, calendlyUrl, orderLinks, multiPage }),
+        body: JSON.stringify({ clientName, prompt, photoUrls, phone, address, ownerEmail, calendlyUrl, orderLinks, multiPage, style }),
       });
 
       // Not every response is JSON. When the function exceeds its time
@@ -2170,6 +2173,8 @@ export default function DashboardClient({ initialProjects }) {
                   </div>
                 )}
 
+                <StylePicker value={style} onChange={setStyle} disabled={busy} />
+
                 {MULTIPAGE_ENABLED && (
                 <>
                 {/* Priced rather than plan-gated: a four-page build burns
@@ -2442,6 +2447,27 @@ export default function DashboardClient({ initialProjects }) {
                 >
                   {active.client_name}
                 </span>
+                {/* Which look this one was built in. Read off the stored
+                    choice rather than guessed from the code, so it stays
+                    right for sites built before the picker existed —
+                    those are all "auto", which is what they were. */}
+                {active.status === "done" && active.style && active.style !== "auto" && (
+                  <span
+                    style={{
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      letterSpacing: "0.05em",
+                      textTransform: "uppercase",
+                      color: "rgba(255,255,255,0.5)",
+                      border: "1px solid rgba(255,255,255,0.16)",
+                      borderRadius: 999,
+                      padding: "2px 8px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {styleById(active.style).label}
+                  </span>
+                )}
               </div>
               <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                 {active.published && (

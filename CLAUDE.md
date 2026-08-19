@@ -15,6 +15,7 @@ client business and get a finished website they can hand off.
 | `lib/theme.js` | Dashboard tokens |
 | `lib/plans.js` | Plan limits and Stripe price IDs — the single source of truth |
 | `lib/logo.js` | Swaps a site's text wordmark for an uploaded logo — a pure transform, no model call |
+| `lib/site-styles.js` | The seven looks a site can be built in — the allowlist the prompt fragment is read from |
 | `lib/lead-script.js` | The words to say on a cold call, built from a lead's own facts — pure, no model call |
 | `lib/leads-csv.js` | The saved-leads download, with the Excel formula-injection guard |
 | `app/dashboard/LeadCards.js`, `LeadDetail.js` | The leads UI, split out so it can be driven in a browser without a login |
