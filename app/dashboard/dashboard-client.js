@@ -571,6 +571,7 @@ export default function DashboardClient({ initialProjects }) {
   const [rxNumbers, setRxNumbers] = useState(null);
   const [rxCalls, setRxCalls] = useState([]);
   const [rxAvailable, setRxAvailable] = useState(true);
+  const [rxCanUse, setRxCanUse] = useState(null);
   const [rxBusy, setRxBusy] = useState(false);
   const [rxError, setRxError] = useState("");
   const [siteSearch, setSiteSearch] = useState("");
@@ -863,6 +864,7 @@ export default function DashboardClient({ initialProjects }) {
       setRxNumbers(result.numbers || []);
       setRxCalls(result.calls || []);
       setRxAvailable(result.available !== false);
+      setRxCanUse(result.canUse !== false);
     } catch (err) {
       setRxError(err.message);
       setRxNumbers((current) => current || []);
@@ -3714,14 +3716,20 @@ export default function DashboardClient({ initialProjects }) {
               numbers={rxNumbers || []}
               calls={rxCalls}
               available={rxAvailable}
-              canUse={canUseReceptionist(profile?.plan)}
+              /* The plan is a good first guess so the right panel paints
+                 immediately; the server's answer replaces it once loaded,
+                 and the route is what actually enforces this either way. */
+              canUse={rxCanUse === null ? canUseReceptionist(profile?.plan) : rxCanUse}
               busy={rxBusy}
               error={rxError}
               onSearch={searchNumbers}
               onBuy={buyReceptionistNumber}
               onSave={saveReceptionist}
               onDelete={deleteReceptionistNumber}
-              onUpgrade={() => setTab("invoices")}
+              /* Billing, not Invoices — Invoices is a list of receipts,
+                 and a button called "See plans" that shows receipts is a
+                 dead end dressed as a way forward. */
+              onUpgrade={() => setTab("billing")}
             />
           </div>
         )}

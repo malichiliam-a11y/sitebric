@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { canUseReceptionist } from "@/lib/plans";
+import { isOwner } from "@/lib/admin";
 import { findAvailableNumbers, buyNumber, releaseNumber, twilioConfigured } from "@/lib/twilio-numbers";
 
 // Buying, configuring and releasing a receptionist number.
@@ -63,19 +64,24 @@ export async function GET(req) {
     }
   }
 
-  const [{ data: numbers }, { data: calls }] = await Promise.all([
+  const [{ data: numbers }, { data: calls }, { data: profile }] = await Promise.all([
     supabase.from("receptionist_numbers").select("*").order("created_at", { ascending: false }),
     supabase
       .from("receptionist_calls")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(100),
+    supabase.from("profiles").select("plan").eq("id", user.id).single(),
   ]);
 
   return NextResponse.json({
     numbers: numbers || [],
     calls: calls || [],
     available: twilioConfigured(),
+    // Decided here rather than in the browser. The owner check reads an
+    // email, and an email compiled into the client bundle is on every
+    // visitor's machine — the answer travels instead of the rule.
+    canUse: canUseReceptionist(profile?.plan) || isOwner(user.email),
   });
 }
 
@@ -89,7 +95,7 @@ export async function POST(req) {
     .eq("id", user.id)
     .single();
 
-  if (!canUseReceptionist(profile?.plan)) {
+  if (!canUseReceptionist(profile?.plan) && !isOwner(user.email)) {
     return NextResponse.json(
       {
         error: "plan_required",
