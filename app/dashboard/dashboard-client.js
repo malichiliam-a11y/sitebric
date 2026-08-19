@@ -10,7 +10,9 @@ import { currentLogoUrl } from "@/lib/logo";
 import { leadsToCsv, csvFilename } from "@/lib/leads-csv";
 import LeadDetail from "./LeadDetail";
 import StylePicker from "./StylePicker";
+import Receptionist from "./Receptionist";
 import { DEFAULT_STYLE, styleById } from "@/lib/site-styles";
+import { canUseReceptionist } from "@/lib/plans";
 import { LeadResultCard, SavedLeadRow } from "./LeadCards";
 
 // Read straight out of the site's own HTML rather than tracked in its own
@@ -566,6 +568,11 @@ export default function DashboardClient({ initialProjects }) {
   const [savedLeads, setSavedLeads] = useState(null);
   const [savedBusy, setSavedBusy] = useState(false);
   const [savedError, setSavedError] = useState("");
+  const [rxNumbers, setRxNumbers] = useState(null);
+  const [rxCalls, setRxCalls] = useState([]);
+  const [rxAvailable, setRxAvailable] = useState(true);
+  const [rxBusy, setRxBusy] = useState(false);
+  const [rxError, setRxError] = useState("");
   const [siteSearch, setSiteSearch] = useState("");
   const [settingsPhone, setSettingsPhone] = useState("");
   const [settingsAddress, setSettingsAddress] = useState("");
@@ -843,6 +850,102 @@ export default function DashboardClient({ initialProjects }) {
     // Revoked on the next tick — revoking synchronously cancels the
     // download in some browsers.
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // ===== The receptionist =====
+
+  async function loadReceptionist() {
+    setRxBusy(true);
+    try {
+      const res = await fetch("/api/receptionist");
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "failed");
+      setRxNumbers(result.numbers || []);
+      setRxCalls(result.calls || []);
+      setRxAvailable(result.available !== false);
+    } catch (err) {
+      setRxError(err.message);
+      setRxNumbers((current) => current || []);
+    } finally {
+      setRxBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (tab === "receptionist" && rxNumbers === null && !rxBusy) loadReceptionist();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  async function searchNumbers(areaCode) {
+    setRxBusy(true);
+    setRxError("");
+    try {
+      const res = await fetch(`/api/receptionist?search=1&areaCode=${encodeURIComponent(areaCode || "")}`);
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message || result.error || "failed");
+      if (result.notConfigured) setRxAvailable(false);
+      return result.numbers || [];
+    } catch (err) {
+      setRxError(err.message);
+      return [];
+    } finally {
+      setRxBusy(false);
+    }
+  }
+
+  async function buyReceptionistNumber(payload) {
+    setRxBusy(true);
+    setRxError("");
+    try {
+      const res = await fetch("/api/receptionist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message || result.error || "failed");
+      setRxNumbers([result.number]);
+    } catch (err) {
+      setRxError(err.message);
+    } finally {
+      setRxBusy(false);
+    }
+  }
+
+  async function saveReceptionist(patch) {
+    setRxBusy(true);
+    setRxError("");
+    try {
+      const res = await fetch("/api/receptionist", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message || result.error || "failed");
+      setRxNumbers((current) => (current || []).map((n) => (n.id === result.number.id ? result.number : n)));
+    } catch (err) {
+      setRxError(err.message);
+    } finally {
+      setRxBusy(false);
+    }
+  }
+
+  async function deleteReceptionistNumber(id) {
+    setRxBusy(true);
+    setRxError("");
+    try {
+      const res = await fetch(`/api/receptionist?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const result = await res.json().catch(() => ({}));
+        throw new Error(result.message || result.error || "failed");
+      }
+      setRxNumbers([]);
+    } catch (err) {
+      setRxError(err.message);
+    } finally {
+      setRxBusy(false);
+    }
   }
 
   // Whether a site already exists for this business, and where it lives.
@@ -1265,6 +1368,7 @@ export default function DashboardClient({ initialProjects }) {
     { id: "overview", label: "Overview", Icon: IconHome },
     { id: "sites", label: "Sites", Icon: IconSites },
     { id: "leads", label: "Find Leads", Icon: IconLeads },
+    { id: "receptionist", label: "Receptionist", Icon: IconBell },
     { id: "invoices", label: "Invoices", Icon: IconInvoice },
     { id: "billing", label: "Billing", Icon: IconBilling },
     { id: "referrals", label: "Referrals", Icon: IconShare },
@@ -3593,6 +3697,32 @@ export default function DashboardClient({ initialProjects }) {
                 onClose={() => setOpenLead(null)}
               />
             )}
+          </div>
+        )}
+
+        {/* ===== RECEPTIONIST TAB ===== */}
+        {tab === "receptionist" && (
+          <div>
+            <h2 style={{ fontFamily: display, fontSize: 20, fontWeight: 700, margin: "0 0 6px" }}>
+              AI Receptionist
+            </h2>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: "0 0 22px", lineHeight: 1.6, maxWidth: 620 }}>
+              A number that answers when your client can&apos;t. It takes the caller&apos;s name,
+              number and what they need, and puts real emergencies straight through to their mobile.
+            </p>
+            <Receptionist
+              numbers={rxNumbers || []}
+              calls={rxCalls}
+              available={rxAvailable}
+              canUse={canUseReceptionist(profile?.plan)}
+              busy={rxBusy}
+              error={rxError}
+              onSearch={searchNumbers}
+              onBuy={buyReceptionistNumber}
+              onSave={saveReceptionist}
+              onDelete={deleteReceptionistNumber}
+              onUpgrade={() => setTab("invoices")}
+            />
           </div>
         )}
 

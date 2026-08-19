@@ -15,6 +15,10 @@ client business and get a finished website they can hand off.
 | `lib/theme.js` | Dashboard tokens |
 | `lib/plans.js` | Plan limits and Stripe price IDs — the single source of truth |
 | `lib/logo.js` | Swaps a site's text wordmark for an uploaded logo — a pure transform, no model call |
+| `lib/receptionist.js` | What the AI receptionist says on a call — pure, no Twilio |
+| `lib/twilio-signature.js` | Proves a /api/voice/* request is really Twilio's. The most important check in the product |
+| `lib/twiml.js` | The XML Twilio reads back. Every string goes through `esc()` |
+| `app/api/voice/` | incoming / turn / status — the call itself |
 | `lib/site-styles.js` | The seven looks a site can be built in — the allowlist the prompt fragment is read from |
 | `lib/lead-script.js` | The words to say on a cold call, built from a lead's own facts — pure, no model call |
 | `lib/leads-csv.js` | The saved-leads download, with the Excel formula-injection guard |
@@ -66,6 +70,33 @@ plus a real `<button>` inside for keyboard and screen readers.
 localStorage and only read in `app/api/ensure-profile/route.js`, the single point
 every profile is created through, and only on first creation. Anything that
 changes routing on `/` must leave `?ref=` alone.
+
+## The receptionist
+
+A Twilio number answers, takes the caller's name, number and what they
+need, and puts real emergencies through to a mobile. Growth and Pro only —
+every number is a monthly Twilio charge whether it rings or not.
+
+Things that will bite:
+
+- **`/api/voice/*` are public URLs that spend money.** Every one validates
+  the Twilio signature first and returns 403 otherwise, including when no
+  auth token is configured. `lib/twilio-signature.js` was checked against
+  Twilio's own library across 3000 randomised inputs — a remembered test
+  vector was tried first and was wrong.
+- **The signed URL comes from `PUBLIC_BASE_URL`, never from the request.**
+  Behind Vercel's proxy the request reports an internal host, so every
+  signature fails; a forwarded-host header is attacker-controlled.
+- **Twilio gives a webhook ~15 seconds.** The model call runs under an 8s
+  abort and falls back to a real sentence. Dead air then a disconnection
+  is the one failure a caller can't forgive.
+- **Caller speech goes into XML.** "me & my wife" breaks the document and
+  drops the call. Everything goes through `esc()` in `lib/twiml.js`.
+- **The status callback can fire twice.** Minutes are only billed when
+  `seconds` is still 0, or a customer's allowance pays for calls that
+  never happened.
+- The assistant may only state facts from `business_facts`. It is on a
+  recorded line speaking for someone else's business.
 
 ## Auth flow
 
