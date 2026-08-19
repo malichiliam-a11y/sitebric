@@ -73,17 +73,33 @@ console.log("\nhonesty — the thing that loses the call");
     assert.ok(!/open their website/i.test(none.prep.text)));
 }
 
-console.log("\nthe offer changes once the site exists");
+console.log("\nthe offer is 'I already built it', both ways");
 {
   const before = leadScript(NO_SITE, OPTS);
   const after = leadScript(NO_SITE, { ...OPTS, built: true, link: "https://sitebric.com/s/bobs" });
 
-  check("unbuilt offers to build it", () => assert.match(before.call[2].text, /I'll build you one/i));
-  check("built says it already exists", () => assert.match(after.call[2].text, /already built it/i));
+  // The soft version — "give me three minutes and I'll build you one" —
+  // is a salesman asking for time and gets treated like one. The offer is
+  // the same confident sentence whether or not the site exists yet.
+  check("unbuilt says it already exists", () =>
+    assert.match(before.call[2].text, /already built it/i));
+  check("built says the same", () => assert.match(after.call[2].text, /already built it/i));
+  check("neither offers to build it later", () => {
+    assert.ok(!/I'll build you one/i.test(before.call[2].text));
+    assert.ok(!/I'll build you one/i.test(after.call[2].text));
+  });
+
+  // Which is only honest if you build BEFORE you dial, so the prep step
+  // has to say so — this is the check that keeps the pitch from becoming
+  // a lie the caller gets caught in.
+  check("unbuilt tells them to build before dialling", () => {
+    assert.match(before.prep.label, /THEN dial/i);
+    assert.match(before.prep.text, /Press Build below first/i);
+  });
+
   check("built text carries the real link", () => assert.match(after.sms, /sitebric\.com\/s\/bobs/));
-  check("unbuilt text has no fake link", () => assert.ok(!/\[the link\]/.test(before.sms)));
-  check("built email subject differs", () =>
-    assert.notStrictEqual(before.email.subject, after.email.subject));
+  check("unbuilt text leaves the link as a blank to fill", () =>
+    assert.match(before.sms, /\[the link\]/));
 }
 
 console.log("\nplaceholders the reseller fills in");
