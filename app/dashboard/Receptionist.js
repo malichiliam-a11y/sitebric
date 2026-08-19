@@ -32,6 +32,20 @@ const input = {
   boxSizing: "border-box",
 };
 
+// Placeholders on a dark ground read as filled-in values. The first
+// person to use this screen — the owner — typed nothing, pressed Find
+// numbers, got numbers from four states he had never heard of, and asked
+// what to do next: the example business name and area code sitting in the
+// boxes looked exactly like text he had entered. The browser default is
+// nowhere near dim enough here, so it is set explicitly.
+const PLACEHOLDER_CSS = `
+  .sb-rx input::placeholder,
+  .sb-rx textarea::placeholder {
+    color: rgba(255,255,255,0.26);
+    opacity: 1;
+  }
+`;
+
 const label = {
   display: "block",
   fontSize: 12,
@@ -195,7 +209,11 @@ export default function Receptionist({
   }
 
   return (
-    <div style={{ fontFamily: BODY, color: "#fff" }}>
+    <div className="sb-rx" style={{ fontFamily: BODY, color: "#fff" }}>
+      {/* React escapes the text child of a <style> tag, so server and
+          client markup disagree and the whole page silently falls back to
+          client rendering. This repo has shipped that bug three times. */}
+      <style dangerouslySetInnerHTML={{ __html: PLACEHOLDER_CSS }} />
       {error && (
         <div style={{ fontSize: 12.5, color: "#FCA5A5", marginBottom: 14 }}>{error}</div>
       )}
@@ -213,12 +231,23 @@ export default function Receptionist({
           <div style={{ marginBottom: 12 }}>
             <span style={label}>Business name</span>
             <input
-              style={input}
+              style={{
+                ...input,
+                // A required box that is empty should look unfinished
+                // rather than look like every other box.
+                borderColor: draft.businessName.trim()
+                  ? "rgba(255,255,255,0.12)"
+                  : "rgba(255,255,255,0.3)",
+              }}
               value={draft.businessName}
-              placeholder="Northgate Locksmiths"
+              placeholder="e.g. Northgate Locksmiths"
               onChange={(e) => setDraft({ ...draft, businessName: e.target.value })}
             />
-            <div style={hint}>Said in the greeting, exactly as typed.</div>
+            <div style={hint}>
+              {draft.businessName.trim()
+                ? "Said in the greeting, exactly as typed."
+                : "Required — this is what callers hear when it answers."}
+            </div>
           </div>
 
           <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 12, flexWrap: "wrap" }}>
@@ -227,7 +256,7 @@ export default function Receptionist({
               <input
                 style={input}
                 value={areaCode}
-                placeholder="512"
+                placeholder="e.g. 512"
                 inputMode="numeric"
                 onChange={(e) => setAreaCode(e.target.value.replace(/\D/g, "").slice(0, 5))}
               />
