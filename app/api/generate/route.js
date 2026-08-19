@@ -6,6 +6,7 @@ import { limitsFor, generationCost, MULTIPAGE_COST, MULTIPAGE_ENABLED } from "@/
 import { stripFakePhoneNumbers } from "@/lib/sanitize-site";
 import { makeButtonsWork } from "@/lib/fix-buttons";
 import { parseOrderLinks, orderLinksBlock } from "@/lib/order-links";
+import { styleBlock, styleById } from "@/lib/site-styles";
 import { UserFacingError, friendlyGenerationError, isBillingFailure } from "@/lib/generation-errors";
 import { alertOwner } from "@/lib/alert-owner";
 import { generateShell } from "@/lib/multipage";
@@ -197,6 +198,7 @@ export async function POST(req) {
     calendlyUrl: rawCalendlyUrl,
     orderLinks: rawOrderLinks,
     multiPage: rawMultiPage,
+    style: rawStyle,
   } = await req.json();
   const photoUrls = Array.isArray(rawPhotoUrls) ? rawPhotoUrls.filter(Boolean) : [];
   const phone = typeof rawPhone === "string" ? rawPhone.trim().slice(0, 40) : "";
@@ -209,6 +211,10 @@ export async function POST(req) {
   const orderLinks = parseOrderLinks(
     typeof rawOrderLinks === "string" ? rawOrderLinks.slice(0, 1200) : ""
   );
+  // Resolved through the allowlist rather than used as sent. The style's
+  // text is pasted into the model prompt, so what arrives here decides
+  // only WHICH of our own fragments is used, never what it says.
+  const style = styleById(rawStyle);
   // Forced off at the server too, not just hidden in the UI — a stale tab
   // or a direct POST must not be able to start a build that cannot finish.
   const multiPage = MULTIPAGE_ENABLED && rawMultiPage === true;
@@ -314,6 +320,7 @@ export async function POST(req) {
       calendly_url: calendlyUrl || null,
       order_links: orderLinks.length > 0 ? orderLinks : null,
       multi_page: multiPage,
+      style: style.id,
     })
     .select()
     .single();
@@ -329,6 +336,7 @@ export async function POST(req) {
   const designBlock = `=== DESIGN ===
 Design this the way a good studio would: choose a direction that fits THIS business, then execute it with restraint. Restraint is the whole point. The difference between a site that looks professionally made and one that looks machine-made is almost never the number of effects — it is type, spacing, and knowing what to leave out.
 
+${styleBlock(style.id)}
 STEP 1 — follow the brief when it has a direction of its own.
 If the brief names colours, a palette, a mood (elegant, warm, minimal, upscale, rustic, corporate, industrial), fonts, or says anything like "don't make it look AI-generated" — that wins completely, over everything below. Follow it as literally as a paying client would expect: "mostly white/cream backgrounds, deep charcoal text, subtle green or burgundy accents" means exactly that, never a dark reinterpretation of it. This has shipped wrong before.
 
