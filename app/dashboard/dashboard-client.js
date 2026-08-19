@@ -58,6 +58,7 @@ export default function DashboardClient({ initialProjects }) {
   const [address, setAddress] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [calendlyUrl, setCalendlyUrl] = useState("");
+  const [orderLinks, setOrderLinks] = useState("");
   const [multiPage, setMultiPage] = useState(false);
   // Snapshotted when a generation starts, so the countdown keeps showing
   // the right estimate even though multiPage itself gets reset on success.
@@ -390,7 +391,7 @@ export default function DashboardClient({ initialProjects }) {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName, prompt, photoUrls, phone, address, ownerEmail, calendlyUrl, multiPage }),
+        body: JSON.stringify({ clientName, prompt, photoUrls, phone, address, ownerEmail, calendlyUrl, orderLinks, multiPage }),
       });
 
       // Not every response is JSON. When the function exceeds its time
@@ -492,6 +493,7 @@ export default function DashboardClient({ initialProjects }) {
       setAddress("");
       setOwnerEmail("");
       setCalendlyUrl("");
+      setOrderLinks("");
       setMultiPage(false);
       setShowContactFields(false);
       loadProfile();
@@ -1939,7 +1941,38 @@ export default function DashboardClient({ initialProjects }) {
                       { value: address, set: setAddress, placeholder: "Business address — for the Google Maps section" },
                       { value: ownerEmail, set: setOwnerEmail, placeholder: "Owner's email — where booking inquiries get sent" },
                       { value: calendlyUrl, set: setCalendlyUrl, placeholder: "Calendly (or other scheduling) link — optional" },
-                    ].map((f) => (
+                      {
+                        value: orderLinks,
+                        set: setOrderLinks,
+                        placeholder:
+                          "Ordering links for restaurants — paste DoorDash, Uber Eats, Grubhub etc. (one per line)",
+                        multiline: true,
+                      },
+                    ].map((f) =>
+                      f.multiline ? (
+                        <textarea
+                          key={f.placeholder}
+                          value={f.value}
+                          onChange={(e) => f.set(e.target.value)}
+                          placeholder={f.placeholder}
+                          rows={3}
+                          style={{
+                            width: "100%",
+                            boxSizing: "border-box",
+                            background: "rgba(255,255,255,0.05)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            borderRadius: 12,
+                            padding: "13px 16px",
+                            color: "#fff",
+                            fontFamily: body,
+                            fontSize: 14,
+                            outline: "none",
+                            resize: "vertical",
+                          }}
+                          onFocus={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.4)")}
+                          onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
+                        />
+                      ) : (
                       <input
                         key={f.placeholder}
                         value={f.value}
@@ -1960,7 +1993,8 @@ export default function DashboardClient({ initialProjects }) {
                         onFocus={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.4)")}
                         onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
                       />
-                    ))}
+                      )
+                    )}
                   </div>
                 )}
 

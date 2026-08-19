@@ -64,6 +64,7 @@ export async function POST(req) {
       clientName: project.client_name,
       brief: project.prompt,
       contactBlock: build.contactBlock || "",
+      orderBlock: build.orderBlock || "",
       imageBlock: build.imageBlock || "",
       shell: build.shell,
       signal: deadline.signal,
