@@ -5,6 +5,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { limitsFor, generationCost, MULTIPAGE_COST, MULTIPAGE_ENABLED } from "@/lib/plans";
 import { stripFakePhoneNumbers } from "@/lib/sanitize-site";
 import { makeButtonsWork } from "@/lib/fix-buttons";
+import { parseOrderLinks, orderLinksBlock } from "@/lib/order-links";
 import { UserFacingError, friendlyGenerationError } from "@/lib/generation-errors";
 import { generateShell } from "@/lib/multipage";
 
@@ -193,6 +194,7 @@ export async function POST(req) {
     address: rawAddress,
     ownerEmail: rawOwnerEmail,
     calendlyUrl: rawCalendlyUrl,
+    orderLinks: rawOrderLinks,
     multiPage: rawMultiPage,
   } = await req.json();
   const photoUrls = Array.isArray(rawPhotoUrls) ? rawPhotoUrls.filter(Boolean) : [];
@@ -200,6 +202,12 @@ export async function POST(req) {
   const address = typeof rawAddress === "string" ? rawAddress.trim().slice(0, 300) : "";
   const ownerEmail = typeof rawOwnerEmail === "string" ? rawOwnerEmail.trim().slice(0, 200) : "";
   const calendlyUrl = typeof rawCalendlyUrl === "string" ? rawCalendlyUrl.trim().slice(0, 300) : "";
+  // Parsed here rather than trusted: this ends up inside an href on a live
+  // site, so anything that isn't an http(s) URL is dropped before it can
+  // get near the page.
+  const orderLinks = parseOrderLinks(
+    typeof rawOrderLinks === "string" ? rawOrderLinks.slice(0, 1200) : ""
+  );
   // Forced off at the server too, not just hidden in the UI — a stale tab
   // or a direct POST must not be able to start a build that cannot finish.
   const multiPage = MULTIPAGE_ENABLED && rawMultiPage === true;
@@ -303,6 +311,7 @@ export async function POST(req) {
       address: address || null,
       owner_email: ownerEmail || null,
       calendly_url: calendlyUrl || null,
+      order_links: orderLinks.length > 0 ? orderLinks : null,
       multi_page: multiPage,
     })
     .select()
@@ -376,6 +385,8 @@ The bar: a small studio charged this client $3,000 and is proud to show it in a 
 ${multiPage ? MULTIPAGE_STRUCTURE : SINGLE_PAGE_STRUCTURE}
 `;
 
+  const orderBlock = orderLinksBlock(orderLinks);
+
   const contactBlock = `=== CONTACT & LOCATION — real data only, never invent fake info ===
 ${phone
   ? `- Real phone number: "${phone}". Use this EXACT number for every "Call Now" link and everywhere the phone number is displayed in text. Never invent a placeholder number like (555) 123-4567. This page can be viewed either standalone or embedded in a sandboxed preview iframe, and sandboxed iframes unreliably block tel: navigation (especially in Safari) even with permissive sandbox attributes — so every "Call Now" link needs a fallback that works either way. Use exactly this pattern for every one of them: <a href="tel:${phone.replace(/[^\d+]/g, "")}" onclick="if(window.parent!==window){event.preventDefault();window.parent.postMessage({type:'sitebric-tel',href:this.href},'*');}">Call Now</a> — keep the real href so it still works standalone, and the onclick only kicks in when the page is actually embedded in a parent frame.`
@@ -384,6 +395,7 @@ ${address
   ? `- Real business address: "${address}". Include a "Find us" section with a real, working embedded Google Map — an <iframe> with src="https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed" (no API key needed, this works standalone), width="100%", height around 350-450px, and loading="lazy". Next to it, a "Get Directions" link to href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}" with target="_blank" rel="noopener".`
   : `- No address was provided — do not invent one. Skip the Google Maps section entirely rather than showing a fake or placeholder location.`}
 - Build one real, working lead-capture form (name, phone or email, and a short "what do you need" message field) using plain HTML and vanilla JS fetch — no decorative "Submit" button that does nothing when clicked. On submit (with e.preventDefault()), POST JSON to "https://sitebric.com/api/site-lead" with header "Content-Type: application/json" and body {"projectId": "${project.id}", "name": <the name field value>, "contact": <the phone/email field value>, "message": <the message field value>}. While the request is in flight, disable the submit button and show a "Sending..." state. On a successful response, replace the form with a real confirmation message ("Thanks — we'll be in touch soon."). On a failed request, show an inline error message and leave what the visitor typed intact so they don't have to retype it.
+${orderBlock}
 ${calendlyUrl
   ? `- A real scheduling link was provided: "${calendlyUrl}". Make the primary "Book a meeting" / "Schedule a call" call-to-action a genuine link to this exact URL with target="_blank" rel="noopener" — place it prominently near the lead form, not instead of it. Both the scheduling link and the lead form should be present and both should work.`
   : `- No scheduling link was provided, so "Book a meeting" style copy should point at the lead form above (e.g. an anchor link to #contact) rather than a fake calendar widget.`}
@@ -409,6 +421,7 @@ ${stockPhotos.length > 0
       // ceiling is shared between five model calls any more.
       const shell = await generateShell({
         anthropic,
+        orderBlock,
         clientName,
         brief: prompt,
         imageBlock,
@@ -418,7 +431,7 @@ ${stockPhotos.length > 0
 
       const { error: shellSaveError } = await supabase
         .from("projects")
-        .update({ build: { shell, contactBlock, imageBlock, pages: {} } })
+        .update({ build: { shell, contactBlock, imageBlock, orderBlock, pages: {} } })
         .eq("id", project.id);
       if (shellSaveError) throw new Error(`Failed to save shell: ${shellSaveError.message}`);
 
