@@ -42,8 +42,8 @@ export default async function ReferralStats() {
   const mrrCents = paid.reduce((sum, row) => sum + PLAN_PRICES[row.plan], 0);
   const commissionCents = Math.round(mrrCents * 0.25);
 
-  const display = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
-  const body = "'Inter', sans-serif";
+  const display = "var(--font-display), Georgia, serif";
+  const body = "var(--font-body), sans-serif";
   const stats = [
     ["Total signups", totalSignups],
     ["Paid subscribers", paidCount],

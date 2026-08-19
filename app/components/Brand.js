@@ -16,7 +16,7 @@ export function Wordmark({ size = 22, gap = 11, markSize, color = "#EDEDED" }) {
       <LogoMark size={markSize || size + 5} />
       <span
         style={{
-          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+          fontFamily: "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif",
           fontWeight: 500,
           fontSize: size,
           letterSpacing: "-0.025em",

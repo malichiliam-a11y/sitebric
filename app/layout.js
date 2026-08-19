@@ -1,5 +1,5 @@
 import "./globals.css";
-import { Inter } from "next/font/google";
+import { Fraunces, Manrope } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SITE_URL } from "@/lib/site";
 
@@ -7,11 +7,32 @@ import { SITE_URL } from "@/lib/site";
 // Removes a render-blocking third-party request, kills the flash of
 // fallback text, and means the page cannot render in the wrong face if
 // fonts.googleapis.com is slow or blocked.
-const inter = Inter({
+//
+// Two faces, doing different jobs. Everything used to be Inter, which is
+// the typeface every generated SaaS page on the internet is set in — the
+// owner's words were that it "looks like a robot made it", and he was
+// right. A product that sells websites cannot itself look generated.
+//
+// Fraunces carries the headlines. A real serif is the single clearest
+// signal that a person designed something rather than a template
+// generator, and its optical-size axis means a 56px hero and a 20px
+// section heading are drawn differently rather than scaled.
+const fraunces = Fraunces({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
   display: "swap",
-  variable: "--font-inter",
+  variable: "--font-display",
+});
+
+// Manrope does the reading. Chosen over another serif because interface
+// copy at 12-14px needs to be unambiguous, not characterful — and over
+// Inter because the whole point was to stop looking like everyone else.
+const manrope = Manrope({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+  variable: "--font-body",
 });
 
 // metadataBase makes the generated OG image resolve to an absolute URL.
@@ -57,11 +78,11 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${fraunces.variable} ${manrope.variable}`}>
       <body
         style={{
           margin: 0,
-          fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif",
+          fontFamily: "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif",
           background: "#000000",
           color: "#EDEDED",
           WebkitFontSmoothing: "antialiased",

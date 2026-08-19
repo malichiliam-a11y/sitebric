@@ -9,19 +9,19 @@
 // to the leads tab shipped on a reading of the diff. That is exactly the
 // habit this repo's notes say has been caught out every time.
 
-const DISPLAY = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
-const BODY = "'Inter', sans-serif";
+const DISPLAY = "var(--font-display), Georgia, serif";
+const BODY = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
 
 function Badge({ children, tone }) {
   const tones = {
     good: { color: "#4ADE80", background: "rgba(74,222,128,0.12)" },
-    muted: { color: "rgba(255,255,255,0.45)", background: "rgba(255,255,255,0.06)" },
+    muted: { color: "rgba(255,255,255,0.64)", background: "rgba(255,255,255,0.06)" },
     solid: { color: "#0A0A10", background: "#FFFFFF" },
   };
   return (
     <span
       style={{
-        fontSize: 10.5,
+        fontSize: 11,
         fontWeight: 600,
         letterSpacing: "0.04em",
         padding: "2px 7px",
@@ -79,10 +79,10 @@ export function LeadResultCard({ lead, built, saved, onOpen, onSave, onUnsave })
           </Badge>
           {built && <Badge tone="solid">SITE BUILT</Badge>}
         </div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 8 }}>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.64)", marginBottom: 8 }}>
           {lead.address}
         </div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.74)" }}>
           {lead.phone || "No phone listed"}
         </div>
       </div>
@@ -193,7 +193,7 @@ export function SavedLeadRow({ row, lead, built, onOpen, onRemove }) {
         </div>
         {/* Which search this came from. A list of sixty saved businesses
             from four different searches is unusable without it. */}
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.42)" }}>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.62)" }}>
           {lead.phone || "No phone"}
           {row.category ? ` · ${row.category}` : ""}
           {row.location ? ` · ${row.location}` : ""}
@@ -230,7 +230,7 @@ export function SavedLeadRow({ row, lead, built, onOpen, onRemove }) {
             border: "1px solid rgba(255,255,255,0.12)",
             borderRadius: 8,
             padding: "8px 14px",
-            color: "rgba(255,255,255,0.55)",
+            color: "rgba(255,255,255,0.7)",
             fontFamily: BODY,
             fontSize: 12,
             fontWeight: 600,
