@@ -261,10 +261,18 @@ export async function POST(req) {
     );
   }
 
+  // A failed generation must not consume a site slot. It counted before,
+  // and the night the API credit ran out that turned one outage into a
+  // second, worse problem: a Starter subscriber reached 4 of 5 sites
+  // having produced one website, and a trial user with two slots and two
+  // crashes was locked out of the product entirely, permanently, without
+  // ever seeing a site. The row is kept so the dashboard can show what
+  // happened — it just doesn't count against what they paid for.
   const { count: siteCount } = await supabase
     .from("projects")
     .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .neq("status", "error");
 
   if (siteCount >= limit.sites) {
     return NextResponse.json(

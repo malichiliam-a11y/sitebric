@@ -1037,7 +1037,10 @@ export default function DashboardClient({ initialProjects }) {
   // from wherever the user actually is, not always "Pro".
   const nextPlan =
     currentPlan === "starter" ? "Growth" : currentPlan === "growth" ? "Pro" : "Starter";
-  const sitesUsed = projects.length;
+  // Matches what /api/generate actually enforces: a crashed generation is
+  // not a site, and showing it as one told people they had used up an
+  // allowance they still had.
+  const sitesUsed = projects.filter((p) => p.status !== "error").length;
   const gensUsed = profile?.generations_used || 0;
   const gensRemaining = Math.max(0, limits.generations - gensUsed);
   // A multi-page build costs several generations, so the option is only
