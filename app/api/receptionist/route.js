@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { canUseReceptionist } from "@/lib/plans";
+import { canUseReceptionist, numbersAllowed, limitsFor } from "@/lib/plans";
 import { isOwner } from "@/lib/admin";
 import { findAvailableNumbers, buyNumber, releaseNumber, twilioConfigured } from "@/lib/twilio-numbers";
 
@@ -19,6 +19,11 @@ const supabaseAdmin = createAdminClient(
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
+
+// The owner's own ceiling. Not unlimited — a runaway loop buying numbers
+// would spend real money — but high enough that it is never the thing in
+// the way while the product is being demonstrated.
+const OWNER_ALLOWANCE = 25;
 
 function field(value, max = 300) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
@@ -91,6 +96,12 @@ export async function GET(req) {
     // email, and an email compiled into the client bundle is on every
     // visitor's machine — the answer travels instead of the rule.
     canUse: canUseReceptionist(profile?.plan) || isOwner(user.email),
+    // How many lines this plan may hold at once, and what the plan is
+    // called, so the dashboard can say "1 of 3" and name the plan without
+    // shipping the table to the browser. The owner gets the top ceiling
+    // for the same reason they bypass canUse: they carry the bill.
+    allowance: isOwner(user.email) ? OWNER_ALLOWANCE : numbersAllowed(profile?.plan),
+    planLabel: limitsFor(profile?.plan).label,
     // Deliberately returned regardless of plan. Somebody who cannot use
     // the feature yet is exactly who needs to hear it.
     demo: demo ? { phoneNumber: demo.phone_number, businessName: demo.business_name } : null,
@@ -110,11 +121,16 @@ export async function POST(req) {
     .eq("id", user.id)
     .single();
 
+  // Every paid plan holds lines; a trial or a lapsed account holds none.
+  // What those accounts get instead is the public demo number, which they
+  // can ring without paying anything — see canUseReceptionist in
+  // lib/plans.js for why a rented line isn't given away.
   if (!canUseReceptionist(profile?.plan) && !isOwner(user.email)) {
     return NextResponse.json(
       {
         error: "plan_required",
-        message: "The AI receptionist is on Growth and Pro. Upgrade to give a client a number that answers.",
+        message:
+          "Ring the demo number to hear it working — your own lines come with any paid plan.",
       },
       { status: 402 }
     );
@@ -136,13 +152,21 @@ export async function POST(req) {
 
   // How many numbers one account may hold. Every number is a monthly
   // Twilio charge whether or not it ever rings, so this is a real spend
-  // ceiling rather than a product limit.
+  // ceiling rather than a product limit — and it is the one thing that
+  // still scales with the plan now that the feature itself doesn't.
+  const allowance = isOwner(user.email) ? OWNER_ALLOWANCE : numbersAllowed(profile?.plan);
   const { count } = await supabase
     .from("receptionist_numbers")
     .select("id", { count: "exact", head: true });
-  if ((count || 0) >= 25) {
+  if ((count || 0) >= allowance) {
     return NextResponse.json(
-      { error: "too_many", message: "That's 25 numbers — message me if you need more." },
+      {
+        error: "too_many",
+        message:
+          allowance === 1
+            ? `${limitsFor(profile?.plan).label} includes one line. Upgrade for more, or give this one back first.`
+            : `That's all ${allowance} lines on ${limitsFor(profile?.plan).label}. Upgrade for more, or give one back first.`,
+      },
       { status: 402 }
     );
   }

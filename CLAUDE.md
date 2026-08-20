@@ -23,6 +23,7 @@ client business and get a finished website they can hand off.
 | `lib/lead-script.js` | The words to say on a cold call, built from a lead's own facts — pure, no model call |
 | `lib/leads-csv.js` | The saved-leads download, with the Excel formula-injection guard |
 | `app/dashboard/LeadCards.js`, `LeadDetail.js` | The leads UI, split out so it can be driven in a browser without a login |
+| `app/dev/receptionist/` | The receptionist screen in every plan state, with no login. 404 in production. `node test/receptionist-ui.mjs` drives it |
 
 ## Traps that have bitten this codebase
 
@@ -58,6 +59,16 @@ guard now decides at build time, by reading the page's own code for a post to
 enough to read the fields before the page's handler calls `form.reset()`.
 `node test/lead-guard.mjs` drives all of this in a real browser.
 
+**An uncontrolled input keeps the previous row's value.** The receptionist
+config boxes use `defaultValue`, which React applies once, on mount. Adding
+a line selector meant switching between clients re-rendered the same
+`<input>` in the same position, so React reused the DOM node and left the
+first client's emergency mobile number sitting in the box — one press of
+Save from being written to the second client's line. Fixed by keying the
+panel on the line's id so it remounts. The fixtures had identical data for
+every line, so the first browser check passed over it; `test/receptionist-ui.mjs`
+now gives each line distinct values and asserts the boxes change.
+
 **A clickable card must not be `role="button"`.** The lead cards carry
 their own buttons (Save, Open), and an ARIA button may not contain other
 controls — the card's accessible name is computed from everything inside
@@ -74,8 +85,17 @@ changes routing on `/` must leave `?ref=` alone.
 ## The receptionist
 
 A Twilio number answers, takes the caller's name, number and what they
-need, and puts real emergencies through to a mobile. Growth and Pro only —
-every number is a monthly Twilio charge whether it rings or not.
+need, and puts real emergencies through to a mobile.
+
+**On every paid plan; the plan caps how many lines, not whether you get
+one.** Starter 3, Growth 10, Pro 25 — `numbersAllowed` in `lib/plans.js`
+is the single source, used by `/api/receptionist` and the dashboard, and
+`test/promises.mjs` ties the pricing card to it. It was Growth-and-Pro-only,
+which was backwards: a reseller can't sell a thing they've never heard.
+The free trial gets **zero** lines and the public demo number instead —
+every line is a monthly Twilio charge whether it rings or not, so renting
+one for an account that has paid nothing is the one part of this that
+quietly loses money.
 
 Things that will bite:
 
@@ -122,9 +142,16 @@ Email signup mails a **6-digit code**, not a link. `AuthCard` collects it via
   working.
 - `/admin/referrals` estimates MRR from list price, so a discounted subscriber
   (APEX is on a $5-off coupon for 6 months) reads $5/mo high.
+- **The per-number add-on is still unbuilt.** At 25 lines a Pro subscriber
+  costs roughly $29/month in Twilio rent against $69.99 of revenue. Still
+  profit, but that tier is where a per-line charge stops being optional.
+  Nobody is near the cap yet, so this is a watch item, not a fire.
 - Dashboard UI still can't be driven end-to-end here — there's no way to sign
-  in from the sandbox. The leads components are verifiable because they were
-  split into their own files; the rest of `dashboard-client.js` is not.
+  in from the sandbox. The leads and receptionist components are verifiable
+  because they were split into their own files; the rest of
+  `dashboard-client.js` is not. `app/dev/receptionist/` is the pattern worth
+  copying for the next screen that needs it: a fixture page that 404s in
+  production, plus a Playwright driver in `test/`.
 
 ## Promises the code has to keep
 

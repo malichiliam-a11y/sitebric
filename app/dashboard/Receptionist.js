@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
 // The receptionist tab: a number that answers, what it's allowed to say,
 // and every call it took.
@@ -334,6 +334,105 @@ Nothing else changes. Customers keep calling your normal number. If you don't pi
   );
 }
 
+// The lines this account holds, and how many more the plan allows.
+//
+// The screen used to render numbers[0] and nothing else, which was fine
+// while the feature was Growth-and-Pro-only and everyone who had it had
+// one. Now every plan carries an allowance, and a plan that says "3
+// lines" with no way to reach the second one is a worse lie than the gate
+// it replaced.
+function Lines({ numbers, selectedId, allowance, planLabel, adding, onSelect, onAdd, onCancelAdd }) {
+  const room = numbers.length < allowance;
+  return (
+    <div style={{ ...panel, marginBottom: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          gap: 10,
+          flexWrap: "wrap",
+          marginBottom: numbers.length ? 12 : 0,
+        }}
+      >
+        <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 15 }}>Your lines</span>
+        <span style={{ fontSize: 12.5, color: "rgba(255,255,255,0.64)" }}>
+          {numbers.length} of {allowance}
+          {planLabel ? ` on ${planLabel}` : ""}
+          {room ? "" : " — upgrade for more"}
+        </span>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {numbers.map((n) => {
+          const active = !adding && n.id === selectedId;
+          return (
+            <button
+              key={n.id}
+              onClick={() => onSelect(n.id)}
+              style={{
+                textAlign: "left",
+                background: active ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.03)",
+                border: `1px solid ${active ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.1)"}`,
+                borderRadius: 10,
+                padding: "8px 12px",
+                color: "#fff",
+                fontFamily: BODY,
+                cursor: "pointer",
+              }}
+            >
+              <span style={{ display: "block", fontSize: 13, fontWeight: 600 }}>
+                {n.business_name}
+              </span>
+              <span style={{ display: "block", fontSize: 12, color: "rgba(255,255,255,0.62)" }}>
+                {prettyNumber(n.phone_number)}
+              </span>
+            </button>
+          );
+        })}
+
+        {numbers.length > 0 && room && !adding && (
+          <button
+            onClick={onAdd}
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px dashed rgba(255,255,255,0.22)",
+              borderRadius: 10,
+              padding: "8px 14px",
+              color: "rgba(255,255,255,0.8)",
+              fontFamily: BODY,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            + Add a line
+          </button>
+        )}
+
+        {numbers.length > 0 && adding && (
+          <button
+            onClick={onCancelAdd}
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 10,
+              padding: "8px 14px",
+              color: "rgba(255,255,255,0.7)",
+              fontFamily: BODY,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Receptionist({
   numbers = [],
   calls = [],
@@ -341,6 +440,8 @@ export default function Receptionist({
   isOwnerAccount = false,
   available = true,
   canUse = true,
+  allowance = 1,
+  planLabel = "",
   onSearch,
   onBuy,
   onSave,
@@ -355,6 +456,8 @@ export default function Receptionist({
   const [editing, setEditing] = useState(null);
   const [openCall, setOpenCall] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
+  const [adding, setAdding] = useState(false);
 
   async function copyHandover(text) {
     try {
@@ -366,7 +469,10 @@ export default function Receptionist({
     }
   }
 
-  const number = numbers[0] || null;
+  // Falls back to the first line rather than to null, so a line that was
+  // just handed back doesn't leave the screen pointing at nothing.
+  const number = numbers.find((n) => n.id === selectedId) || numbers[0] || null;
+  const showBuy = !number || adding;
 
   if (!canUse) {
     return (
@@ -384,9 +490,19 @@ export default function Receptionist({
           can&apos;t, takes the caller&apos;s name, number and what they need, and puts real
           emergencies straight through to their mobile.
         </p>
+        {/* Not "upgrade to unlock" — the demo above IS the feature, and
+            they can ring it right now. What a plan buys is a line of your
+            own to point a client's phone at. */}
         <p style={{ ...hint, marginBottom: 16 }}>
-          On Growth and Pro — every number costs us monthly whether it rings or not, so it
-          isn&apos;t something a trial can carry.
+          {/* The demo panel is only rendered when a line has actually been
+              nominated, so pointing at "the number above" when there
+              isn't one would send someone looking for nothing. */}
+          {demo?.phoneNumber
+            ? "Ring the demo number above first — that's this, working, no card needed. "
+            : ""}
+          Every paid plan comes with lines of your own: Starter runs 3 clients at once, Growth 10,
+          Pro 25. Each line is a real phone number rented every month, which is why the free trial
+          gets the demo rather than one of its own.
         </p>
         <button
           onClick={onUpgrade}
@@ -437,16 +553,40 @@ export default function Receptionist({
 
       <HowItWorks hasNumber={Boolean(number)} />
 
-      {number && <HandOver number={number} onCopy={copyHandover} copied={copied} />}
+      {numbers.length > 0 && (
+        <Lines
+          numbers={numbers}
+          selectedId={number?.id}
+          allowance={allowance}
+          planLabel={planLabel}
+          adding={adding}
+          onSelect={(id) => {
+            setSelectedId(id);
+            setAdding(false);
+            setEditing(null);
+          }}
+          onAdd={() => {
+            setAdding(true);
+            setFound(null);
+            setDraft({ businessName: "", forwardTo: "", businessFacts: "" });
+          }}
+          onCancelAdd={() => setAdding(false)}
+        />
+      )}
 
-      {!number && (
+      {number && !adding && <HandOver number={number} onCopy={copyHandover} copied={copied} />}
+
+      {showBuy && (
         <div style={{ ...panel, marginBottom: 16, maxWidth: 620 }}>
           <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 17, marginBottom: 6 }}>
-            Get a number
+            {adding ? "Add another line" : "Get a number"}
           </div>
           <p style={{ ...hint, marginTop: 0, marginBottom: 16 }}>
             Pick the area code your client&apos;s customers are used to seeing. Nothing is charged
             until you press Use this one.
+            {numbers.length === 0 && allowance > 1
+              ? ` Your plan runs ${allowance} of these at once.`
+              : ""}
           </p>
 
           <div style={{ marginBottom: 12 }}>
@@ -556,8 +696,13 @@ export default function Receptionist({
         </div>
       )}
 
-      {number && (
-        <>
+      {/* Keyed on the line. The two config boxes below are uncontrolled
+          (defaultValue), and React only applies defaultValue when the DOM
+          node mounts — switching lines reuses the same <input> and would
+          leave the previous client's mobile number and facts sitting in
+          the boxes, one Save away from being written to the wrong line. */}
+      {number && !adding && (
+        <Fragment key={number.id}>
           <div style={{ ...panel, marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
               <div>
@@ -690,7 +835,7 @@ export default function Receptionist({
               {busy ? "Saving…" : "Save"}
             </button>
           </div>
-        </>
+        </Fragment>
       )}
 
       <div style={panel}>
