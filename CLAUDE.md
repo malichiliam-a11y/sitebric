@@ -97,6 +97,11 @@ Things that will bite:
   never happened.
 - The assistant may only state facts from `business_facts`. It is on a
   recorded line speaking for someone else's business.
+- **One number is public.** The row with `is_demo` is shown to every user
+  on every plan, including accounts that can't use the feature — hearing
+  it is what sells it. It is therefore the only number a stranger can
+  dial, so it carries its own caps: `DEMO_CALLS_PER_DAY` per calling
+  number and a lower turn ceiling. Only the owner can nominate one.
 
 ## Auth flow
 

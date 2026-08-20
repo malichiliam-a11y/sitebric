@@ -10,6 +10,7 @@ import {
   TURN_MODEL,
   TURN_MAX_TOKENS,
   MAX_TURNS,
+  DEMO_MAX_TURNS,
 } from "@/lib/receptionist";
 
 // One exchange: the caller said something, work out what to say back.
@@ -75,9 +76,12 @@ export async function POST(req) {
     const withCaller = [...transcript, { role: "caller", text: spoken }];
 
     // Past the ceiling this call is not going anywhere and is costing
-    // money on every exchange.
+    // money on every exchange. The public demo line gets a lower one: it
+    // has to prove the thing works, not book a job, and every turn on it
+    // is spent on someone who might just be poking it.
+    const ceiling = number.is_demo ? DEMO_MAX_TURNS : MAX_TURNS;
     const callerTurns = withCaller.filter((t) => t.role === "caller").length;
-    if (callerTurns > MAX_TURNS) {
+    if (callerTurns > ceiling) {
       return respond({
         reply: outOfTurnsReply(),
         callId,
