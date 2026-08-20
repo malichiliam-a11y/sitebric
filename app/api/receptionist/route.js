@@ -64,15 +64,24 @@ export async function GET(req) {
     }
   }
 
-  const [{ data: numbers }, { data: calls }, { data: profile }] = await Promise.all([
-    supabase.from("receptionist_numbers").select("*").order("created_at", { ascending: false }),
-    supabase
-      .from("receptionist_calls")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(100),
-    supabase.from("profiles").select("plan").eq("id", user.id).single(),
-  ]);
+  const [{ data: numbers }, { data: calls }, { data: profile }, { data: demo }] =
+    await Promise.all([
+      supabase.from("receptionist_numbers").select("*").order("created_at", { ascending: false }),
+      supabase
+        .from("receptionist_calls")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabase.from("profiles").select("plan").eq("id", user.id).single(),
+      // The demo line, read with the service role because it belongs to
+      // the owner's account and RLS would hide it from everybody else —
+      // which is precisely the people it exists for.
+      supabaseAdmin
+        .from("receptionist_numbers")
+        .select("phone_number, business_name")
+        .eq("is_demo", true)
+        .maybeSingle(),
+    ]);
 
   return NextResponse.json({
     numbers: numbers || [],
@@ -82,6 +91,12 @@ export async function GET(req) {
     // email, and an email compiled into the client bundle is on every
     // visitor's machine — the answer travels instead of the rule.
     canUse: canUseReceptionist(profile?.plan) || isOwner(user.email),
+    // Deliberately returned regardless of plan. Somebody who cannot use
+    // the feature yet is exactly who needs to hear it.
+    demo: demo ? { phoneNumber: demo.phone_number, businessName: demo.business_name } : null,
+    // Drives the owner-only "use this as the demo line" toggle. The
+    // answer travels, not the rule — same reason as canUse above.
+    isOwnerAccount: isOwner(user.email),
   });
 }
 
@@ -191,6 +206,9 @@ export async function PATCH(req) {
   if ("greeting" in body) patch.greeting = field(body.greeting, 400);
   if ("forwardTo" in body) patch.forward_to = dialable(body.forwardTo);
   if ("active" in body) patch.active = Boolean(body.active);
+  // Owner only. This is the one number in the system a stranger can dial,
+  // and every call on it spends money that nobody is paying for.
+  if ("isDemo" in body && isOwner(user.email)) patch.is_demo = Boolean(body.isDemo);
 
   const { data, error } = await supabaseAdmin
     .from("receptionist_numbers")

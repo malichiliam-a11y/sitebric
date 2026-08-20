@@ -575,6 +575,8 @@ export default function DashboardClient({ initialProjects }) {
   const [rxCalls, setRxCalls] = useState([]);
   const [rxAvailable, setRxAvailable] = useState(true);
   const [rxCanUse, setRxCanUse] = useState(null);
+  const [rxDemo, setRxDemo] = useState(null);
+  const [rxIsOwner, setRxIsOwner] = useState(false);
   const [rxBusy, setRxBusy] = useState(false);
   const [rxError, setRxError] = useState("");
   const [siteSearch, setSiteSearch] = useState("");
@@ -868,6 +870,8 @@ export default function DashboardClient({ initialProjects }) {
       setRxCalls(result.calls || []);
       setRxAvailable(result.available !== false);
       setRxCanUse(result.canUse !== false);
+      setRxDemo(result.demo || null);
+      setRxIsOwner(Boolean(result.isOwnerAccount));
     } catch (err) {
       setRxError(err.message);
       setRxNumbers((current) => current || []);
@@ -3718,6 +3722,8 @@ export default function DashboardClient({ initialProjects }) {
             <Receptionist
               numbers={rxNumbers || []}
               calls={rxCalls}
+              demo={rxDemo}
+              isOwnerAccount={rxIsOwner}
               available={rxAvailable}
               /* The plan is a good first guess so the right panel paints
                  immediately; the server's answer replaces it once loaded,

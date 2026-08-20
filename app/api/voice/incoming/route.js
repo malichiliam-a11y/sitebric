@@ -1,7 +1,7 @@
 import { readTwilioRequest, supabaseAdmin, normalizeNumber } from "@/lib/voice-request";
 import { publicUrlFor } from "@/lib/twilio-signature";
 import { sayAndGather, sayAndDial, sayAndHangUp, twimlResponse } from "@/lib/twiml";
-import { greetingFor, overLimitMessage } from "@/lib/receptionist";
+import { greetingFor, overLimitMessage, demoLimitMessage, DEMO_CALLS_PER_DAY } from "@/lib/receptionist";
 
 // A phone rang. This is the first thing that happens.
 //
@@ -43,6 +43,24 @@ export async function POST(req) {
       return twimlResponse(
         sayAndHangUp("Sorry, this number isn't in service. Please check the number and try again.")
       );
+    }
+
+    // The demo line is public, so one bored caller could otherwise spend
+    // the whole month's minutes on their own. Counted per calling number
+    // rather than per day overall, so one person cannot lock everybody
+    // else out of hearing the product.
+    if (number.is_demo && from) {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { count: recent } = await supabaseAdmin
+        .from("receptionist_calls")
+        .select("id", { count: "exact", head: true })
+        .eq("number_id", number.id)
+        .eq("from_number", from)
+        .gte("created_at", since);
+
+      if ((recent || 0) >= DEMO_CALLS_PER_DAY) {
+        return twimlResponse(sayAndHangUp(demoLimitMessage()));
+      }
     }
 
     // The month's minutes are gone. The caller is still logged — Twilio

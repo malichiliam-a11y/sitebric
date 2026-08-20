@@ -139,6 +139,64 @@ export function CallRow({ call, onOpen }) {
 }
 
 
+
+// "Ring it yourself" — the whole point of which is that it works before
+// anyone has paid for anything.
+//
+// Hearing this product used to require a Growth plan AND buying a number.
+// Nobody buys a subscription for a feature they have never heard, so the
+// people most in need of convincing were the only ones who could not be.
+// This block is shown to everyone, on every plan, including accounts that
+// cannot use the feature at all.
+function TryIt({ demo }) {
+  if (!demo?.phoneNumber) return null;
+  const dial = String(demo.phoneNumber).replace(/[^0-9+]/g, "");
+
+  return (
+    <div
+      style={{
+        ...panel,
+        marginBottom: 16,
+        maxWidth: 720,
+        borderColor: "rgba(255,255,255,0.18)",
+      }}
+    >
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ flex: "1 1 300px", minWidth: 0 }}>
+          <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
+            Hear it before you sell it
+          </div>
+          <div style={{ fontSize: 13, lineHeight: 1.55, color: "rgba(255,255,255,0.66)" }}>
+            Ring this number and talk to it. It&apos;s set up as {demo.businessName || "a demo business"} —
+            ask for a quote, ask something it wasn&apos;t told, see how it handles you. Free, and you
+            don&apos;t need a plan.
+          </div>
+        </div>
+        <a
+          href={`tel:${dial}`}
+          style={{
+            background: "#fff",
+            color: "#0A0A10",
+            borderRadius: 10,
+            padding: "12px 20px",
+            fontFamily: DISPLAY,
+            fontWeight: 700,
+            fontSize: 15,
+            textDecoration: "none",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+          }}
+        >
+          {prettyNumber(demo.phoneNumber)}
+        </a>
+      </div>
+      <div style={{ ...hint, marginTop: 10 }}>
+        Three calls a day per phone, so one person can&apos;t use up everybody else&apos;s.
+      </div>
+    </div>
+  );
+}
+
 // How the whole thing works, in the order it happens.
 //
 // The owner built this feature, paid for the Twilio account, and still
@@ -279,6 +337,8 @@ Nothing else changes. Customers keep calling your normal number. If you don't pi
 export default function Receptionist({
   numbers = [],
   calls = [],
+  demo = null,
+  isOwnerAccount = false,
   available = true,
   canUse = true,
   onSearch,
@@ -310,7 +370,12 @@ export default function Receptionist({
 
   if (!canUse) {
     return (
-      <div style={{ ...panel, fontFamily: BODY, color: "#fff", maxWidth: 620 }}>
+      <div className="sb-rx" style={{ fontFamily: BODY, color: "#fff" }}>
+        <style dangerouslySetInnerHTML={{ __html: PLACEHOLDER_CSS }} />
+        {/* Shown first, deliberately. Someone who cannot use the feature
+            is exactly who needs to hear it working. */}
+        <TryIt demo={demo} />
+        <div style={{ ...panel, maxWidth: 620 }}>
         <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 17, marginBottom: 8 }}>
           Give a client a number that answers
         </div>
@@ -339,6 +404,7 @@ export default function Receptionist({
         >
           See plans →
         </button>
+        </div>
       </div>
     );
   }
@@ -366,6 +432,8 @@ export default function Receptionist({
       {error && (
         <div style={{ fontSize: 12.5, color: "#FCA5A5", marginBottom: 14 }}>{error}</div>
       )}
+
+      <TryIt demo={demo} />
 
       <HowItWorks hasNumber={Boolean(number)} />
 
@@ -574,6 +642,35 @@ export default function Receptionist({
                 someone will confirm on the call back — it will never guess a price or a time.
               </div>
             </div>
+
+            {isOwnerAccount && (
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  marginBottom: 16,
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={editing?.isDemo ?? number.is_demo}
+                  onChange={(e) => setEditing({ ...editing, isDemo: e.target.checked })}
+                  style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0 }}
+                />
+                <span>
+                  <span style={{ display: "block", fontSize: 13, fontWeight: 600 }}>
+                    Use this as the public demo line
+                  </span>
+                  <span style={{ ...hint, marginTop: 2 }}>
+                    Owner only. Shows this number to every Sitebric user so they can ring it and
+                    hear the product before buying anything. Capped at three calls a day per
+                    caller.
+                  </span>
+                </span>
+              </label>
+            )}
 
             <button
               disabled={busy || !editing}
