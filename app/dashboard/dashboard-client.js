@@ -12,7 +12,7 @@ import LeadDetail from "./LeadDetail";
 import StylePicker from "./StylePicker";
 import Receptionist from "./Receptionist";
 import { DEFAULT_STYLE, styleById } from "@/lib/site-styles";
-import { canUseReceptionist } from "@/lib/plans";
+import { canUseReceptionist, numbersAllowed, limitsFor } from "@/lib/plans";
 import { LeadResultCard, SavedLeadRow } from "./LeadCards";
 
 // Read straight out of the site's own HTML rather than tracked in its own
@@ -577,6 +577,8 @@ export default function DashboardClient({ initialProjects }) {
   const [rxCanUse, setRxCanUse] = useState(null);
   const [rxDemo, setRxDemo] = useState(null);
   const [rxIsOwner, setRxIsOwner] = useState(false);
+  const [rxAllowance, setRxAllowance] = useState(1);
+  const [rxPlanLabel, setRxPlanLabel] = useState("");
   const [rxBusy, setRxBusy] = useState(false);
   const [rxError, setRxError] = useState("");
   const [siteSearch, setSiteSearch] = useState("");
@@ -872,6 +874,8 @@ export default function DashboardClient({ initialProjects }) {
       setRxCanUse(result.canUse !== false);
       setRxDemo(result.demo || null);
       setRxIsOwner(Boolean(result.isOwnerAccount));
+      setRxAllowance(result.allowance ?? 1);
+      setRxPlanLabel(result.planLabel || "");
     } catch (err) {
       setRxError(err.message);
       setRxNumbers((current) => current || []);
@@ -913,7 +917,10 @@ export default function DashboardClient({ initialProjects }) {
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.message || result.error || "failed");
-      setRxNumbers([result.number]);
+      // Appended, not replaced. An account can hold several lines now, and
+      // replacing the list here would make the others vanish from the
+      // screen while still billing every month.
+      setRxNumbers((current) => [result.number, ...(current || [])]);
     } catch (err) {
       setRxError(err.message);
     } finally {
@@ -949,7 +956,7 @@ export default function DashboardClient({ initialProjects }) {
         const result = await res.json().catch(() => ({}));
         throw new Error(result.message || result.error || "failed");
       }
-      setRxNumbers([]);
+      setRxNumbers((current) => (current || []).filter((n) => n.id !== id));
     } catch (err) {
       setRxError(err.message);
     } finally {
@@ -3729,6 +3736,9 @@ export default function DashboardClient({ initialProjects }) {
                  immediately; the server's answer replaces it once loaded,
                  and the route is what actually enforces this either way. */
               canUse={rxCanUse === null ? canUseReceptionist(profile?.plan) : rxCanUse}
+              /* Same first-guess-then-server pattern as canUse above. */
+              allowance={rxCanUse === null ? numbersAllowed(profile?.plan) : rxAllowance}
+              planLabel={rxPlanLabel || limitsFor(profile?.plan).label}
               busy={rxBusy}
               error={rxError}
               onSearch={searchNumbers}

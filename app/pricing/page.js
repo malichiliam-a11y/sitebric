@@ -59,6 +59,11 @@ export default function Pricing() {
     `${PLAN_LIMITS[plan].sites} client sites`,
     `${PLAN_LIMITS[plan].generations} AI generations / mo`,
     `${PLAN_LIMITS[plan].searches} lead searches / mo`,
+    // Same rule as the rest: read from what the route enforces, never
+    // typed out here. A plan with no lines simply doesn't get the line.
+    ...(PLAN_LIMITS[plan].numbers
+      ? [`AI receptionist — ${PLAN_LIMITS[plan].numbers} phone lines`]
+      : []),
   ];
 
   const tiers = [
