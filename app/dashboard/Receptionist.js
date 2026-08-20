@@ -10,7 +10,7 @@ import { useState } from "react";
 // and this is the most complicated screen in the product to get wrong
 // quietly.
 
-const DISPLAY = "var(--font-display), Georgia, serif";
+const DISPLAY = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
 const BODY = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
 
 const panel = {
@@ -138,6 +138,144 @@ export function CallRow({ call, onOpen }) {
   );
 }
 
+
+// How the whole thing works, in the order it happens.
+//
+// The owner built this feature, paid for the Twilio account, and still
+// asked "do I need to buy a phone number? how does it even work?" — which
+// means nobody arriving cold had a chance. The screen said what to type,
+// never what the thing IS.
+//
+// The part that confuses everyone: this is a NEW number. A business's
+// existing line cannot be pointed at an AI directly. Either their old
+// number forwards to this one, or this one becomes the number they hand
+// out. Nothing else works, and nothing on this page used to say so.
+function HowItWorks({ hasNumber }) {
+  const steps = [
+    {
+      n: 1,
+      title: "You get a number here",
+      body: "A brand new phone line, about $1.15 a month. One per client. That's the whole cost to you — you charge them whatever you like on top.",
+    },
+    {
+      n: 2,
+      title: "Their old number forwards to it",
+      body: "Your client rings their phone company and sets call forwarding to this number — usually only when they don't pick up. Their customers keep dialling the same number they always have. Nothing about their line changes.",
+    },
+    {
+      n: 3,
+      title: "It answers when they can't",
+      body: "Takes the caller's name, number and what they need, then texts you and shows it here. If it's a real emergency, it puts the caller straight through to your client's mobile instead.",
+    },
+  ];
+
+  return (
+    <div style={{ ...panel, marginBottom: 16, maxWidth: 720 }}>
+      <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 16, marginBottom: 14 }}>
+        {hasNumber ? "How this works" : "How this works — read this first"}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {steps.map((s) => (
+          <div key={s.n} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+            <span
+              style={{
+                flexShrink: 0,
+                width: 24,
+                height: 24,
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.1)",
+                border: "1px solid rgba(255,255,255,0.16)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 12,
+                fontWeight: 700,
+              }}
+            >
+              {s.n}
+            </span>
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 2 }}>{s.title}</div>
+              <div style={{ fontSize: 13, lineHeight: 1.55, color: "rgba(255,255,255,0.66)" }}>
+                {s.body}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div
+        style={{
+          marginTop: 14,
+          paddingTop: 12,
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          fontSize: 12.5,
+          lineHeight: 1.55,
+          color: "rgba(255,255,255,0.6)",
+        }}
+      >
+        This is a <strong style={{ color: "#fff" }}>new</strong> number, not their existing one. An
+        AI can&apos;t be attached to a line someone already owns — either their number forwards to
+        this one, or they start handing this one out.
+      </div>
+    </div>
+  );
+}
+
+// What the reseller sends the client once the number exists. Without this
+// they have a working number and no idea what to tell anyone.
+function HandOver({ number, onCopy, copied }) {
+  const text = `Here's your new answering line: ${prettyNumber(number.phone_number)}
+
+To switch it on, call your phone provider (or use your phone's settings) and set up CALL FORWARDING WHEN UNANSWERED to ${prettyNumber(number.phone_number)}.
+
+Nothing else changes. Customers keep calling your normal number. If you don't pick up within a few rings, it rolls over here and gets answered instead of going to voicemail. You get the caller's name, number and what they need sent to you straight away, and anything urgent gets put through to your mobile.`;
+
+  return (
+    <div style={{ ...panel, marginBottom: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+          marginBottom: 8,
+        }}
+      >
+        <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 15 }}>
+          Send this to your client
+        </div>
+        <button
+          type="button"
+          onClick={() => onCopy(text)}
+          style={{
+            background: copied ? "rgba(74,222,128,0.14)" : "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.14)",
+            borderRadius: 8,
+            padding: "7px 14px",
+            color: copied ? "#4ADE80" : "#fff",
+            fontFamily: BODY,
+            fontSize: 12.5,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <div
+        style={{
+          fontSize: 13,
+          lineHeight: 1.6,
+          color: "rgba(255,255,255,0.78)",
+          whiteSpace: "pre-wrap",
+        }}
+      >
+        {text}
+      </div>
+    </div>
+  );
+}
+
 export default function Receptionist({
   numbers = [],
   calls = [],
@@ -156,6 +294,17 @@ export default function Receptionist({
   const [draft, setDraft] = useState({ businessName: "", forwardTo: "", businessFacts: "" });
   const [editing, setEditing] = useState(null);
   const [openCall, setOpenCall] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  async function copyHandover(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* Clipboard blocked; the text is on screen to select by hand. */
+    }
+  }
 
   const number = numbers[0] || null;
 
@@ -218,14 +367,18 @@ export default function Receptionist({
         <div style={{ fontSize: 12.5, color: "#FCA5A5", marginBottom: 14 }}>{error}</div>
       )}
 
+      <HowItWorks hasNumber={Boolean(number)} />
+
+      {number && <HandOver number={number} onCopy={copyHandover} copied={copied} />}
+
       {!number && (
         <div style={{ ...panel, marginBottom: 16, maxWidth: 620 }}>
           <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 17, marginBottom: 6 }}>
             Get a number
           </div>
           <p style={{ ...hint, marginTop: 0, marginBottom: 16 }}>
-            Pick a local number, tell it about the business, and point it at a mobile for
-            emergencies. Callers hear it answer within one ring.
+            Pick the area code your client&apos;s customers are used to seeing. Nothing is charged
+            until you press Use this one.
           </p>
 
           <div style={{ marginBottom: 12 }}>
@@ -344,7 +497,7 @@ export default function Receptionist({
                   {prettyNumber(number.phone_number)}
                 </div>
                 <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.64)", marginTop: 3 }}>
-                  Answering for {number.business_name}
+                  Answering for {number.business_name} · forward their line here
                 </div>
               </div>
               <button
@@ -394,7 +547,7 @@ export default function Receptionist({
             </div>
 
             <div style={{ marginBottom: 14 }}>
-              <span style={label}>Put emergencies through to</span>
+              <span style={label}>Your client&apos;s mobile — for emergencies</span>
               <input
                 style={input}
                 defaultValue={number.forward_to}
@@ -402,13 +555,14 @@ export default function Receptionist({
                 onChange={(e) => setEditing({ ...editing, forwardTo: e.target.value })}
               />
               <div style={hint}>
-                A mobile. Leave this empty and it will never offer to transfer anyone — better than
-                promising a person who never picks up.
+                Where a burst pipe gets put straight through to a human. This is your
+                client&apos;s own phone, not the number above. Leave it empty and it will never
+                offer to transfer anyone — better than promising a person who never picks up.
               </div>
             </div>
 
             <div style={{ marginBottom: 14 }}>
-              <span style={label}>Facts it may state</span>
+              <span style={label}>What it&apos;s allowed to tell callers</span>
               <textarea
                 style={{ ...input, minHeight: 110, resize: "vertical", lineHeight: 1.55 }}
                 defaultValue={number.business_facts}

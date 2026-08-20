@@ -131,7 +131,7 @@ export default function DashboardClient({ initialProjects }) {
   // Set in app/layout.js. A serif for headings, a sans for reading —
   // everything here used to be Inter, which is what every generated SaaS
   // page on the internet is set in.
-  const display = "var(--font-display), Georgia, serif";
+  const display = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
   const body = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
   const [billingStatus, setBillingStatus] = useState(null);
   const [referralStats, setReferralStats] = useState(null);

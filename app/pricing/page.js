@@ -8,7 +8,7 @@ export default function Pricing() {
   const [hovered, setHovered] = useState(null);
   const [loadingPlan, setLoadingPlan] = useState(null);
   const [checkoutError, setCheckoutError] = useState("");
-  const display = "var(--font-display), Georgia, serif";
+  const display = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
   const body = "var(--font-body), sans-serif";
 
   async function subscribe(planId, interval = "month") {
