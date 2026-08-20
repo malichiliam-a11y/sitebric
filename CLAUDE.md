@@ -24,6 +24,8 @@ client business and get a finished website they can hand off.
 | `lib/leads-csv.js` | The saved-leads download, with the Excel formula-injection guard |
 | `app/dashboard/LeadCards.js`, `LeadDetail.js` | The leads UI, split out so it can be driven in a browser without a login |
 | `app/dev/receptionist/` | The receptionist screen in every plan state, with no login. 404 in production. `node test/receptionist-ui.mjs` drives it |
+| `lib/domain-status.js` | What a connected custom domain is actually doing — pure, reads Vercel's answer, never calls it |
+| `app/dashboard/DomainStatus.js`, `app/dev/domain/` | The domain panel and its harness. `node test/domain-ui.mjs` drives it |
 
 ## Traps that have bitten this codebase
 
@@ -68,6 +70,19 @@ Save from being written to the second client's line. Fixed by keying the
 panel on the line's id so it remounts. The fixtures had identical data for
 every line, so the first browser check passed over it; `test/receptionist-ui.mjs`
 now gives each line distinct values and asserts the boxes change.
+
+**"Connected" is not a state, it's a wish.** The dashboard printed
+"Connected domain: theirsite.com" the moment `/api/connect-domain` wrote
+the row — but connecting only *registers* the domain with Vercel, and
+registration does nothing until the domain's nameservers point at Vercel.
+A reseller read "connected", told a client the job was done, and then had
+to explain twelve hours of a dead website they had already been paid for.
+`lib/domain-status.js` now reads the two facts that decide it (`verified`
+on the project domain, `misconfigured` on the domain config) and the panel
+names the real state. Everything uncertain resolves *downwards*: a failed
+Vercel call, a missing field, a `misconfigured` that isn't literally
+`false` — all render as "not ready", never as live. A false "live" is the
+only failure here that costs somebody their reputation with a client.
 
 **A clickable card must not be `role="button"`.** The lead cards carry
 their own buttons (Save, Open), and an ARIA button may not contain other
@@ -140,6 +155,10 @@ Email signup mails a **6-digit code**, not a link. `AuthCard` collects it via
   Code works around its absence; this fixes the cause.
 - Password reset has been walked end-to-end by a human (2026-08-07) — confirmed
   working.
+- **`www.` is never registered.** `/api/connect-domain` adds the apex only, so
+  every client whose customers type `www.theirsite.com` gets a 404 even when the
+  bare domain is live. The fix is to register both and let Vercel redirect one to
+  the other; it hasn't been done because it changes what a paid action buys.
 - `/admin/referrals` estimates MRR from list price, so a discounted subscriber
   (APEX is on a $5-off coupon for 6 months) reads $5/mo high.
 - **The per-number add-on is still unbuilt.** At 25 lines a Pro subscriber
