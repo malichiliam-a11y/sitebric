@@ -45,9 +45,9 @@ export default function LoginScreen({ initialPanel = "demo" }: { initialPanel?: 
           scroll-behavior: smooth;
         }
           h1, h2, h3 {
-            font-family: var(--font-display), Georgia, serif;
-            font-weight: 600;
-            letter-spacing: -0.012em;
+            font-family: var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif;
+            font-weight: 700;
+            letter-spacing: -0.025em;
           }
 
         /* The hero owns the terrain, so it clips its own backdrop instead

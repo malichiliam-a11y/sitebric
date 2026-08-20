@@ -9,7 +9,7 @@
 // to the leads tab shipped on a reading of the diff. That is exactly the
 // habit this repo's notes say has been caught out every time.
 
-const DISPLAY = "var(--font-display), Georgia, serif";
+const DISPLAY = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
 const BODY = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
 
 function Badge({ children, tone }) {

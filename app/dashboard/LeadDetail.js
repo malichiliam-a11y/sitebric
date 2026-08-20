@@ -11,7 +11,7 @@ import { leadScript } from "@/lib/lead-script";
 // screen with its own state, and the only thing it needs from the parent
 // is the lead itself and four callbacks.
 
-const DISPLAY = "var(--font-display), Georgia, serif";
+const DISPLAY = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
 const BODY = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
 
 const panel = {

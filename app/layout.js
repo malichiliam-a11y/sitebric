@@ -1,5 +1,5 @@
 import "./globals.css";
-import { Fraunces, Manrope } from "next/font/google";
+import { Manrope } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SITE_URL } from "@/lib/site";
 
@@ -8,26 +8,16 @@ import { SITE_URL } from "@/lib/site";
 // fallback text, and means the page cannot render in the wrong face if
 // fonts.googleapis.com is slow or blocked.
 //
-// Two faces, doing different jobs. Everything used to be Inter, which is
-// the typeface every generated SaaS page on the internet is set in — the
-// owner's words were that it "looks like a robot made it", and he was
-// right. A product that sells websites cannot itself look generated.
+// One family, headlines and body both. It was Inter, which the owner
+// called robotic and which is what every generated SaaS page is set in.
+// It was then briefly a serif for the headlines, which he liked less. So:
+// Manrope — a modern grotesque with slightly rounded terminals and a wide
+// weight range, which reads as a normal interface font rather than a
+// statement, and is not the font everyone else defaults to.
 //
-// Fraunces carries the headlines. A real serif is the single clearest
-// signal that a person designed something rather than a template
-// generator, and its optical-size axis means a 56px hero and a 20px
-// section heading are drawn differently rather than scaled.
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
-  display: "swap",
-  variable: "--font-display",
-});
-
-// Manrope does the reading. Chosen over another serif because interface
-// copy at 12-14px needs to be unambiguous, not characterful — and over
-// Inter because the whole point was to stop looking like everyone else.
+// Both variables point at it. Keeping --font-display as its own variable
+// means swapping the headline face later is one line here rather than a
+// hunt through thirty files.
 const manrope = Manrope({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
@@ -78,7 +68,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${manrope.variable}`}>
+    <html lang="en" className={manrope.variable}>
       <body
         style={{
           margin: 0,

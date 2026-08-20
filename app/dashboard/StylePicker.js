@@ -13,7 +13,7 @@ import { SITE_STYLES } from "@/lib/site-styles";
 // Its own file so it can be rendered in a browser without a login, the
 // same reason the lead cards live in one.
 
-const DISPLAY = "var(--font-display), Georgia, serif";
+const DISPLAY = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
 const BODY = "var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif";
 
 export default function StylePicker({ value, onChange, disabled }) {
