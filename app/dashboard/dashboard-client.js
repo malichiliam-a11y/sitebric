@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
 import { PLAN_LIMITS, MULTIPAGE_COST, MULTIPAGE_ENABLED, canUseCustomDomain } from "@/lib/plans";
+import DomainStatus from "./DomainStatus";
 import GeneratingProgress from "./GeneratingProgress";
 import { withPreviewAnchorFix } from "@/lib/preview-anchors";
 import { currentLogoUrl } from "@/lib/logo";
@@ -581,6 +582,11 @@ export default function DashboardClient({ initialProjects }) {
   const [rxPlanLabel, setRxPlanLabel] = useState("");
   const [rxBusy, setRxBusy] = useState(false);
   const [rxError, setRxError] = useState("");
+  // Keyed by project id: one dashboard can hold several connected
+  // domains, and they are at different stages.
+  const [domainStatuses, setDomainStatuses] = useState({});
+  const [domainChecking, setDomainChecking] = useState("");
+  const [domainCopied, setDomainCopied] = useState("");
   const [siteSearch, setSiteSearch] = useState("");
   const [settingsPhone, setSettingsPhone] = useState("");
   const [settingsAddress, setSettingsAddress] = useState("");
@@ -889,6 +895,17 @@ export default function DashboardClient({ initialProjects }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
+  // Check a domain the first time its project is opened, and not again
+  // until they ask. Someone who has just connected a domain opens this
+  // screen to find out what is happening, so making them press a button
+  // to see anything at all would be the same silence in a new shape.
+  useEffect(() => {
+    if (!active?.custom_domain) return;
+    if (active.id in domainStatuses) return;
+    checkDomain(active);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.id, active?.custom_domain]);
+
   async function searchNumbers(areaCode) {
     setRxBusy(true);
     setRxError("");
@@ -1184,10 +1201,46 @@ export default function DashboardClient({ initialProjects }) {
         .order("created_at", { ascending: false });
       if (data) setProjects(data);
       setDomainInput("");
+      // The state right after connecting is "registered, pointing
+      // nowhere". Showing that immediately is what stops someone telling
+      // a client it's done.
+      const connected = (data || []).find((p) => p.id === project.id);
+      if (connected?.custom_domain) checkDomain(connected);
     } catch (err) {
       setDomainError(err.message);
     } finally {
       setDomainBusy(false);
+    }
+  }
+
+  // What the connected domain is actually doing. Asked on demand rather
+  // than polled: it calls out to Vercel, the answer only changes when a
+  // registrar somewhere else changes, and a dashboard left open all day
+  // must not sit there hammering an API on a timer.
+  async function checkDomain(project) {
+    if (!project?.custom_domain) return;
+    setDomainChecking(project.id);
+    try {
+      const res = await fetch(`/api/domain-status?projectId=${encodeURIComponent(project.id)}`);
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "failed");
+      setDomainStatuses((current) => ({ ...current, [project.id]: result.status }));
+    } catch {
+      // Left unset, which renders as "couldn't check" rather than as a
+      // state. Guessing here is the exact bug this screen replaced.
+      setDomainStatuses((current) => ({ ...current, [project.id]: null }));
+    } finally {
+      setDomainChecking("");
+    }
+  }
+
+  async function copyDomainText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setDomainCopied(text);
+      setTimeout(() => setDomainCopied(""), 2000);
+    } catch {
+      /* Clipboard blocked; the value is on screen to select by hand. */
     }
   }
 
@@ -2787,48 +2840,21 @@ export default function DashboardClient({ initialProjects }) {
                 }}
               >
                 {active.custom_domain ? (
-                  <div>
-                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
-                      Connected domain: <span style={{ color: "#FFFFFF" }}>{active.custom_domain}</span>
-                    </span>
-                    <div
-                      style={{
-                        marginTop: 10,
-                        fontSize: 12,
-                        lineHeight: 1.6,
-                        color: "rgba(255,255,255,0.72)",
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        borderRadius: 10,
-                        padding: "12px 14px",
-                        maxWidth: 520,
-                      }}
-                    >
-                      <strong style={{ display: "block", marginBottom: 6, color: "#F2F0FA" }}>
-                        One more step — point the domain here
-                      </strong>
-                      Log into wherever <code>{active.custom_domain}</code> was purchased (Namecheap,
-                      GoDaddy, etc.), find its DNS or nameserver settings, and set the nameservers to:
-                      <div
-                        style={{
-                          marginTop: 8,
-                          fontFamily: "monospace",
-                          fontSize: 12,
-                          background: "rgba(0,0,0,0.25)",
-                          borderRadius: 6,
-                          padding: "8px 10px",
-                        }}
-                      >
-                        ns1.vercel-dns.com
-                        <br />
-                        ns2.vercel-dns.com
-                      </div>
-                      <div style={{ marginTop: 8, color: "rgba(255,255,255,0.5)" }}>
-                        This can take anywhere from a few minutes to a few hours to take effect. Once it
-                        does, the domain will start showing this site automatically.
-                      </div>
-                    </div>
-                  </div>
+                  <DomainStatus
+                    /* undefined = never checked (renders as "checking"),
+                       null = the check failed. The two are different and
+                       the panel says different things about them. */
+                    status={
+                      active.id in domainStatuses
+                        ? domainStatuses[active.id]
+                        : { state: "unknown", domain: active.custom_domain }
+                    }
+                    slug={active.slug}
+                    busy={domainChecking === active.id}
+                    copied={domainCopied}
+                    onRecheck={() => checkDomain(active)}
+                    onCopy={copyDomainText}
+                  />
                 ) : !canUseCustomDomain(profile?.plan) ? (
                   /* Say so before they type a domain in. Letting someone
                      fill the box and press Connect only to be told no is
