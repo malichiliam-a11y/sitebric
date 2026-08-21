@@ -11,6 +11,8 @@ import {
   TURN_MAX_TOKENS,
   MAX_TURNS,
   DEMO_MAX_TURNS,
+  isDecline,
+  closingQuestion,
 } from "@/lib/receptionist";
 
 // One exchange: the caller said something, work out what to say back.
@@ -25,6 +27,16 @@ import {
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export const dynamic = "force-dynamic";
+
+// The action URL, built in one place.
+//
+// It is both the address Twilio calls next AND the string the POST
+// signature is computed over, so the two must be byte-identical. Building
+// it twice by hand is how a signature check starts failing for a reason
+// nobody can see.
+function turnPath({ callId, silences, closing }) {
+  return `/api/voice/turn?call=${encodeURIComponent(callId)}&s=${silences}${closing ? "&closing=1" : ""}`;
+}
 export const maxDuration = 15;
 
 // Comfortably inside Twilio's patience, leaving room for the database
@@ -35,13 +47,13 @@ async function handle(req) {
   const url = new URL(req.url);
   const callId = url.searchParams.get("call") || "";
   const silences = Number(url.searchParams.get("s") || 0);
+  // Set only on the one extra turn after the assistant has said its
+  // goodbye and asked whether there is anything else.
+  const closing = url.searchParams.get("closing") === "1";
 
   // The query string is part of what Twilio signed, so it is rebuilt
   // exactly rather than approximated.
-  const auth = await readTwilioRequest(
-    req,
-    `/api/voice/turn?call=${encodeURIComponent(callId)}&s=${silences}`
-  );
+  const auth = await readTwilioRequest(req, turnPath({ callId, silences, closing }));
   if (!auth.ok) {
     console.warn(`voice/turn rejected: ${auth.reason}`);
     return new Response("forbidden", { status: 403 });
@@ -66,11 +78,44 @@ async function handle(req) {
     const canForward = Boolean(number.forward_to);
     const transcript = Array.isArray(call.transcript) ? call.transcript : [];
 
+    // The closing turn. The assistant has already said goodbye and asked
+    // whether there is anything else; this is the answer to that.
+    //
+    // Decided here rather than by the model: it costs a round trip we do
+    // not need, and the model is the thing that wanted to hang up in the
+    // first place. If they are done, end it. If they are not — a
+    // follow-up question, anything ambiguous, anything at all that is not
+    // clearly "no" — the call carries on exactly as before.
+    if (closing) {
+      if (isDecline(spoken)) {
+        const withCloser = spoken ? [...transcript, { role: "caller", text: spoken }] : transcript;
+        return respond({
+          reply: { action: "finish", text: "Thanks very much. Bye for now." },
+          callId,
+          silences: 0,
+          transcript: withCloser,
+          number,
+          call,
+          endNow: true,
+        });
+      }
+      // Not a decline: fall through and treat it as an ordinary turn.
+    }
+
     // Silence. Twilio posts an empty SpeechResult, and the answer is not
     // to ask the same question forever.
     if (!spoken) {
       const reply = silenceReply(silences);
-      return respond({ reply, callId, silences: silences + 1, transcript, number, call });
+      return respond({
+        reply,
+        callId,
+        silences: silences + 1,
+        transcript,
+        number,
+        call,
+        // Nobody is there. Asking "anything else?" into silence is absurd.
+        endNow: reply.action === "finish",
+      });
     }
 
     const withCaller = [...transcript, { role: "caller", text: spoken }];
@@ -89,6 +134,9 @@ async function handle(req) {
         transcript: withCaller,
         number,
         call,
+        // The ceiling exists to stop the call. Offering another turn here
+        // would defeat it.
+        endNow: true,
       });
     }
 
@@ -137,7 +185,7 @@ async function handle(req) {
   }
 }
 
-async function respond({ reply, callId, silences, transcript, number, call }) {
+async function respond({ reply, callId, silences, transcript, number, call, endNow = false }) {
   const updated = reply.text ? [...transcript, { role: "assistant", text: reply.text }] : transcript;
 
   await supabaseAdmin
@@ -163,14 +211,31 @@ async function respond({ reply, callId, silences, transcript, number, call }) {
     );
   }
 
+  // "Finished" is the model's opinion, not the caller's.
+  //
+  // It decides it is done the moment it has a name, a number and a
+  // reason — which on a real call is routinely while the caller is still
+  // talking. The first call that worked end to end was cut off
+  // mid-conversation, one question after a good answer, and that is the
+  // rudest thing this product can do to someone else's customer.
+  //
+  // So the closing line is spoken and then it listens once more. Only an
+  // answer that is clearly "no" ends the call; `closing` is false on that
+  // second pass so it cannot loop.
   if (reply.action === "finish") {
-    return twimlResponse(sayAndHangUp(reply.text));
+    if (endNow) return twimlResponse(sayAndHangUp(reply.text));
+    return twimlResponse(
+      sayAndGather({
+        text: `${reply.text} ${closingQuestion()}`,
+        action: publicUrlFor(turnPath({ callId, silences: 0, closing: true })),
+      })
+    );
   }
 
   return twimlResponse(
     sayAndGather({
       text: reply.text,
-      action: publicUrlFor(`/api/voice/turn?call=${encodeURIComponent(callId)}&s=${silences}`),
+      action: publicUrlFor(turnPath({ callId, silences, closing: false })),
     })
   );
 }
