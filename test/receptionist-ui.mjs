@@ -107,6 +107,41 @@ for (const [name, w, h] of shots) {
   await page.close();
 }
 
+// The voice picker. It is the only control on this screen whose effect
+// cannot be seen — only heard — so at minimum it has to be present,
+// selectable, and honest about the fact that a chosen voice may silently
+// not exist.
+{
+  const page = await browser.newPage({ viewport: { width: 940, height: 1900 } });
+  await page.goto("http://localhost:3000/dev/receptionist?state=two", { waitUntil: "networkidle" });
+  await page.waitForTimeout(300);
+
+  const options = await page.getByRole("radio").count();
+  if (options < 4) problems.push(`voice picker: only ${options} voices offered`);
+
+  const t = await page.evaluate(() => document.body.innerText);
+  if (!/Voice/.test(t)) problems.push("voice picker: no Voice heading");
+  if (!/isn't available on this account/.test(t))
+    problems.push("voice picker: does not warn that a voice may silently not exist");
+
+  // One must start selected, or there is no way to tell what it speaks in.
+  const checked = await page.evaluate(
+    () => document.querySelectorAll('[role="radio"][aria-checked="true"]').length
+  );
+  if (checked !== 1) problems.push(`voice picker: ${checked} voices selected, want exactly 1`);
+
+  // Picking one must arm Save.
+  const before = await page.getByRole("button", { name: "Save" }).isDisabled();
+  await page.getByRole("radio", { name: /Ruth/ }).click();
+  await page.waitForTimeout(200);
+  const after = await page.getByRole("button", { name: "Save" }).isDisabled();
+  if (!before) problems.push("voice picker: Save was already enabled before any change");
+  if (after) problems.push("voice picker: choosing a voice did not enable Save");
+
+  if (OUT) await page.screenshot({ path: `${OUT}/rx-voices.png`, fullPage: true });
+  await page.close();
+}
+
 await browser.close();
 console.log("\n================");
 if (problems.length) { problems.forEach((p) => console.log("PROBLEM " + p)); process.exit(1); }

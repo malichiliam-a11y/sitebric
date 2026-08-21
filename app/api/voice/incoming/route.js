@@ -64,12 +64,14 @@ async function handle(req) {
             text: "One moment, I'll put you through.",
             to: number.forward_to,
             callerId: number.phone_number,
+            voice: number.voice,
           })
         );
       }
       return twimlResponse(
         sayAndHangUp(
-          "Sorry, we can't take your call right now. Please try again later."
+          "Sorry, we can't take your call right now. Please try again later.",
+          number.voice
         )
       );
     }
@@ -88,7 +90,7 @@ async function handle(req) {
         .gte("created_at", since);
 
       if ((recent || 0) >= DEMO_CALLS_PER_DAY) {
-        return twimlResponse(sayAndHangUp(demoLimitMessage()));
+        return twimlResponse(sayAndHangUp(demoLimitMessage(), number.voice));
       }
     }
 
@@ -115,10 +117,11 @@ async function handle(req) {
             text: "One moment, I'll put you through.",
             to: number.forward_to,
             callerId: number.phone_number,
+            voice: number.voice,
           })
         );
       }
-      return twimlResponse(sayAndHangUp(overLimitMessage(number.business_name)));
+      return twimlResponse(sayAndHangUp(overLimitMessage(number.business_name), number.voice));
     }
 
     const { data: call } = await supabaseAdmin
@@ -161,6 +164,7 @@ async function handle(req) {
     return twimlResponse(
       sayAndGather({
         text: greeting,
+        voice: number.voice,
         action: publicUrlFor(`/api/voice/turn?call=${call?.id || ""}&s=0`),
       })
     );

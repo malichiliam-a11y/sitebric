@@ -12,6 +12,7 @@ const line = (id, name, phone, forward, facts) => ({
   forward_to: forward,
   business_facts: facts,
   greeting: "",
+  voice: "",
   is_demo: false,
   minutes_used: 12,
   minutes_limit: 120,

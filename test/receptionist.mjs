@@ -453,7 +453,20 @@ console.log("\nIt is told how to sound, not just what to say");
     assert.match(prompt, /Contractions always/i));
 
   check("it is told to say 'yeah' rather than 'yes'", () =>
-    assert.match(prompt, /"Yeah" not "yes"/i));
+    assert.match(prompt, /"yeah" instead of "yes"/i));
+
+  check("hesitations are asked for by name, not merely permitted", () => {
+    assert.match(prompt, /Uhh/);
+    assert.match(prompt, /Ohh/);
+    assert.match(prompt, /a tiny stumble sounds human/i);
+  });
+
+  // Warm is the goal; slang is not. Half the people ringing a locksmith
+  // are not twenty, and an assistant saying "bet" to them reads as broken
+  // rather than friendly.
+  check("internet slang is ruled out by name", () => {
+    assert.match(prompt, /no "bet", "no cap"/);
+  });
 
   check("the corporate phrases are named and banned", () => {
     assert.match(prompt, /I understand/);
@@ -483,9 +496,18 @@ console.log("\nSpeed levers");
     assert.match(TURN_MODEL, /haiku/));
 
   check("the voice can be changed without a deploy", () => {
-    const src = readFileSync(new URL("../lib/twiml.js", import.meta.url), "utf8");
-    assert.match(src, /process\.env\.RECEPTIONIST_VOICE/);
-    assert.match(src, /Polly\.Joanna-Neural/, "there is no sane default voice");
+    const twiml = readFileSync(new URL("../lib/twiml.js", import.meta.url), "utf8");
+    assert.match(twiml, /process\.env\.RECEPTIONIST_VOICE/);
+    const voices = readFileSync(new URL("../lib/voices.js", import.meta.url), "utf8");
+    assert.match(voices, /DEFAULT_VOICE = "Polly\./, "there is no sane default voice");
+  });
+
+  check("and per line from the dashboard, without even an env var", () => {
+    const ui = readFileSync(
+      new URL("../app/dashboard/Receptionist.js", import.meta.url),
+      "utf8"
+    );
+    assert.match(ui, /VOICES\.map/, "there is no voice picker on the screen");
   });
 
   check("and it is written down where the other settings are", () => {
