@@ -24,6 +24,10 @@ client business and get a finished website they can hand off.
 | `lib/leads-csv.js` | The saved-leads download, with the Excel formula-injection guard |
 | `app/dashboard/LeadCards.js`, `LeadDetail.js` | The leads UI, split out so it can be driven in a browser without a login |
 | `app/dev/receptionist/` | The receptionist screen in every plan state, with no login. 404 in production. `node test/receptionist-ui.mjs` drives it |
+| `lib/entitlements.js` | What keeps working after the money stops — grace periods, number release. Pure. **Fails OPEN**, unlike `lib/plans.js` |
+| `lib/owner-state.js` | The one impure part: looks up a site owner's standing with the service role |
+| `lib/offline-page.js` | What a lapsed site's visitors see. 503, never 404 |
+| `app/api/cron/reclaim/` | Hands numbers back to Twilio 30 days after a cancellation — the thing that stops the bill |
 | `lib/domain-status.js` | What a connected custom domain is actually doing — pure, reads Vercel's answer, never calls it |
 | `app/dashboard/DomainStatus.js`, `app/dev/domain/` | The domain panel and its harness. `node test/domain-ui.mjs` drives it |
 
@@ -137,6 +141,53 @@ Things that will bite:
   it is what sells it. It is therefore the only number a stranger can
   dial, so it carries its own caps: `DEMO_CALLS_PER_DAY` per calling
   number and a lower turn ceiling. Only the owner can nominate one.
+
+## When someone stops paying
+
+Cancelling used to set `plan: "none"` and stop there. Nothing read it, so
+every published site stayed live forever on a cancelled account and every
+receptionist number kept renting from Twilio against no revenue — the only
+cost in this product that grows on its own and never stops.
+
+`customer.subscription.deleted` now stamps `profiles.plan_ended_at`, and
+`lib/entitlements.js` measures everything from it:
+
+| | When |
+|---|---|
+| Sites and receptionist keep working | `GRACE_DAYS` = 3 |
+| Then sites 503 and the receptionist stops answering | after that |
+| Numbers handed back to Twilio | `NUMBER_RELEASE_DAYS` = 30 |
+
+Things that will bite:
+
+- **`lib/entitlements.js` fails OPEN; `lib/plans.js` fails CLOSED.** They
+  are opposite on purpose. Entitlements decides whether something already
+  sold keeps working, and getting that wrong takes a *paying* customer's
+  client's business offline. Plans decides whether someone may create
+  something new, and getting that wrong gives away a paid feature. Never
+  swap the defaults.
+- **Grace is not generosity — it's Stripe.** A declined or expired card
+  ends a subscription through the same `subscription.deleted` event as a
+  deliberate cancellation. At zero days, one bounced payment would black
+  out every one of that reseller's clients before they could notice.
+- **Nothing is deleted.** Sites stop being *served*; the code stays. A
+  resubscribe clears `plan_ended_at` and everything is back in seconds.
+  The single exception is releasing a number, which is irreversible — the
+  number can be reissued to somebody else and any business forwarding to
+  it has a dead phone. That is why it waits ten times longer than the
+  sites do, and why `test/serving-gate.mjs` asserts the gap.
+- **The offline page is written for the client's customers, not for us.**
+  It doesn't say "unpaid", doesn't name Sitebric, and returns **503 with
+  `noindex`, never 404** — a 404 tells Google to drop the business from
+  the index, which outlasts the missed payment by months and isn't undone
+  by paying up. Punishing a business for its web guy's card is not a
+  collection strategy.
+- **A lapsed receptionist line still forwards to the business.** The
+  person on the phone is some plumber's actual customer with an actual
+  problem. The reseller loses the AI they stopped paying for; nobody's
+  customer gets hung up on to make the point.
+- **The demo line is exempt from all of it** — it belongs to Sitebric, not
+  to a customer, and it is what sells the feature.
 
 ## Auth flow
 

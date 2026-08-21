@@ -14,6 +14,8 @@ import StylePicker from "./StylePicker";
 import Receptionist from "./Receptionist";
 import { DEFAULT_STYLE, styleById } from "@/lib/site-styles";
 import { canUseReceptionist, numbersAllowed, limitsFor } from "@/lib/plans";
+import { lapsedNotice } from "@/lib/entitlements";
+import LapsedBanner from "./LapsedBanner";
 import { LeadResultCard, SavedLeadRow } from "./LeadCards";
 
 // Read straight out of the site's own HTML rather than tracked in its own
@@ -1941,6 +1943,15 @@ export default function DashboardClient({ initialProjects }) {
 
       <div className="sb-dash-main" style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
 
+        {/* Above every tab, not tucked into Billing. Someone whose
+            clients' sites are hours from going dark should not have to
+            open the right screen to find that out — and the sentence and
+            the countdown both come from lib/entitlements.js, so what this
+            says and what the serving routes actually do cannot drift. */}
+        <LapsedBanner
+          notice={lapsedNotice({ plan: profile?.plan, planEndedAt: profile?.plan_ended_at })}
+          onFix={() => setTab("billing")}
+        />
 
         {/* ===== OVERVIEW TAB ===== */}
         {tab === "overview" && (
