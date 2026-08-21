@@ -23,6 +23,7 @@ import {
   TURN_MAX_TOKENS,
   isDecline,
   closingQuestion,
+  TURN_MODEL,
 } from "../lib/receptionist.js";
 import { esc, sayAndGather, sayAndDial, sayAndHangUp } from "../lib/twiml.js";
 
@@ -300,18 +301,21 @@ console.log("\nIt answers rather than taking a message");
     canForward: false,
   });
 
-  check("being useful is the first instruction, not the last", () => {
-    const useful = prompt.indexOf("BE USEFUL FIRST");
+  check("answering comes before taking details", () => {
+    const answer = prompt.indexOf("ANSWER, DO NOT DEFLECT");
     const details = prompt.indexOf("WHAT TO COME AWAY WITH");
-    assert.ok(useful > -1, "the prompt no longer leads with being useful");
-    assert.ok(useful < details, "taking details still comes before helping");
+    assert.ok(answer > -1, "the prompt no longer has an answer-first section");
+    assert.ok(answer < details, "taking details is placed before answering");
   });
 
-  check("it is told to answer from the facts, not defer", () =>
-    assert.match(prompt, /ANSWER IT/));
+  check("it is told to answer from the facts straight away", () =>
+    assert.match(prompt, /say the answer straight away/i));
+
+  check("it is told what deflecting costs", () =>
+    assert.match(prompt, /rings the next locksmith|been given nothing/i));
 
   check("it is told not to end the call mid-question", () =>
-    assert.match(prompt, /Do not end the call while they are still asking/));
+    assert.match(prompt, /Never do that while they are still asking/));
 
   // The guardrail this must never trade away.
   check("it still may not invent a price", () =>
@@ -422,6 +426,71 @@ console.log("\nThe route only ends the call when it should");
       !/\/api\/voice\/turn\?call=\$\{encodeURIComponent\(callId\)\}&s=\$\{silences\}`\s*\)/.test(src),
       "the path is still being hand-built somewhere as well as by turnPath"
     );
+  });
+}
+
+// ---------------------------------------------------------------------
+// Sounding like a person.
+//
+// The complaint after the first working call was that it read like a
+// phone menu — correct, and useless. What makes a voice sound human on a
+// phone is not vocabulary, it is reacting before answering: "Ah, right —"
+// before the substance, contractions throughout, and never once repeating
+// the caller's own words back at them.
+// ---------------------------------------------------------------------
+console.log("\nIt is told how to sound, not just what to say");
+{
+  const prompt = systemPrompt({
+    businessName: "Northgate Locksmiths",
+    businessFacts: "Call-out fee $89.",
+    canForward: true,
+  });
+
+  check("it is told to react before answering", () =>
+    assert.match(prompt, /Ah, right|Oh no|Yeah, definitely/));
+
+  check("contractions are required, not merely allowed", () =>
+    assert.match(prompt, /Contractions always/i));
+
+  check("it is told to say 'yeah' rather than 'yes'", () =>
+    assert.match(prompt, /"Yeah" not "yes"/i));
+
+  check("the corporate phrases are named and banned", () => {
+    assert.match(prompt, /I understand/);
+    assert.match(prompt, /thank you for that information/i);
+  });
+
+  check("it is told never to parrot the caller", () =>
+    assert.match(prompt, /Never repeat their words back/i));
+
+  check("digits are still read like a person reads them", () =>
+    assert.match(prompt, /nine two nine, six oh two/));
+
+  // Sounding human must not cost the thing that makes it safe to sell.
+  check("it still may not invent a price", () =>
+    assert.match(prompt, /Never state a price[^\n]*not in the facts/));
+
+  check("it still may not invent contact details", () =>
+    assert.match(prompt, /Never invent a phone number/));
+}
+
+console.log("\nSpeed levers");
+{
+  check("replies are capped tight enough to arrive quickly", () =>
+    assert.ok(TURN_MAX_TOKENS <= 80, `TURN_MAX_TOKENS is ${TURN_MAX_TOKENS}`));
+
+  check("the model is the fast one, not the clever one", () =>
+    assert.match(TURN_MODEL, /haiku/));
+
+  check("the voice can be changed without a deploy", () => {
+    const src = readFileSync(new URL("../lib/twiml.js", import.meta.url), "utf8");
+    assert.match(src, /process\.env\.RECEPTIONIST_VOICE/);
+    assert.match(src, /Polly\.Joanna-Neural/, "there is no sane default voice");
+  });
+
+  check("and it is written down where the other settings are", () => {
+    const env = readFileSync(new URL("../.env.local.example", import.meta.url), "utf8");
+    assert.match(env, /RECEPTIONIST_VOICE/);
   });
 }
 
