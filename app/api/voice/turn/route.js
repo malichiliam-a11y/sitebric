@@ -207,6 +207,7 @@ async function respond({ reply, callId, silences, transcript, number, call, endN
         text: "Of course — let me put you through now.",
         to: number.forward_to,
         callerId: number.phone_number,
+        voice: number.voice,
       })
     );
   }
@@ -223,10 +224,11 @@ async function respond({ reply, callId, silences, transcript, number, call, endN
   // answer that is clearly "no" ends the call; `closing` is false on that
   // second pass so it cannot loop.
   if (reply.action === "finish") {
-    if (endNow) return twimlResponse(sayAndHangUp(reply.text));
+    if (endNow) return twimlResponse(sayAndHangUp(reply.text, number.voice));
     return twimlResponse(
       sayAndGather({
         text: `${reply.text} ${closingQuestion()}`,
+        voice: number.voice,
         action: publicUrlFor(turnPath({ callId, silences: 0, closing: true })),
       })
     );
@@ -235,6 +237,7 @@ async function respond({ reply, callId, silences, transcript, number, call, endN
   return twimlResponse(
     sayAndGather({
       text: reply.text,
+      voice: number.voice,
       action: publicUrlFor(turnPath({ callId, silences, closing: false })),
     })
   );

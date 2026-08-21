@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { canUseReceptionist, numbersAllowed, limitsFor } from "@/lib/plans";
 import { isOwner } from "@/lib/admin";
+import { isKnownVoice } from "@/lib/voices";
 import { findAvailableNumbers, buyNumber, releaseNumber, twilioConfigured } from "@/lib/twilio-numbers";
 
 // Buying, configuring and releasing a receptionist number.
@@ -230,6 +231,11 @@ export async function PATCH(req) {
   if ("greeting" in body) patch.greeting = field(body.greeting, 400);
   if ("forwardTo" in body) patch.forward_to = dialable(body.forwardTo);
   if ("active" in body) patch.active = Boolean(body.active);
+  // Validated against the allowlist rather than stored as typed. An
+  // unrecognised voice does not error on Twilio's side — it silently
+  // falls back to their robotic default, so a bad value would be
+  // invisible until a caller heard it.
+  if ("voice" in body) patch.voice = isKnownVoice(body.voice) ? String(body.voice).trim() : "";
   // Owner only. This is the one number in the system a stranger can dial,
   // and every call on it spends money that nobody is paying for.
   if ("isDemo" in body && isOwner(user.email)) patch.is_demo = Boolean(body.isDemo);

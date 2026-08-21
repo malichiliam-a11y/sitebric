@@ -19,6 +19,7 @@ client business and get a finished website they can hand off.
 | `lib/twilio-signature.js` | Proves a /api/voice/* request is really Twilio's. The most important check in the product |
 | `lib/twiml.js` | The XML Twilio reads back. Every string goes through `esc()` |
 | `app/api/voice/` | incoming / turn / status — the call itself |
+| `lib/voices.js` | The eight voices a line can speak in — an allowlist, because an unknown name silently becomes Twilio's robot |
 | `lib/site-styles.js` | The seven looks a site can be built in — the allowlist the prompt fragment is read from |
 | `lib/lead-script.js` | The words to say on a cold call, built from a lead's own facts — pure, no model call |
 | `lib/leads-csv.js` | The saved-leads download, with the Excel formula-injection guard |
@@ -136,6 +137,24 @@ Things that will bite:
   never happened.
 - The assistant may only state facts from `business_facts`. It is on a
   recorded line speaking for someone else's business.
+- **An unrecognised voice name does not error — it becomes the robot.**
+  Twilio silently falls back to its own 2005-era synthesiser, so a typo in
+  a voice is invisible until a caller hears it. Everything goes through
+  `voiceFor()` in `lib/voices.js`, which is an allowlist and returns the
+  default for anything else. The voice is per line and set from the
+  dashboard, because which one sounds human is decided by ringing the
+  number, not in a code review.
+- **`<Say>` must never be nested inside `<Gather>`.** That is Twilio's
+  barge-in mode: recognition starts while the prompt is still playing, so
+  on any line with echo the assistant transcribes its own voice as the
+  caller. It did exactly that on the first real call, burning three of six
+  turns before the caller got a word in. The cost of the fix is that a
+  caller cannot interrupt, which is why replies are capped at 70 tokens.
+- **`[[DONE]]` is the model's opinion, not the caller's.** It fires as
+  soon as there is a name, a number and a reason — routinely while the
+  caller is still asking things. A finish speaks its line, asks "anything
+  else?", and only ends on a clear decline. `isDecline` fails toward
+  staying on the line on purpose.
 - **One number is public.** The row with `is_demo` is shown to every user
   on every plan, including accounts that can't use the feature — hearing
   it is what sells it. It is therefore the only number a stranger can

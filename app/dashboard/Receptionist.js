@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { VOICES, DEFAULT_VOICE } from "@/lib/voices";
 
 // The receptionist tab: a number that answers, what it's allowed to say,
 // and every call it took.
@@ -785,6 +786,65 @@ export default function Receptionist({
               <div style={hint}>
                 This is the only thing it can state as fact. Anything not written here, it says
                 someone will confirm on the call back — it will never guess a price or a time.
+              </div>
+            </div>
+
+            {/* The one setting that can only be judged by ear. It is
+                here rather than in an env var so the person who can hear
+                it can change it, and so two clients can sound different. */}
+            <div style={{ marginBottom: 16 }}>
+              <span style={label}>Voice</span>
+              <div
+                role="radiogroup"
+                aria-label="Receptionist voice"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+                  gap: 8,
+                }}
+              >
+                {VOICES.map((v) => {
+                  const current = editing?.voice ?? (number.voice || DEFAULT_VOICE);
+                  const active = current === v.id;
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setEditing({ ...editing, voice: v.id })}
+                      style={{
+                        textAlign: "left",
+                        background: active ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.03)",
+                        border: `1px solid ${active ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.1)"}`,
+                        borderRadius: 10,
+                        padding: "8px 12px",
+                        color: "#fff",
+                        fontFamily: BODY,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <span style={{ display: "block", fontSize: 13, fontWeight: 600 }}>
+                        {v.label}
+                      </span>
+                      <span
+                        style={{
+                          display: "block",
+                          fontSize: 12,
+                          lineHeight: 1.35,
+                          color: "rgba(255,255,255,0.62)",
+                        }}
+                      >
+                        {v.blurb}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={hint}>
+                Save, then ring the number to hear it. If one comes out flat and robotic,
+                that voice isn&apos;t available on this account — pick another. There&apos;s
+                no way to tell from here, only by listening.
               </div>
             </div>
 
