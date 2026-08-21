@@ -17,7 +17,7 @@ export const maxDuration = 15;
 
 const PATH = "/api/voice/incoming";
 
-export async function POST(req) {
+async function handle(req) {
   const auth = await readTwilioRequest(req, PATH);
   if (!auth.ok) {
     console.warn(`voice/incoming rejected: ${auth.reason}`);
@@ -165,3 +165,13 @@ export async function POST(req) {
     );
   }
 }
+
+// Both methods, same handler.
+//
+// Twilio signs GET and POST differently and readTwilioRequest handles
+// that; what must never happen again is a method arriving that no
+// handler answers, because Next returns 405 before any of our code runs
+// and the caller hears "an application error has occurred" with nothing
+// written to the logs to explain it.
+export const POST = handle;
+export const GET = handle;

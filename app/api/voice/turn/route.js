@@ -31,7 +31,7 @@ export const maxDuration = 15;
 // round trips either side.
 const MODEL_TIMEOUT_MS = 8000;
 
-export async function POST(req) {
+async function handle(req) {
   const url = new URL(req.url);
   const callId = url.searchParams.get("call") || "";
   const silences = Number(url.searchParams.get("s") || 0);
@@ -174,3 +174,13 @@ async function respond({ reply, callId, silences, transcript, number, call }) {
     })
   );
 }
+
+// Both methods, same handler.
+//
+// Twilio signs GET and POST differently and readTwilioRequest handles
+// that; what must never happen again is a method arriving that no
+// handler answers, because Next returns 405 before any of our code runs
+// and the caller hears "an application error has occurred" with nothing
+// written to the logs to explain it.
+export const POST = handle;
+export const GET = handle;
