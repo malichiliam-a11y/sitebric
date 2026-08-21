@@ -118,6 +118,89 @@ console.log("\nthe URL that gets signed");
     assert.match(publicUrlFor("/api/voice/incoming", ""), /^https:\/\/sitebric\.com\//));
 }
 
+// ---------------------------------------------------------------------
+// The variants Twilio's own validator accepts.
+//
+// A single-variant check is what rejected the first real call this
+// product ever took. Twilio signs the URL as IT built it, which is not
+// always byte-identical to the URL that arrives — the port may or may
+// not be present, and a space in the query may be "+" or "%20".
+//
+// These cases are lifted from a 4000-case cross-check against Twilio's
+// own library (see the commit that added them); the port ones are the
+// exact shape that failed 999 times before it was fixed.
+// ---------------------------------------------------------------------
+console.log("\nThe URL forms Twilio may have signed");
+{
+  const TOKEN = "a".repeat(32);
+  const sign = (url, params = {}) =>
+    expectedSignature(TOKEN, url, params);
+
+  const accepts = (signedUrl, arrivingUrl, params = {}) =>
+    isValidTwilioRequest({
+      authToken: TOKEN,
+      url: arrivingUrl,
+      params,
+      signature: sign(signedUrl, params),
+    });
+
+  check("the standard port is accepted when we rebuilt without it", () =>
+    assert.ok(accepts(
+      "https://sitebric.com:443/api/voice/incoming",
+      "https://sitebric.com/api/voice/incoming"
+    )));
+
+  check("and the reverse — signed without, arrives with", () =>
+    assert.ok(accepts(
+      "https://sitebric.com/api/voice/incoming",
+      "https://sitebric.com:443/api/voice/incoming"
+    )));
+
+  check("a space as '+' matches a space as '%20'", () =>
+    assert.ok(accepts(
+      "https://sitebric.com/api/voice/incoming?FromCity=NEW+YORK",
+      "https://sitebric.com/api/voice/incoming?FromCity=NEW%20YORK"
+    )));
+
+  check("and the reverse", () =>
+    assert.ok(accepts(
+      "https://sitebric.com/api/voice/incoming?FromCity=NEW%20YORK",
+      "https://sitebric.com/api/voice/incoming?FromCity=NEW+YORK"
+    )));
+
+  check("port and encoding differing together still matches", () =>
+    assert.ok(accepts(
+      "https://sitebric.com:443/api/voice/incoming?SpeechResult=how+much+is+it",
+      "https://sitebric.com/api/voice/incoming?SpeechResult=how%20much%20is%20it"
+    )));
+
+  check("a non-standard port is not silently forgiven", () =>
+    assert.ok(!accepts(
+      "https://sitebric.com:8443/api/voice/incoming",
+      "https://sitebric.com/api/voice/incoming"
+    )));
+
+  check("a different host is still refused", () =>
+    assert.ok(!accepts(
+      "https://evil.example/api/voice/incoming",
+      "https://sitebric.com/api/voice/incoming"
+    )));
+
+  check("a different path is still refused", () =>
+    assert.ok(!accepts(
+      "https://sitebric.com/api/voice/status",
+      "https://sitebric.com/api/voice/incoming"
+    )));
+
+  check("a garbage signature is refused against every variant", () =>
+    assert.ok(!isValidTwilioRequest({
+      authToken: TOKEN,
+      url: "https://sitebric.com/api/voice/incoming?FromCity=NEW+YORK",
+      params: {},
+      signature: "not-a-real-signature",
+    })));
+}
+
 if (failures) {
   console.log(`\n${failures} check(s) failed`);
   process.exit(1);
