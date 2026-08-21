@@ -201,6 +201,89 @@ console.log("\nThe URL forms Twilio may have signed");
     })));
 }
 
+// ---------------------------------------------------------------------
+// The www/apex pair.
+//
+// This is the one that killed the third real call. sitebric.com redirects
+// to www.sitebric.com; Twilio requests the configured URL, follows the
+// redirect, and signs the URL it lands on, while PUBLIC_BASE_URL hands us
+// the other form. Same site, different string, every signature failed.
+//
+// The query below is lifted verbatim from the request that failed, so
+// this test fails if that exact call would fail again.
+// ---------------------------------------------------------------------
+console.log("\nThe www and apex forms of our own host");
+{
+  const TOKEN = "t".repeat(32);
+  const sign = (url, params = {}) => expectedSignature(TOKEN, url, params);
+  const accepts = (signedUrl, arrivingUrl, params = {}) =>
+    isValidTwilioRequest({
+      authToken: TOKEN,
+      url: arrivingUrl,
+      params,
+      signature: sign(signedUrl, params),
+    });
+
+  const REAL_QUERY =
+    "?Called=%2B16076383619&ToState=NY&CallerCountry=US&Direction=inbound" +
+    "&CallerState=NY&ToZip=13488&CallSid=CAfd73e9b7909b38a0fb84f9b2f38ec354" +
+    "&To=%2B16076383619&CallerZip=&ToCountry=US&CalledZip=13488" +
+    "&ApiVersion=2010-04-01&CalledCity=SCHENEVUS&CallStatus=ringing" +
+    "&From=%2B19296025599&CalledCountry=US&CallerCity=NEW%20YORK%20CITY" +
+    "&ToCity=SCHENEVUS&FromCountry=US&Caller=%2B19296025599" +
+    "&FromCity=NEW%20YORK%20CITY&CalledState=NY&FromZip=&FromState=NY";
+
+  check("the real failing call is accepted — signed at www, hashed at apex", () =>
+    assert.ok(accepts(
+      `https://www.sitebric.com/api/voice/incoming${REAL_QUERY}`,
+      `https://sitebric.com/api/voice/incoming${REAL_QUERY}`
+    )));
+
+  check("and the reverse — signed at apex, hashed at www", () =>
+    assert.ok(accepts(
+      `https://sitebric.com/api/voice/incoming${REAL_QUERY}`,
+      `https://www.sitebric.com/api/voice/incoming${REAL_QUERY}`
+    )));
+
+  check("host swapping combines with the port variants", () =>
+    assert.ok(accepts(
+      "https://www.sitebric.com:443/api/voice/status?CallStatus=no-answer",
+      "https://sitebric.com/api/voice/status?CallStatus=no-answer"
+    )));
+
+  check("and with the query encoding variants", () =>
+    assert.ok(accepts(
+      "https://www.sitebric.com/api/voice/incoming?FromCity=NEW+YORK+CITY",
+      "https://sitebric.com/api/voice/incoming?FromCity=NEW%20YORK%20CITY"
+    )));
+
+  // The swap toggles exactly one label on a host that came from our own
+  // configuration. It must not become a general "any nearby host" rule.
+  check("a different domain entirely is still refused", () =>
+    assert.ok(!accepts(
+      "https://evil.example/api/voice/incoming",
+      "https://sitebric.com/api/voice/incoming"
+    )));
+
+  check("a lookalike subdomain is still refused", () =>
+    assert.ok(!accepts(
+      "https://api.sitebric.com/api/voice/incoming",
+      "https://sitebric.com/api/voice/incoming"
+    )));
+
+  check("a sitebric.com suffix on someone else's domain is still refused", () =>
+    assert.ok(!accepts(
+      "https://sitebric.com.evil.example/api/voice/incoming",
+      "https://sitebric.com/api/voice/incoming"
+    )));
+
+  check("www.www is not manufactured", () =>
+    assert.ok(!accepts(
+      "https://www.www.sitebric.com/api/voice/incoming",
+      "https://www.sitebric.com/api/voice/incoming"
+    )));
+}
+
 if (failures) {
   console.log(`\n${failures} check(s) failed`);
   process.exit(1);
