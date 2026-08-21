@@ -112,6 +112,26 @@ export default function DashboardClient({ initialProjects }) {
     })();
   }, []);
 
+  // A plan changed on an existing subscription — say so, then take the
+  // marker out of the address bar so a refresh doesn't announce it again.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const changed = params.get("planChanged");
+      if (!changed) return;
+      setPlanChanged(changed);
+      params.delete("planChanged");
+      const rest = params.toString();
+      window.history.replaceState(
+        {},
+        "",
+        window.location.pathname + (rest ? `?${rest}` : "")
+      );
+    } catch {
+      // No history API — the banner just isn't shown.
+    }
+  }, []);
+
   // Without this the page behind keeps scrolling under the overlay on a
   // phone, which reads as the site sliding around while you drag it.
   useEffect(() => {
@@ -120,6 +140,11 @@ export default function DashboardClient({ initialProjects }) {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = previous; };
   }, [previewFull]);
+  // Set when a plan change happened in place rather than through
+  // checkout. Without it, upgrading redirects to a dashboard that looks
+  // exactly like the one they left and says nothing about the money that
+  // just moved.
+  const [planChanged, setPlanChanged] = useState("");
   const [showContactFields, setShowContactFields] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -1447,6 +1472,66 @@ export default function DashboardClient({ initialProjects }) {
 
   return (
     <div className={`sb-dash-shell${tab === "sites" && active ? " sb-dash-shell--project-open" : ""}`} style={{ height: "100vh", display: "flex", color: t.text, background: t.bg, fontFamily: body, position: "relative" }}>
+      {/* Portalled for the same reason the preview overlay is: position
+          fixed resolves against the nearest ancestor with a transform or
+          filter, and this shell has several, so a banner rendered in
+          place lands somewhere in the middle of the page. */}
+      {planChanged && typeof document !== "undefined" && createPortal(
+        <div
+          role="status"
+          style={{
+            position: "fixed",
+            top: 16,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 200,
+            maxWidth: "min(520px, calc(100vw - 32px))",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 12,
+            padding: "12px 14px",
+            borderRadius: 12,
+            background: "#101018",
+            border: "1px solid rgba(255,255,255,0.16)",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+            fontFamily: body,
+            color: "#fff",
+          }}
+        >
+          <span style={{ fontSize: 15, lineHeight: 1.4 }}>✅</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontFamily: display, fontWeight: 700, fontSize: 13.5 }}>
+              You&apos;re on {PLAN_LIMITS[planChanged]?.label || planChanged} now
+            </span>
+            {/* Says where the money went. A plan change bills only the
+                difference, and someone who just clicked an upgrade is
+                owed that sentence before they go looking for it. */}
+            <span style={{ display: "block", fontSize: 12.5, lineHeight: 1.5, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+              Your subscription was switched over, not started again — you were only charged the
+              difference for the rest of this month. The new limits are live already.
+            </span>
+          </span>
+          <button
+            onClick={() => setPlanChanged("")}
+            aria-label="Dismiss"
+            style={{
+              flexShrink: 0,
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              borderRadius: 8,
+              width: 26,
+              height: 26,
+              color: "#fff",
+              cursor: "pointer",
+              lineHeight: 1,
+              fontSize: 12,
+            }}
+          >
+            ✕
+          </button>
+        </div>,
+        document.body
+      )}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes sbDashDrift1 {
           0%   { transform: translate(-50%, 0) scale(1); }
@@ -1855,6 +1940,7 @@ export default function DashboardClient({ initialProjects }) {
       </div>
 
       <div className="sb-dash-main" style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+
 
         {/* ===== OVERVIEW TAB ===== */}
         {tab === "overview" && (
