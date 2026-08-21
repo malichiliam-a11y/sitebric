@@ -26,6 +26,7 @@ client business and get a finished website they can hand off.
 | `lib/lead-script.js` | The words to say on a cold call, built from a lead's own facts — pure, no model call |
 | `lib/leads-csv.js` | The saved-leads download, with the Excel formula-injection guard |
 | `app/dashboard/LeadCards.js`, `LeadDetail.js` | The leads UI, split out so it can be driven in a browser without a login |
+| `app/dashboard/PageShell.js` | The frame every tab sits in — full width, panels flowing into columns. `app/dev/shell/` + `node test/shell-ui.mjs` drive it |
 | `app/dev/receptionist/` | The receptionist screen in every plan state, with no login. 404 in production. `node test/receptionist-ui.mjs` drives it |
 | `lib/entitlements.js` | What keeps working after the money stops — grace periods, number release. Pure. **Fails OPEN**, unlike `lib/plans.js` |
 | `lib/owner-state.js` | The one impure part: looks up a site owner's standing with the service role |
@@ -244,6 +245,13 @@ Email signup mails a **6-digit code**, not a link. `AuthCard` collects it via
   costs roughly $29/month in Twilio rent against $69.99 of revenue. Still
   profit, but that tier is where a per-line charge stops being optional.
   Nobody is near the cap yet, so this is a watch item, not a fire.
+- **Only Settings uses `PageShell` so far.** Overview, Sites, Leads,
+  Invoices, Billing, Referrals and Profile still carry their own
+  container, and five of them are still pinned at `maxWidth: 640` — less
+  than half a laptop window. Converting one is mechanical: header text
+  becomes `title`/`subtitle`, the card stack gets wrapped in `PageGrid`,
+  and each card drops its `marginBottom` because the grid gap does that
+  job. Do them one at a time, not in a batch.
 - Dashboard UI still can't be driven end-to-end here — there's no way to sign
   in from the sandbox. The leads and receptionist components are verifiable
   because they were split into their own files; the rest of
