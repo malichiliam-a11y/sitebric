@@ -21,6 +21,8 @@ import {
   DEMO_MAX_TURNS,
   DEMO_CALLS_PER_DAY,
   TURN_MAX_TOKENS,
+  isDecline,
+  closingQuestion,
 } from "../lib/receptionist.js";
 import { esc, sayAndGather, sayAndDial, sayAndHangUp } from "../lib/twiml.js";
 
@@ -335,6 +337,92 @@ console.log("\nThe demo gets enough turns to be convincing");
 
   check("replies are capped short enough to sit through", () =>
     assert.ok(TURN_MAX_TOKENS <= 120, `TURN_MAX_TOKENS is ${TURN_MAX_TOKENS}`));
+}
+
+// ---------------------------------------------------------------------
+// Hanging up on someone mid-question.
+//
+// The first call that worked end to end ended like this:
+//
+//   caller:    "So it's going to be free if I booked the work with you?"
+//   assistant: "That's right — the $89 fee is waived if you book the
+//               work. Someone will call you back shortly."
+//   [call over]
+//
+// The model emits [[DONE]] as soon as it has a name, a number and a
+// reason, which on a real call is routinely while the caller is still
+// talking. So a finish now speaks its closing line, asks once more, and
+// only ends on an answer that is clearly "no".
+// ---------------------------------------------------------------------
+console.log("\nIt asks before it hangs up");
+{
+  check("there is a closing question to ask", () =>
+    assert.match(closingQuestion(), /anything else/i));
+
+  check("silence on the closing turn ends the call", () =>
+    assert.strictEqual(isDecline(""), true));
+
+  for (const said of ["no", "Nope", "no thanks", "That's it.", "thats all",
+                      "all set", "I'm good", "bye", "nothing else"]) {
+    check(`"${said}" ends the call`, () => assert.strictEqual(isDecline(said), true));
+  }
+
+  // These are the ones that matter. Every one of them, treated as a
+  // decline, is a caller hung up on mid-sentence.
+  for (const said of [
+    "how much is it?",
+    "No, but how much would it be?",
+    "yes actually",
+    "um can you also do house locks",
+    "yeah one more thing",
+    "wait",
+    "do you come out on Sundays",
+    "sorry what was the price again",
+  ]) {
+    check(`"${said}" keeps the call open`, () =>
+      assert.strictEqual(isDecline(said), false));
+  }
+
+  check("an exact decline wins over the question test", () =>
+    // "that is it" contains "is", which the question heuristic looks for.
+    assert.strictEqual(isDecline("that is it"), true));
+
+  check("a long answer is never read as 'no'", () =>
+    assert.strictEqual(
+      isDecline("no I think we covered everything thanks very much indeed"),
+      false
+    ));
+}
+
+console.log("\nThe route only ends the call when it should");
+{
+  const src = readFileSync(
+    new URL("../app/api/voice/turn/route.js", import.meta.url),
+    "utf8"
+  );
+
+  check("a normal finish asks again instead of hanging up", () =>
+    assert.match(src, /if \(endNow\) return twimlResponse\(sayAndHangUp/));
+
+  check("the closing question is appended to the closing line", () =>
+    assert.match(src, /\$\{reply\.text\} \$\{closingQuestion\(\)\}/));
+
+  check("the closing turn cannot loop — it ends on a decline", () =>
+    assert.match(src, /isDecline\(spoken\)[\s\S]{0,400}endNow: true/));
+
+  check("the turn ceiling still really ends the call", () =>
+    assert.match(src, /outOfTurnsReply\(\)[\s\S]{0,400}endNow: true/));
+
+  check("giving up on silence still really ends the call", () =>
+    assert.match(src, /endNow: reply\.action === "finish"/));
+
+  check("the action URL is built in one place, so it cannot drift from the signature", () => {
+    assert.match(src, /function turnPath\(/);
+    assert.ok(
+      !/\/api\/voice\/turn\?call=\$\{encodeURIComponent\(callId\)\}&s=\$\{silences\}`\s*\)/.test(src),
+      "the path is still being hand-built somewhere as well as by turnPath"
+    );
+  });
 }
 
 if (failures) {
