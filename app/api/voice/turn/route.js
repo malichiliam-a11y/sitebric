@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { readTwilioRequest, supabaseAdmin } from "@/lib/voice-request";
 import { publicUrlFor } from "@/lib/twilio-signature";
+import { bookingUrl, bookingSms, bookingSpoken, bookingFailedSpoken } from "@/lib/booking";
+import { sendSms } from "@/lib/twilio-sms";
 import { sayAndGather, sayAndDial, sayAndHangUp, twimlResponse } from "@/lib/twiml";
 import {
   systemPrompt,
@@ -76,6 +78,7 @@ async function handle(req) {
     }
 
     const canForward = Boolean(number.forward_to);
+    const canBook = Boolean(bookingUrl(number.booking_url));
     const transcript = Array.isArray(call.transcript) ? call.transcript : [];
 
     // The closing turn. The assistant has already said goodbye and asked
@@ -175,7 +178,7 @@ async function handle(req) {
       clearTimeout(timer);
     }
 
-    const reply = interpretReply(raw, { canForward });
+    const reply = interpretReply(raw, { canForward, canBook });
     return respond({ reply, callId, silences: 0, transcript: withCaller, number, call });
   } catch (err) {
     console.error("voice/turn failed:", err?.message);
@@ -200,6 +203,39 @@ async function respond({ reply, callId, silences, transcript, number, call, endN
             : call.outcome,
     })
     .eq("id", callId);
+
+  // Send the booking link, then carry on talking.
+  //
+  // Sent here rather than after the call so the caller has it while they
+  // are still on the phone — that is the whole difference between "I'll
+  // text you a link" and a link that actually arrives. The call is held
+  // open afterwards rather than finished: someone who has just been sent
+  // a booking page usually has one more question.
+  if (reply.action === "book") {
+    const link = bookingUrl(number.booking_url);
+    const { sent } = await sendSms({
+      to: call.from_number,
+      from: number.phone_number,
+      body: bookingSms({ businessName: number.business_name, url: link }),
+    });
+    // Never claims to have sent something it did not. A caller told the
+    // text is coming will sit waiting for it.
+    const text = sent ? bookingSpoken() : bookingFailedSpoken();
+    const withReply = [...transcript, { role: "assistant", text }];
+
+    await supabaseAdmin
+      .from("receptionist_calls")
+      .update({ transcript: withReply, outcome: sent ? "booking_sent" : call.outcome })
+      .eq("id", callId);
+
+    return twimlResponse(
+      sayAndGather({
+        text: `${text} ${closingQuestion()}`,
+        voice: number.voice,
+        action: publicUrlFor(turnPath({ callId, silences: 0, closing: true })),
+      })
+    );
+  }
 
   if (reply.action === "transfer") {
     return twimlResponse(

@@ -4,6 +4,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { canUseReceptionist, numbersAllowed, limitsFor } from "@/lib/plans";
 import { isOwner } from "@/lib/admin";
 import { isKnownVoice } from "@/lib/voices";
+import { bookingUrl } from "@/lib/booking";
 import { findAvailableNumbers, buyNumber, releaseNumber, twilioConfigured } from "@/lib/twilio-numbers";
 
 // Buying, configuring and releasing a receptionist number.
@@ -236,6 +237,11 @@ export async function PATCH(req) {
   // falls back to their robotic default, so a bad value would be
   // invisible until a caller heard it.
   if ("voice" in body) patch.voice = isKnownVoice(body.voice) ? String(body.voice).trim() : "";
+  // Normalised on the way in rather than stored as typed. This link gets
+  // texted from the business's own number to someone who just rang them,
+  // so anything not a clean https URL turns the feature off for that line
+  // instead of putting something dubious in that message.
+  if ("bookingUrl" in body) patch.booking_url = bookingUrl(body.bookingUrl);
   // Owner only. This is the one number in the system a stranger can dial,
   // and every call on it spends money that nobody is paying for.
   if ("isDemo" in body && isOwner(user.email)) patch.is_demo = Boolean(body.isDemo);

@@ -789,6 +789,24 @@ export default function Receptionist({
               </div>
             </div>
 
+            <div style={{ marginBottom: 14 }}>
+              <span style={label}>Booking link (optional)</span>
+              <input
+                style={input}
+                defaultValue={number.booking_url}
+                placeholder="https://calendly.com/their-name/30min"
+                onChange={(e) => setEditing({ ...editing, bookingUrl: e.target.value })}
+              />
+              <div style={hint}>
+                Paste your client&apos;s Calendly, Cal.com, Acuity or Square page. When a caller
+                asks to book, it offers to text them the link and sends it while they&apos;re still
+                on the phone. Leave it empty and it won&apos;t mention booking at all.
+                <br />
+                Must start with <code>https://</code> — anything else is ignored, because this
+                gets texted out from your client&apos;s own number.
+              </div>
+            </div>
+
             {/* The one setting that can only be judged by ear. It is
                 here rather than in an env var so the person who can hear
                 it can change it, and so two clients can sound different. */}
