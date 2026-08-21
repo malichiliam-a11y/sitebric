@@ -19,6 +19,8 @@ client business and get a finished website they can hand off.
 | `lib/twilio-signature.js` | Proves a /api/voice/* request is really Twilio's. The most important check in the product |
 | `lib/twiml.js` | The XML Twilio reads back. Every string goes through `esc()` |
 | `app/api/voice/` | incoming / turn / status — the call itself |
+| `lib/booking.js` | The link a caller gets texted to pick a time — pure, https-only, no calendar integration |
+| `lib/twilio-sms.js` | Sends that text. Runs mid-call, so it never throws and never hangs |
 | `lib/voices.js` | The eight voices a line can speak in — an allowlist, because an unknown name silently becomes Twilio's robot |
 | `lib/site-styles.js` | The seven looks a site can be built in — the allowlist the prompt fragment is read from |
 | `lib/lead-script.js` | The words to say on a cold call, built from a lead's own facts — pure, no model call |
@@ -155,6 +157,13 @@ Things that will bite:
   caller is still asking things. A finish speaks its line, asks "anything
   else?", and only ends on a clear decline. `isDecline` fails toward
   staying on the line on purpose.
+- **Booking is a texted link, not a calendar integration.** An assistant
+  cannot fill in a form over the phone, and reading live availability
+  aloud would mean holding an OAuth token for every client of every
+  reseller. Texting the link mid-call gets the same result, works with
+  any provider, and breaks when nobody's API changes. `[[BOOK]]` is
+  checked before `[[DONE]]` — a caller who just said "yes, text me" is
+  not finished, and must not be hung up on in the same breath.
 - **One number is public.** The row with `is_demo` is shown to every user
   on every plan, including accounts that can't use the feature — hearing
   it is what sells it. It is therefore the only number a stranger can

@@ -13,6 +13,7 @@ const line = (id, name, phone, forward, facts) => ({
   business_facts: facts,
   greeting: "",
   voice: "",
+  booking_url: "",
   is_demo: false,
   minutes_used: 12,
   minutes_limit: 120,
