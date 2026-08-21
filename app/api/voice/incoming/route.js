@@ -137,7 +137,15 @@ async function handle(req) {
       .select()
       .single();
 
-    const greeting = greetingFor(number);
+    // Mapped by hand rather than passed straight through: the row is
+    // snake_case and greetingFor reads camelCase, so handing it the row
+    // silently produced the "the office" fallback on every single call —
+    // the first thing every caller heard was that we did not know the
+    // name of the business we were answering for.
+    const greeting = greetingFor({
+      businessName: number.business_name,
+      greeting: number.greeting,
+    });
 
     if (call) {
       await supabaseAdmin

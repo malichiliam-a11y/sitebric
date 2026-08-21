@@ -5,6 +5,7 @@
 //   node test/receptionist.mjs
 
 import assert from "node:assert";
+import { readFileSync } from "node:fs";
 import {
   greetingFor,
   systemPrompt,
@@ -19,6 +20,7 @@ import {
   MAX_TURNS,
   DEMO_MAX_TURNS,
   DEMO_CALLS_PER_DAY,
+  TURN_MAX_TOKENS,
 } from "../lib/receptionist.js";
 import { esc, sayAndGather, sayAndDial, sayAndHangUp } from "../lib/twiml.js";
 
@@ -220,6 +222,119 @@ console.log("\nthe XML survives what callers actually say");
       /<Dial[^>]*>\+15125550142<\/Dial>/
     ));
   check("hang-up is well-formed", () => assert.match(sayAndHangUp("Bye."), /<Hangup\/><\/Response>$/));
+}
+
+// ---------------------------------------------------------------------
+// The four bugs from the first real call.
+//
+// The transcript opened with the assistant transcribing its own greeting
+// as the caller, burned three of six turns doing it, hit the ceiling at
+// the exact moment the caller asked a real question, and answered with a
+// canned "I'll pass all of that on" — while introducing itself as "the
+// office" because the business name never reached the greeting.
+//
+// Every one of those is one line of code, and every one of them looked
+// like "the AI is stupid" from the outside.
+// ---------------------------------------------------------------------
+console.log("\nThe assistant must not hear itself");
+{
+  const xml = sayAndGather({ text: "Hi there", action: "/api/voice/turn?call=1&s=0" });
+
+  check("<Say> is not nested inside <Gather>", () => {
+    const gatherAt = xml.indexOf("<Gather");
+    const sayAt = xml.indexOf("<Say");
+    assert.ok(sayAt > -1 && gatherAt > -1, "both verbs should be present");
+    assert.ok(
+      sayAt < gatherAt,
+      "the prompt is inside <Gather>, which is barge-in mode — Twilio starts " +
+        "listening while it is still speaking and transcribes its own voice"
+    );
+  });
+
+  check("<Gather> is self-closing, so nothing can be nested in it later", () =>
+    assert.match(xml, /<Gather[^>]*\/>/));
+
+  check("the prompt is still actually spoken", () =>
+    assert.match(xml, /<Say voice="[^"]+">Hi there<\/Say>/));
+
+  check("and the action still carries the escaped query", () =>
+    assert.match(xml, /action="\/api\/voice\/turn\?call=1&amp;s=0"/));
+}
+
+console.log("\nThe greeting says who it is answering for");
+{
+  check("the business name is used", () =>
+    assert.match(
+      greetingFor({ businessName: "Northgate Locksmiths" }),
+      /Northgate Locksmiths/
+    ));
+
+  // The bug: the caller passed the database row straight in, and the row
+  // is snake_case. Every real call opened "Thanks for calling the office".
+  check("the route maps the row's fields explicitly", () => {
+    const src = readFileSync(
+      new URL("../app/api/voice/incoming/route.js", import.meta.url),
+      "utf8"
+    );
+    assert.match(src, /greetingFor\(\{\s*businessName: number\.business_name/);
+    assert.ok(
+      !/greetingFor\(number\)/.test(src),
+      "the row is passed straight in again — camelCase fields will be undefined"
+    );
+  });
+
+  check("a custom greeting still wins", () =>
+    assert.strictEqual(
+      greetingFor({ businessName: "Northgate", greeting: "Northgate, how can I help?" }),
+      "Northgate, how can I help?"
+    ));
+}
+
+console.log("\nIt answers rather than taking a message");
+{
+  const prompt = systemPrompt({
+    businessName: "Northgate Locksmiths",
+    businessFacts: "Call-out fee $89, waived if you book the work.",
+    canForward: false,
+  });
+
+  check("being useful is the first instruction, not the last", () => {
+    const useful = prompt.indexOf("BE USEFUL FIRST");
+    const details = prompt.indexOf("WHAT TO COME AWAY WITH");
+    assert.ok(useful > -1, "the prompt no longer leads with being useful");
+    assert.ok(useful < details, "taking details still comes before helping");
+  });
+
+  check("it is told to answer from the facts, not defer", () =>
+    assert.match(prompt, /ANSWER IT/));
+
+  check("it is told not to end the call mid-question", () =>
+    assert.match(prompt, /Do not end the call while they are still asking/));
+
+  // The guardrail this must never trade away.
+  check("it still may not invent a price", () =>
+    assert.match(prompt, /Never state a price[^\n]*not in the facts/));
+
+  check("it still may not invent contact details", () =>
+    assert.match(prompt, /Never invent a phone number/));
+
+  check("with no facts it is told to say so honestly", () => {
+    const bare = systemPrompt({ businessName: "X", businessFacts: "", canForward: false });
+    assert.match(bare, /Nothing was provided/);
+    assert.match(bare, /may not state anything about this business beyond its name/);
+  });
+}
+
+console.log("\nThe demo gets enough turns to be convincing");
+{
+  check("a demo call is not cut off after a handful of exchanges", () =>
+    assert.ok(DEMO_MAX_TURNS >= 10, `DEMO_MAX_TURNS is ${DEMO_MAX_TURNS}`));
+
+  check("a real line still gets more than the demo", () =>
+    assert.ok(MAX_TURNS > DEMO_MAX_TURNS));
+
+  check("replies are capped short enough to sit through", () =>
+    assert.ok(TURN_MAX_TOKENS <= 120, `TURN_MAX_TOKENS is ${TURN_MAX_TOKENS}`));
 }
 
 if (failures) {
