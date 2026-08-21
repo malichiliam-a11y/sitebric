@@ -16,6 +16,7 @@ import { DEFAULT_STYLE, styleById } from "@/lib/site-styles";
 import { canUseReceptionist, numbersAllowed, limitsFor } from "@/lib/plans";
 import { lapsedNotice } from "@/lib/entitlements";
 import LapsedBanner from "./LapsedBanner";
+import { PageShell, PageGrid } from "./PageShell";
 import { LeadResultCard, SavedLeadRow } from "./LeadCards";
 
 // Read straight out of the site's own HTML rather than tracked in its own
@@ -4430,19 +4431,14 @@ export default function DashboardClient({ initialProjects }) {
 
         {/* ===== SETTINGS TAB ===== */}
         {tab === "settings" && (
-          <div style={{ padding: "48px 40px", maxWidth: 640, overflowY: "auto" }}>
-            <div style={{ fontFamily: display, fontWeight: 700, fontSize: 26, marginBottom: 6 }}>Settings</div>
-            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 32 }}>
-              Account preferences.
-            </div>
-
+          <PageShell title="Settings" subtitle="Account preferences.">
+            <PageGrid>
             <div
               style={{
                 borderRadius: 16,
                 padding: 24,
                 background: "rgba(255,255,255,0.03)",
                 border: "1px solid rgba(255,255,255,0.08)",
-                marginBottom: 20,
               }}
             >
               <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>Email</div>
@@ -4460,7 +4456,6 @@ export default function DashboardClient({ initialProjects }) {
                 padding: 24,
                 background: "rgba(255,255,255,0.03)",
                 border: "1px solid rgba(255,255,255,0.08)",
-                marginBottom: 20,
               }}
             >
               <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>Need help?</div>
@@ -4478,6 +4473,7 @@ export default function DashboardClient({ initialProjects }) {
                 padding: 24,
                 background: "rgba(239,68,68,0.05)",
                 border: "1px solid rgba(239,68,68,0.2)",
+                gridColumn: "1 / -1",
               }}
             >
               <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6, color: "#F87171" }}>Danger zone</div>
@@ -4572,7 +4568,8 @@ export default function DashboardClient({ initialProjects }) {
                 </div>
               )}
             </div>
-          </div>
+            </PageGrid>
+          </PageShell>
         )}
       </div>
     </div>
