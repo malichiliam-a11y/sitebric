@@ -2,6 +2,8 @@ import { readTwilioRequest, supabaseAdmin, normalizeNumber } from "@/lib/voice-r
 import { publicUrlFor } from "@/lib/twilio-signature";
 import { sayAndGather, sayAndDial, sayAndHangUp, twimlResponse } from "@/lib/twiml";
 import { greetingFor, overLimitMessage, demoLimitMessage, DEMO_CALLS_PER_DAY } from "@/lib/receptionist";
+import { ownerServiceState } from "@/lib/owner-state";
+import { receptionistAnswers } from "@/lib/entitlements";
 
 // A phone rang. This is the first thing that happens.
 //
@@ -42,6 +44,33 @@ export async function POST(req) {
     if (!number || !number.active) {
       return twimlResponse(
         sayAndHangUp("Sorry, this number isn't in service. Please check the number and try again.")
+      );
+    }
+
+    // The reseller stopped paying. The demo line is exempt — it belongs
+    // to Sitebric rather than to a customer, and it is the thing that
+    // sells the feature.
+    //
+    // The person on the phone is some plumber's actual customer with an
+    // actual problem, and they have no idea any of this exists. So when
+    // the business gave us a mobile to reach them on, the call goes
+    // straight there: the reseller loses the AI they stopped paying for,
+    // and nobody's customer is hung up on to make that point. Only with
+    // no forwarding number is there nothing better to do than say so.
+    if (!number.is_demo && !receptionistAnswers(await ownerServiceState(number.user_id))) {
+      if (number.forward_to) {
+        return twimlResponse(
+          sayAndDial({
+            text: "One moment, I'll put you through.",
+            to: number.forward_to,
+            callerId: number.phone_number,
+          })
+        );
+      }
+      return twimlResponse(
+        sayAndHangUp(
+          "Sorry, we can't take your call right now. Please try again later."
+        )
       );
     }
 

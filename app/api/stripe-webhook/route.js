@@ -75,6 +75,10 @@ export async function POST(req) {
             stripe_subscription_id: session.subscription,
             generations_used: 0,
             searches_used: 0,
+            // Coming back clears the lapse, which is what brings their
+            // clients' sites and receptionist lines straight back up.
+            // Nothing was deleted, so this is the whole restore.
+            plan_ended_at: null,
           });
 
           // The moment this user became a paying subscriber, not before —
@@ -91,13 +95,23 @@ export async function POST(req) {
 
       case "invoice.payment_succeeded": {
         // Renewal — reset the monthly generation counter.
+        //
+        // Only a real renewal. Changing plan mid-month now bills the
+        // difference immediately, which produces an invoice too, and
+        // resetting on that would hand out a fresh month of generations
+        // for every plan switch — a Starter who burned all ten could
+        // upgrade and downgrade to get ten more for the proration
+        // difference. "subscription_cycle" is the billing reason Stripe
+        // uses for the periodic charge and nothing else.
         const invoice = event.data.object;
         const customerId = invoice.customer;
 
-        await supabaseAdmin
-          .from("profiles")
-          .update({ generations_used: 0, searches_used: 0 })
-          .eq("stripe_customer_id", customerId);
+        if (invoice.billing_reason === "subscription_cycle") {
+          await supabaseAdmin
+            .from("profiles")
+            .update({ generations_used: 0, searches_used: 0 })
+            .eq("stripe_customer_id", customerId);
+        }
         break;
       }
 
@@ -113,7 +127,13 @@ export async function POST(req) {
         if (plan && !(await ownsThisCustomer(subscription.customer))) {
           await supabaseAdmin
             .from("profiles")
-            .update({ plan, stripe_subscription_id: subscription.id })
+            .update({
+              plan,
+              stripe_subscription_id: subscription.id,
+              // A live subscription on a recognised price is proof they
+              // are paying, whatever happened before it.
+              plan_ended_at: null,
+            })
             .eq("stripe_customer_id", subscription.customer);
         }
         break;
@@ -124,9 +144,19 @@ export async function POST(req) {
         const customerId = subscription.customer;
 
         if (!(await ownsThisCustomer(customerId))) {
+          // The timestamp is the whole point. Setting plan='none' alone
+          // told nothing downstream WHEN this happened, so every
+          // published site stayed live forever on a cancelled account and
+          // every receptionist number kept renting from Twilio against no
+          // revenue at all. lib/entitlements.js measures both grace
+          // periods from here.
+          //
+          // Note this fires for a declined or expired card as well as a
+          // deliberate cancellation — which is exactly why the grace
+          // period isn't zero.
           await supabaseAdmin
             .from("profiles")
-            .update({ plan: "none" })
+            .update({ plan: "none", plan_ended_at: new Date().toISOString() })
             .eq("stripe_customer_id", customerId);
         }
         break;
