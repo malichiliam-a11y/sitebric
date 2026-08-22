@@ -167,6 +167,20 @@ Things that will bite:
   any provider, and breaks when nobody's API changes. `[[BOOK]]` is
   checked before `[[DONE]]` — a caller who just said "yes, text me" is
   not finished, and must not be hung up on in the same breath.
+- **The receptionist is currently LOCKED — everything, everyone.**
+  `lib/feature-lock.js` shuts the dashboard tab, the `/try` demo, all
+  provisioning, the owner's own account, and the phone lines themselves.
+  It **defaults to locked**: it was added before a day off and has to hold
+  without anyone setting anything. Lift it with `RECEPTIONIST_LOCKED=0`
+  (read per request, no deploy) or delete the module's use, which is the
+  tidier end state. **Only lift it when the owner says so.**
+  An earlier version exempted the owner and left live lines answering; he
+  was told the reasoning and asked for it off completely, so it is.
+  A caller with a mobile on file is still put through to it — that is the
+  AI not answering rather than the call being thrown away — and one
+  without hears a single neutral sentence that never mentions Sitebric or
+  makes the business sound shut. `test/feature-lock.mjs` checks every
+  door, because a lock with one open door is not a lock.
 - **`/try` is public and spends money on strangers.** It is the only
   route where someone who has never signed up can burn Anthropic credit,
   and the balance it burns is the same one site generation runs on — so

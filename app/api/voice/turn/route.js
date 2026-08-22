@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { readTwilioRequest, supabaseAdmin } from "@/lib/voice-request";
 import { publicUrlFor } from "@/lib/twilio-signature";
+import { receptionistLocked, lockedCallerMessage } from "@/lib/feature-lock";
 import { bookingUrl, bookingSms, bookingSpoken, bookingFailedSpoken } from "@/lib/booking";
 import { sendSms } from "@/lib/twilio-sms";
 import { sayAndGather, sayAndDial, sayAndHangUp, twimlResponse } from "@/lib/twiml";
@@ -75,6 +76,24 @@ async function handle(req) {
       return twimlResponse(
         sayAndHangUp("Sorry, something went wrong with this call. Please try again.")
       );
+    }
+
+    // A call that was already in flight when the lock landed. It does not
+    // get to keep spending on model turns — it is put through to the
+    // business if there is somewhere to put it, and otherwise ended
+    // politely rather than mid-sentence.
+    if (receptionistLocked()) {
+      if (number.forward_to) {
+        return twimlResponse(
+          sayAndDial({
+            text: "One moment, I'll put you through.",
+            to: number.forward_to,
+            callerId: number.phone_number,
+            voice: number.voice,
+          })
+        );
+      }
+      return twimlResponse(sayAndHangUp(lockedCallerMessage(), number.voice));
     }
 
     const canForward = Boolean(number.forward_to);

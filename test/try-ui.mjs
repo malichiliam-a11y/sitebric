@@ -26,7 +26,24 @@ const browser = await chromium.launch(
 );
 const problems = [];
 
-for (const [name, w, h] of [["desktop", 1280, 1000], ["phone", 390, 844]]) {
+// The receptionist can be temporarily switched off for everyone but the
+// owner (lib/feature-lock.js). A locked page has no orb and no chips by
+// design, so the checks below branch rather than reporting a working
+// lock as a broken page.
+//
+// Run it both ways:
+//   node test/try-ui.mjs                        (however it is configured)
+//   RECEPTIONIST_LOCKED=0 npm run dev           (then run it again)
+const LOCKED = await (async () => {
+  const p = await browser.newPage();
+  await p.goto("http://localhost:3000/try", { waitUntil: "networkidle" });
+  const t = await p.evaluate(() => document.body.innerText);
+  await p.close();
+  return /off for a day/i.test(t);
+})();
+console.log(LOCKED ? "(receptionist is LOCKED — checking the lock)" : "(receptionist is open — checking the demo)");
+
+for (const [name, w, h] of LOCKED ? [] : [["desktop", 1280, 1000], ["phone", 390, 844]]) {
   const page = await browser.newPage({ viewport: { width: w, height: h } });
   const errors = [];
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
@@ -82,7 +99,7 @@ for (const [name, w, h] of [["desktop", 1280, 1000], ["phone", 390, 844]]) {
 // The conversation itself. Needs a real key, so it is skipped rather than
 // faked when there isn't one — a mocked reply would prove nothing about
 // whether the assistant answers.
-{
+if (!LOCKED) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
   await page.goto("http://localhost:3000/try", { waitUntil: "networkidle" });
 
@@ -123,6 +140,84 @@ for (const [name, w, h] of [["desktop", 1280, 1000], ["phone", 390, 844]]) {
     if (!/89/.test(said)) problems.push(`conversation: asked the price, got "${said}"`);
     else console.log(`\nconversation: price answered -> "${said.slice(0, 90)}"`);
     if (OUT) await page.screenshot({ path: `${OUT}/try-answered.png`, fullPage: true });
+  }
+  await page.close();
+}
+
+// The lock.
+//
+// The receptionist is temporarily off for everyone but the owner. The
+// thing that matters is that a locked page does not still invite somebody
+// to press a button that will not work.
+if (LOCKED) {
+  const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
+  await page.goto("http://localhost:3000/try", { waitUntil: "networkidle" });
+  await page.waitForTimeout(300);
+  const t = await page.evaluate(() => document.body.innerText);
+  {
+    const talk = await page.getByRole("button", { name: /Tap to talk/i }).count();
+    if (talk) problems.push("locked: still offers a Tap to talk button");
+    const chips = await page.getByRole("button", { name: /call-out|locked out/i }).count();
+    if (chips) problems.push("locked: still offers prompt chips that would fail");
+    if (!/back tomorrow/i.test(t)) problems.push("locked: doesn't say when it is coming back");
+
+    const api = await page.evaluate(async () => {
+      const res = await fetch("/api/demo-receptionist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ said: "hello", history: [] }),
+      });
+      return (await res.json()).locked === true;
+    });
+    if (!api) problems.push("locked: the page is locked but the API still answers");
+    console.log("\nlock: page and API both closed, with a return date");
+  }
+  await page.close();
+}
+
+// The orb has to move while somebody is talking to it — including when
+// the microphone is refused, which is the common case on a first visit
+// and the one where a dead orb looks like a broken page.
+if (!LOCKED) {
+  const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
+  await page.goto("http://localhost:3000/try", { waitUntil: "networkidle" });
+  await page.waitForTimeout(300);
+
+  const moves = await page.evaluate(async () => {
+    const orb = document.querySelector(".sb-orb");
+    const core = document.querySelector(".sb-orb__core");
+    if (!orb || !core) return { ok: false, why: "no orb" };
+
+    // Drive the states directly. Speech recognition needs a microphone
+    // this environment does not have, and the point here is the CSS.
+    const sample = async (cls, level) => {
+      orb.className = `sb-orb sb-orb--${cls}`;
+      orb.style.setProperty("--level", String(level));
+      await new Promise((r) => setTimeout(r, 260));
+      const s = getComputedStyle(core);
+      return { transform: s.transform, shadow: s.boxShadow, animation: s.animationName };
+    };
+
+    const quiet = await sample("listening", 0);
+    const loud = await sample("listening", 0.9);
+    const speaking = await sample("speaking", 0.7);
+    return { ok: true, quiet, loud, speaking };
+  });
+
+  if (!moves.ok) problems.push(`orb: ${moves.why}`);
+  else {
+    // Loud must not look the same as quiet, or nothing is reacting.
+    if (moves.quiet.transform === moves.loud.transform)
+      problems.push(`orb: does not grow with the voice (${moves.loud.transform})`);
+    if (moves.quiet.shadow === moves.loud.shadow)
+      problems.push("orb: glow does not react to the voice");
+    // And with no level at all it must still be animating, or a refused
+    // microphone leaves a dead circle on screen.
+    if (!/breathe/.test(moves.quiet.animation))
+      problems.push(`orb: sits still at level 0 (animation: ${moves.quiet.animation})`);
+    if (moves.speaking.transform === "none")
+      problems.push("orb: does not move while speaking");
+    console.log(`orb: reacts (quiet ${moves.quiet.transform} -> loud ${moves.loud.transform})`);
   }
   await page.close();
 }
