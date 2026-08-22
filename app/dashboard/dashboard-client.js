@@ -608,6 +608,7 @@ export default function DashboardClient({ initialProjects }) {
   const [rxIsOwner, setRxIsOwner] = useState(false);
   const [rxAllowance, setRxAllowance] = useState(1);
   const [rxPlanLabel, setRxPlanLabel] = useState("");
+  const [rxLocked, setRxLocked] = useState(null);
   const [rxBusy, setRxBusy] = useState(false);
   const [rxError, setRxError] = useState("");
   // Keyed by project id: one dashboard can hold several connected
@@ -910,6 +911,10 @@ export default function DashboardClient({ initialProjects }) {
       setRxIsOwner(Boolean(result.isOwnerAccount));
       setRxAllowance(result.allowance ?? 1);
       setRxPlanLabel(result.planLabel || "");
+      // Temporarily switched off for everyone but the owner. The server
+      // decides — see lib/feature-lock.js — so the browser only has to
+      // render what it is told.
+      setRxLocked(result.locked ? { title: result.title, body: result.body } : null);
     } catch (err) {
       setRxError(err.message);
       setRxNumbers((current) => current || []);
@@ -3850,6 +3855,24 @@ export default function DashboardClient({ initialProjects }) {
               A number that answers when your client can&apos;t. It takes the caller&apos;s name,
               number and what they need, and puts real emergencies straight through to their mobile.
             </p>
+            {rxLocked ? (
+              <div
+                style={{
+                  maxWidth: 560,
+                  padding: "22px 24px",
+                  borderRadius: 16,
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                }}
+              >
+                <div style={{ fontFamily: display, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
+                  {rxLocked.title}
+                </div>
+                <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: "rgba(255,255,255,0.6)" }}>
+                  {rxLocked.body}
+                </p>
+              </div>
+            ) : (
             <Receptionist
               numbers={rxNumbers || []}
               calls={rxCalls}
@@ -3874,6 +3897,7 @@ export default function DashboardClient({ initialProjects }) {
                  dead end dressed as a way forward. */
               onUpgrade={() => setTab("billing")}
             />
+            )}
           </div>
         )}
 

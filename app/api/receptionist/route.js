@@ -5,6 +5,7 @@ import { canUseReceptionist, numbersAllowed, limitsFor } from "@/lib/plans";
 import { isOwner } from "@/lib/admin";
 import { isKnownVoice } from "@/lib/voices";
 import { bookingUrl } from "@/lib/booking";
+import { receptionistLocked, lockedNotice } from "@/lib/feature-lock";
 import { findAvailableNumbers, buyNumber, releaseNumber, twilioConfigured } from "@/lib/twilio-numbers";
 
 // Buying, configuring and releasing a receptionist number.
@@ -51,6 +52,12 @@ async function me() {
 export async function GET(req) {
   const { supabase, user } = await me();
   if (!user) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
+
+  // Temporarily off for everyone but the owner. See lib/feature-lock.js —
+  // this is a holding measure with an end date, not a plan.
+  if (receptionistLocked() && !isOwner(user.email)) {
+    return NextResponse.json({ locked: true, ...lockedNotice() });
+  }
 
   const url = new URL(req.url);
 
@@ -116,6 +123,10 @@ export async function GET(req) {
 export async function POST(req) {
   const { supabase, user } = await me();
   if (!user) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
+
+  if (receptionistLocked() && !isOwner(user.email)) {
+    return NextResponse.json({ error: "locked", ...lockedNotice() }, { status: 403 });
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -211,6 +222,10 @@ export async function PATCH(req) {
   const { supabase, user } = await me();
   if (!user) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
 
+  if (receptionistLocked() && !isOwner(user.email)) {
+    return NextResponse.json({ error: "locked", ...lockedNotice() }, { status: 403 });
+  }
+
   const body = await req.json().catch(() => ({}));
   const id = field(body.id, 40);
   if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });
@@ -263,6 +278,10 @@ export async function PATCH(req) {
 export async function DELETE(req) {
   const { supabase, user } = await me();
   if (!user) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
+
+  if (receptionistLocked() && !isOwner(user.email)) {
+    return NextResponse.json({ error: "locked", ...lockedNotice() }, { status: 403 });
+  }
 
   const id = field(new URL(req.url).searchParams.get("id"), 40);
   if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });

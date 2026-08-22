@@ -167,6 +167,13 @@ Things that will bite:
   any provider, and breaks when nobody's API changes. `[[BOOK]]` is
   checked before `[[DONE]]` — a caller who just said "yes, text me" is
   not finished, and must not be hung up on in the same breath.
+- **The receptionist is currently LOCKED.** `lib/feature-lock.js` hides
+  the dashboard tab, the `/try` demo and all provisioning from everyone
+  except the owner, and it **defaults to locked** — it was added as a
+  holding measure before a day off and is meant to come off. Lift it with
+  `RECEPTIONIST_LOCKED=0`, or delete the module's use, which is the
+  tidier end state. It deliberately does NOT stop a line that is already
+  answering: there is a real customer with a number on this account.
 - **`/try` is public and spends money on strangers.** It is the only
   route where someone who has never signed up can burn Anthropic credit,
   and the balance it burns is the same one site generation runs on — so

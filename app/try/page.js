@@ -1,5 +1,6 @@
 import OrbDemo from "./OrbDemo";
 import { DEMO_BUSINESS } from "@/lib/demo-chat";
+import { receptionistLocked, lockedNotice } from "@/lib/feature-lock";
 
 export const metadata = {
   title: "Try the AI receptionist — Sitebric",
@@ -13,6 +14,9 @@ export const metadata = {
 // never hear the thing they are being asked to sell. A page you can talk
 // to is a different proposition from a phone number you have to dial.
 export default function TryPage() {
+  const locked = receptionistLocked();
+  const notice = lockedNotice();
+
   return (
     <main
       style={{
@@ -53,14 +57,34 @@ export default function TryPage() {
         >
           Talk to the receptionist
         </h1>
-        <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.6, color: "rgba(255,255,255,0.55)" }}>
-          This is the same assistant that answers your clients&apos; phones. It&apos;s standing in
-          for {DEMO_BUSINESS} — ask it a price, then ask it something it wasn&apos;t told.
-        </p>
+        {!locked && (
+          <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.6, color: "rgba(255,255,255,0.55)" }}>
+            This is the same assistant that answers your clients&apos; phones. It&apos;s standing in
+            for {DEMO_BUSINESS} — ask it a price, then ask it something it wasn&apos;t told.
+          </p>
+        )}
       </div>
 
       <div style={{ position: "relative", width: "100%", display: "flex", justifyContent: "center" }}>
-        <OrbDemo autoFocus />
+        {locked ? (
+          <div
+            style={{
+              maxWidth: 520,
+              textAlign: "center",
+              padding: "26px 24px",
+              borderRadius: 16,
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.1)",
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 8 }}>{notice.title}</div>
+            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: "rgba(255,255,255,0.6)" }}>
+              {notice.body}
+            </p>
+          </div>
+        ) : (
+          <OrbDemo autoFocus />
+        )}
       </div>
 
       <a

@@ -13,6 +13,7 @@ import {
   outOfTurnsMessage,
   rateLimitedMessage,
 } from "@/lib/demo-chat";
+import { receptionistLocked, lockedNotice } from "@/lib/feature-lock";
 
 // The receptionist, in a browser.
 //
@@ -85,6 +86,12 @@ async function overDailyLimit(hash) {
 }
 
 export async function POST(req) {
+  // Off with the rest of the feature. This one is public, so there is no
+  // owner to exempt — the page it serves shows the notice instead.
+  if (receptionistLocked()) {
+    return NextResponse.json({ locked: true, reply: lockedNotice().body, done: true });
+  }
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ reply: rateLimitedMessage(), done: true });
   }

@@ -39,6 +39,95 @@ export default function OrbDemo({ autoFocus = false }) {
   const historyRef = useRef([]);
   historyRef.current = history;
 
+  // How loudly something is happening right now, 0..1. Drives the orb.
+  const [level, setLevel] = useState(0);
+  const audio = useRef({ ctx: null, stream: null, raf: null, timer: null });
+
+  // Stops whatever is currently driving the orb and lets it settle.
+  const quiet = useCallback(() => {
+    const a = audio.current;
+    if (a.raf) cancelAnimationFrame(a.raf);
+    if (a.timer) clearInterval(a.timer);
+    a.raf = null;
+    a.timer = null;
+    if (a.stream) {
+      // Released rather than held open — a page keeping the microphone
+      // live after it has stopped listening is the kind of thing that
+      // ends up in a screenshot on the internet.
+      a.stream.getTracks().forEach((t) => t.stop());
+      a.stream = null;
+    }
+    if (a.ctx) {
+      a.ctx.close().catch(() => {});
+      a.ctx = null;
+    }
+    setLevel(0);
+  }, []);
+
+  // Reads the microphone and reports how loud it is.
+  //
+  // Entirely additive: if the browser refuses, or there is no AudioContext,
+  // the orb falls back to its CSS animation and the conversation is
+  // unaffected. Nothing here touches what gets sent to the server, and no
+  // audio leaves the machine — only a number between 0 and 1 that moves a
+  // div.
+  const watchMic = useCallback(async () => {
+    if (typeof window === "undefined") return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx || !navigator.mediaDevices?.getUserMedia) return;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const ctx = new Ctx();
+      const src = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      src.connect(analyser);
+
+      const buf = new Uint8Array(analyser.frequencyBinCount);
+      audio.current.ctx = ctx;
+      audio.current.stream = stream;
+
+      const tick = () => {
+        analyser.getByteTimeDomainData(buf);
+        // Root mean square around the centre line — actual loudness,
+        // rather than whichever sample happened to be read.
+        let sum = 0;
+        for (let i = 0; i < buf.length; i++) {
+          const v = (buf[i] - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / buf.length);
+        // Eased so a normal speaking voice fills most of the range
+        // instead of sitting near zero.
+        setLevel((prev) => prev * 0.6 + Math.min(1, rms * 6) * 0.4);
+        audio.current.raf = requestAnimationFrame(tick);
+      };
+      tick();
+    } catch {
+      /* No microphone, or permission refused. The CSS animation covers it. */
+    }
+  }, []);
+
+  // While it speaks there is no audio stream to measure — the browser
+  // renders speech itself and does not hand it back. So the orb is driven
+  // from a shaped wobble instead, which reads as talking rather than as a
+  // metronome.
+  const watchSpeech = useCallback(() => {
+    const started = Date.now();
+    audio.current.timer = setInterval(() => {
+      const t = (Date.now() - started) / 1000;
+      const wobble =
+        0.55 +
+        0.25 * Math.sin(t * 7.3) +
+        0.12 * Math.sin(t * 13.1 + 1.4) +
+        0.08 * Math.sin(t * 3.1 + 0.6);
+      setLevel(Math.max(0.15, Math.min(1, wobble)));
+    }, 60);
+  }, []);
+
+  useEffect(() => quiet, [quiet]);
+
   useEffect(() => {
     const SR =
       typeof window !== "undefined" &&
@@ -51,15 +140,21 @@ export default function OrbDemo({ autoFocus = false }) {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.rate = 1.02;
-    u.onend = () => setState("idle");
+    u.onend = () => {
+      quiet();
+      setState("idle");
+    };
     setState("speaking");
+    quiet();
+    watchSpeech();
     window.speechSynthesis.speak(u);
-  }, []);
+  }, [quiet, watchSpeech]);
 
   const send = useCallback(
     async (said) => {
       if (!said || ended) return;
       setState("thinking");
+      quiet();
       setCaption("");
       const next = [...historyRef.current, { role: "user", text: said }];
       setHistory(next);
@@ -81,7 +176,7 @@ export default function OrbDemo({ autoFocus = false }) {
         setState("idle");
       }
     },
-    [ended, speak]
+    [ended, speak, quiet]
   );
 
   const listen = useCallback(() => {
@@ -107,20 +202,26 @@ export default function OrbDemo({ autoFocus = false }) {
       // sitting there while the browser thinks.
       setCaption(final || interim);
     };
-    r.onerror = () => setState("idle");
+    r.onerror = () => {
+      quiet();
+      setState("idle");
+    };
     r.onend = () => {
+      quiet();
       if (final.trim()) send(final.trim());
       else setState("idle");
     };
 
     setState("listening");
     setCaption("");
+    watchMic();
     try {
       r.start();
     } catch {
+      quiet();
       setState("idle");
     }
-  }, [ended, send]);
+  }, [ended, send, watchMic, quiet]);
 
   function stop() {
     try {
@@ -131,6 +232,7 @@ export default function OrbDemo({ autoFocus = false }) {
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
+    quiet();
     setState("idle");
   }
 
@@ -143,7 +245,14 @@ export default function OrbDemo({ autoFocus = false }) {
           client rendering. This repo has shipped that three times. */}
       <style dangerouslySetInnerHTML={{ __html: ORB_CSS }} />
 
-      <div className={`sb-orb sb-orb--${state}`} aria-hidden="true">
+      <div
+        className={`sb-orb sb-orb--${state}`}
+        aria-hidden="true"
+        // A custom property rather than inline transforms on each layer:
+        // one number crosses the React boundary per frame and the CSS
+        // decides what moves, so a repaint does not rebuild the tree.
+        style={{ "--level": level.toFixed(3) }}
+      >
         <span className="sb-orb__ring sb-orb__ring--outer" />
         <span className="sb-orb__ring sb-orb__ring--mid" />
         <span className="sb-orb__core" />
@@ -288,24 +397,62 @@ const ORB_CSS = `
 .sb-orb__ring { position: absolute; border-radius: 50%; border: 1px solid rgba(255,255,255,0.16); }
 .sb-orb__ring--outer { inset: 0; border-style: dashed; opacity: 0.5; }
 .sb-orb__ring--mid { inset: 11%; border-color: rgba(255,255,255,0.24); }
-.sb-orb--listening .sb-orb__core {
-  transform: scale(1.06);
-  box-shadow: 0 0 96px 18px rgba(210,225,255,0.42), inset 0 0 46px rgba(255,255,255,0.55);
-}
-.sb-orb--thinking .sb-orb__core { transform: scale(0.95); }
+
+/* --level is written from JS every frame: real microphone loudness while
+   listening, a shaped wobble while speaking. Everything below reads it,
+   so one number moves the whole orb and React never re-renders for it.
+   It defaults to 0, which is what makes the orb work at all if the
+   microphone is refused. */
+.sb-orb { --level: 0; }
+
+/* Grows and brightens with the voice. The transition is short enough to
+   feel immediate and long enough that a consonant does not make it
+   flicker. */
+.sb-orb--listening .sb-orb__core,
 .sb-orb--speaking .sb-orb__core {
-  box-shadow: 0 0 86px 16px rgba(200,215,240,0.36), inset 0 0 44px rgba(255,255,255,0.5);
+  transform: scale(calc(1.02 + (var(--level) * 0.16)));
+  box-shadow:
+    0 0 calc(70px + (var(--level) * 70px)) calc(12px + (var(--level) * 16px))
+      rgba(210,225,255, calc(0.26 + (var(--level) * 0.34))),
+    inset 0 0 calc(40px + (var(--level) * 18px)) rgba(255,255,255, calc(0.4 + (var(--level) * 0.35)));
+  transition: transform 90ms linear, box-shadow 120ms linear;
 }
+
+/* The rings push outward on the loud parts, so the movement reads as
+   something coming off the orb rather than the orb just inflating. */
+.sb-orb--listening .sb-orb__ring--mid,
+.sb-orb--speaking .sb-orb__ring--mid {
+  transform: scale(calc(1 + (var(--level) * 0.09)));
+  border-color: rgba(255,255,255, calc(0.24 + (var(--level) * 0.4)));
+  transition: transform 130ms ease-out, border-color 130ms linear;
+}
+.sb-orb--listening .sb-orb__ring--outer,
+.sb-orb--speaking .sb-orb__ring--outer {
+  transform: scale(calc(1 + (var(--level) * 0.045)));
+  opacity: calc(0.5 + (var(--level) * 0.45));
+  transition: transform 180ms ease-out, opacity 180ms linear;
+}
+
+.sb-orb--thinking .sb-orb__core { transform: scale(0.95); }
+
 @media (prefers-reduced-motion: no-preference) {
   .sb-orb__ring--outer { animation: sb-orb-spin 26s linear infinite; }
   .sb-orb__ring--mid { animation: sb-orb-spin 17s linear infinite reverse; }
-  .sb-orb--listening .sb-orb__core { animation: sb-orb-pulse 1.6s ease-in-out infinite; }
   .sb-orb--thinking .sb-orb__ring--mid { animation: sb-orb-spin 2.4s linear infinite; }
-  .sb-orb--speaking .sb-orb__core { animation: sb-orb-pulse 2.4s ease-in-out infinite; }
+
+  /* The fallback. If the microphone was refused --level stays 0 and the
+     orb would sit dead still while somebody talks to it, which looks
+     broken rather than restrained. This keeps it breathing underneath;
+     the transform above wins whenever there is a real level to read. */
+  .sb-orb--listening .sb-orb__core,
+  .sb-orb--speaking .sb-orb__core {
+    animation: sb-orb-breathe 2.2s ease-in-out infinite;
+  }
 }
+
 @keyframes sb-orb-spin { to { transform: rotate(360deg); } }
-@keyframes sb-orb-pulse {
-  0%, 100% { transform: scale(1.03); }
-  50% { transform: scale(1.09); }
+@keyframes sb-orb-breathe {
+  0%, 100% { scale: 1; }
+  50% { scale: calc(1.035 + (var(--level) * 0.02)); }
 }
 `;
