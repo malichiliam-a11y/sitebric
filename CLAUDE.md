@@ -26,6 +26,8 @@ client business and get a finished website they can hand off.
 | `lib/lead-script.js` | The words to say on a cold call, built from a lead's own facts — pure, no model call |
 | `lib/leads-csv.js` | The saved-leads download, with the Excel formula-injection guard |
 | `app/dashboard/LeadCards.js`, `LeadDetail.js` | The leads UI, split out so it can be driven in a browser without a login |
+| `app/try/` | The receptionist in a browser — orb UI, no login, no phone. `node test/try-ui.mjs` drives it |
+| `lib/demo-chat.js` | The demo's fictional business and its turn limits. Runs the REAL `systemPrompt` |
 | `app/dashboard/PageShell.js` | The frame every tab sits in — full width, panels flowing into columns. `app/dev/shell/` + `node test/shell-ui.mjs` drive it |
 | `app/dev/receptionist/` | The receptionist screen in every plan state, with no login. 404 in production. `node test/receptionist-ui.mjs` drives it |
 | `lib/entitlements.js` | What keeps working after the money stops — grace periods, number release. Pure. **Fails OPEN**, unlike `lib/plans.js` |
@@ -165,6 +167,17 @@ Things that will bite:
   any provider, and breaks when nobody's API changes. `[[BOOK]]` is
   checked before `[[DONE]]` — a caller who just said "yes, text me" is
   not finished, and must not be hung up on in the same breath.
+- **`/try` is public and spends money on strangers.** It is the only
+  route where someone who has never signed up can burn Anthropic credit,
+  and the balance it burns is the same one site generation runs on — so
+  an unbounded demo would take down the product it exists to sell. Capped
+  per conversation and per IP per day, counted server-side because the
+  browser posts the transcript back and could simply send a shorter one.
+  The limiter fails OPEN: a prospect hitting an error is a lost customer,
+  a few uncounted turns is a few cents.
+- **The demo runs the real prompt.** Same `systemPrompt`, same fenced
+  facts, same guardrail. A demo that behaves better than the phone line
+  is a lie told to a prospect, and they find out after they have sold it.
 - **One number is public.** The row with `is_demo` is shown to every user
   on every plan, including accounts that can't use the feature — hearing
   it is what sells it. It is therefore the only number a stranger can
