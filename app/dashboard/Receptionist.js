@@ -191,6 +191,38 @@ function TryIt({ demo }) {
           {prettyNumber(demo.phoneNumber)}
         </a>
       </div>
+      <div
+        style={{
+          marginTop: 12,
+          paddingTop: 12,
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <span style={{ ...hint, marginTop: 0 }}>
+          Don&apos;t want to ring it? Talk to it in your browser instead.
+        </span>
+        <a
+          href="/try"
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.16)",
+            borderRadius: 999,
+            padding: "8px 16px",
+            color: "#fff",
+            fontSize: 12.5,
+            fontWeight: 600,
+            textDecoration: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Try the receptionist →
+        </a>
+      </div>
       <div style={{ ...hint, marginTop: 10 }}>
         Three calls a day per phone, so one person can&apos;t use up everybody else&apos;s.
       </div>
