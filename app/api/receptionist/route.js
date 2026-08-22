@@ -53,9 +53,9 @@ export async function GET(req) {
   const { supabase, user } = await me();
   if (!user) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
 
-  // Temporarily off for everyone but the owner. See lib/feature-lock.js —
-  // this is a holding measure with an end date, not a plan.
-  if (receptionistLocked() && !isOwner(user.email)) {
+  // Temporarily off. Everyone, including the owner — see
+  // lib/feature-lock.js. A holding measure with an end date, not a plan.
+  if (receptionistLocked()) {
     return NextResponse.json({ locked: true, ...lockedNotice() });
   }
 
@@ -124,7 +124,7 @@ export async function POST(req) {
   const { supabase, user } = await me();
   if (!user) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
 
-  if (receptionistLocked() && !isOwner(user.email)) {
+  if (receptionistLocked()) {
     return NextResponse.json({ error: "locked", ...lockedNotice() }, { status: 403 });
   }
 
@@ -222,7 +222,7 @@ export async function PATCH(req) {
   const { supabase, user } = await me();
   if (!user) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
 
-  if (receptionistLocked() && !isOwner(user.email)) {
+  if (receptionistLocked()) {
     return NextResponse.json({ error: "locked", ...lockedNotice() }, { status: 403 });
   }
 
@@ -279,7 +279,7 @@ export async function DELETE(req) {
   const { supabase, user } = await me();
   if (!user) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
 
-  if (receptionistLocked() && !isOwner(user.email)) {
+  if (receptionistLocked()) {
     return NextResponse.json({ error: "locked", ...lockedNotice() }, { status: 403 });
   }
 

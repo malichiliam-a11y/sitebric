@@ -4,6 +4,7 @@ import { sayAndGather, sayAndDial, sayAndHangUp, twimlResponse } from "@/lib/twi
 import { greetingFor, overLimitMessage, demoLimitMessage, DEMO_CALLS_PER_DAY } from "@/lib/receptionist";
 import { ownerServiceState } from "@/lib/owner-state";
 import { receptionistAnswers } from "@/lib/entitlements";
+import { receptionistLocked, lockedCallerMessage } from "@/lib/feature-lock";
 
 // A phone rang. This is the first thing that happens.
 //
@@ -45,6 +46,28 @@ async function handle(req) {
       return twimlResponse(
         sayAndHangUp("Sorry, this number isn't in service. Please check the number and try again.")
       );
+    }
+
+    // Temporarily off, for every line including the demo — see
+    // lib/feature-lock.js. Checked before anything that costs money, so a
+    // locked call never reaches the model.
+    //
+    // The caller is put through to the business where there is a mobile
+    // to put them through to: a customer with a real problem should still
+    // reach a human. That is the call not being answered by an AI, which
+    // is what was asked, rather than the call being thrown away.
+    if (receptionistLocked()) {
+      if (number.forward_to) {
+        return twimlResponse(
+          sayAndDial({
+            text: "One moment, I'll put you through.",
+            to: number.forward_to,
+            callerId: number.phone_number,
+            voice: number.voice,
+          })
+        );
+      }
+      return twimlResponse(sayAndHangUp(lockedCallerMessage(), number.voice));
     }
 
     // The reseller stopped paying. The demo line is exempt — it belongs
